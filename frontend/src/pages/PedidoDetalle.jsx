@@ -98,10 +98,13 @@ export default function PedidoDetalle() {
     accion(() => api.patch(`/api/pedidos/${id}/cancelar`), 'Pedido cancelado.')
   }
   const alFirmar = async () => {
-    // Tras la firma el pedido queda FIRMADO (pendiente de pago): se continúa en la pestaña de pago
-    setPestaña('pago')
+    // Si ya estaba pagado queda listo para preparar; si no, se continúa con el pago
+    const yaPagado = Boolean(pedido?.fechaPago)
+    setPestaña(yaPagado ? 'resumen' : 'pago')
     setAccionError(null)
-    setAccionOk('Pedido firmado correctamente. Continúa con el pago.')
+    setAccionOk(yaPagado
+      ? 'Pedido firmado correctamente. Ya está pagado: la distribuidora puede prepararlo.'
+      : 'Pedido firmado correctamente. Continúa con el pago.')
     await cargar()
     setTimeout(() => setAccionOk(null), 4000)
   }
@@ -154,6 +157,7 @@ export default function PedidoDetalle() {
           <h2>Acciones según el estado</h2>
           <AccionesPedido
             estado={estado}
+            pagado={Boolean(pedido.fechaPago)}
             puedeFirmar={puedeFirmar}
             puedePagar={puedePagar}
             procesando={procesando}
@@ -169,6 +173,7 @@ export default function PedidoDetalle() {
         <FirmaSeccion
           pedido={pedido}
           onFirmado={alFirmar}
+          onRechazado={cargar}
         />
       )}
 
@@ -204,7 +209,7 @@ function EstadoAutorizacionPago({ pedido }) {
   )
 }
 
-function AccionesPedido({ estado, puedeFirmar, puedePagar, procesando, enviarFirma, cancelar, irAFirmar, irAPagar }) {
+function AccionesPedido({ estado, pagado, puedeFirmar, puedePagar, procesando, enviarFirma, cancelar, irAFirmar, irAPagar }) {
   if (estado === 'BORRADOR') {
     return (
       <div className="acciones-fila">
@@ -213,24 +218,24 @@ function AccionesPedido({ estado, puedeFirmar, puedePagar, procesando, enviarFir
       </div>
     )
   }
-  if (estado === 'PENDIENTE_FIRMA') {
+  if (['PENDIENTE_FIRMA', 'FIRMADO', 'LISTO_PREPARAR'].includes(estado) && (puedeFirmar || puedePagar || !pagado)) {
     return (
       <div className="acciones-fila">
-        {puedeFirmar
-          ? <button type="button" className="btn btn-primario" onClick={irAFirmar} disabled={procesando}>Revisar y firmar</button>
-          : <p className="texto-suave">Pendiente de que el veterinario asignado lo revise y firme con su cuenta. Después se podrá pagar.</p>}
-        <button type="button" className="btn btn-peligro" onClick={cancelar} disabled={procesando}>Cancelar pedido</button>
-      </div>
-    )
-  }
-  if (estado === 'FIRMADO') {
-    return (
-      <div className="acciones-fila">
-        {puedePagar && <button type="button" className="btn btn-primario" onClick={irAPagar} disabled={procesando}>Pagar (entorno de pruebas)</button>}
-        <button type="button" className="btn btn-peligro" onClick={cancelar} disabled={procesando}>Cancelar pedido</button>
+        {puedeFirmar && <button type="button" className="btn btn-primario" onClick={irAFirmar} disabled={procesando}>Revisar y firmar</button>}
+        {puedePagar && <button type="button" className={puedeFirmar ? 'btn btn-secundario' : 'btn btn-primario'} onClick={irAPagar} disabled={procesando}>Pagar (entorno de pruebas)</button>}
+        {!puedeFirmar && estado === 'PENDIENTE_FIRMA' && (
+          <p className="texto-suave">
+            Falta la firma del veterinario asignado. {pagado ? 'El pago ya está confirmado.' : 'Puedes pagarlo ya: no se preparará hasta que esté firmado.'}
+          </p>
+        )}
+        {/* Un pedido pagado no se cancela desde la aplicación; el veterinario asignado sí puede rechazarlo */}
+        {!pagado && <button type="button" className="btn btn-peligro" onClick={cancelar} disabled={procesando}>Cancelar pedido</button>}
       </div>
     )
   }
   if (estado === 'CANCELADO') return <p className="texto-suave">Este pedido está cancelado: no admite más acciones.</p>
+  if (['PENDIENTE_FIRMA', 'FIRMADO', 'LISTO_PREPARAR'].includes(estado)) {
+    return <p className="texto-suave">Pedido firmado y pagado: la distribuidora lo preparará desde su panel.</p>
+  }
   return <p className="texto-suave">El pedido está en preparación/logística: la distribuidora lo gestionará desde el panel de administración.</p>
 }

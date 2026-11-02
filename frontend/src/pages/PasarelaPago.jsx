@@ -84,8 +84,8 @@ export default function PasarelaPago() {
           <div className="caja-ok">
             <span aria-hidden="true">✔️</span>
             <div className="caja-error-texto">
-              Pago CONFIRMADO por la notificación del proveedor (simulado). El pedido ya está firmado y pagado:
-              pasa a «Listo para preparar».
+              Pago CONFIRMADO por la notificación del proveedor (simulado). Si el veterinario asignado ya lo ha firmado,
+              el pedido pasa a «Listo para preparar»; si no, queda pagado a la espera de su firma.
             </div>
           </div>
         )}

@@ -599,3 +599,6 @@ input[type="radio"]:focus-visible,
   .login-presentacion h2 { font-size: 1.3rem; }
   .inicio-cabecera .btn { width: 100%; text-align: center; }
 }
+
+/* ============ Vistas de pedidos por firma y pago (administración) ============ */
+.vistas-pedidos { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; }

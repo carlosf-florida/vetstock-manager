@@ -5,7 +5,7 @@ import { dinero, fechaCorta, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO, totalPedido }
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox } from '../../components/Spinner.jsx'
 import { BadgeEstadoPedido } from '../../components/Badges.jsx'
-import { infoEstadoFirma, infoEstadoPago } from '../../pedidoEstado.js'
+import { CLASIFICACIONES, infoEstadoFirma, infoEstadoPago } from '../../pedidoEstado.js'
 
 function Etiqueta({ info }) {
   return <span className={`etiqueta ${info.clase}`}>{info.texto}</span>
@@ -19,6 +19,8 @@ export default function AdminPedidos() {
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
+  // Vista por firma y pago: la clasificación la calcula el backend (pedido.autorizacion)
+  const [vista, setVista] = useState(paramsUrl.get('vista') || '')
   const [clinicaId, setClinicaId] = useState('')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
@@ -46,7 +48,9 @@ export default function AdminPedidos() {
   }, [])
 
   // Filtro por fecha de creación: las fechas llegan en ISO y se compara el día (AAAA-MM-DD)
-  const filasFiltradas = (pedidos || []).filter((p) => {
+  const contar = (clave) => (pedidos || []).filter((p) => p.autorizacion?.clasificacion === clave).length
+
+  const filasFiltradas = (pedidos || []).filter((p) => !vista || p.autorizacion?.clasificacion === vista).filter((p) => {
     const dia = (p.fechaCreacion || '').slice(0, 10)
     return (!desde || dia >= desde) && (!hasta || dia <= hasta)
   })
@@ -59,6 +63,23 @@ export default function AdminPedidos() {
   return (
     <section>
       <h1>Pedidos (administración)</h1>
+
+      <div className="vistas-pedidos" role="group" aria-label="Separar pedidos por firma y pago">
+        <button type="button" className={'btn ' + (vista === '' ? 'btn-primario' : 'btn-secundario')} aria-pressed={vista === ''} onClick={() => setVista('')}>
+          Todos ({(pedidos || []).length})
+        </button>
+        {Object.entries(CLASIFICACIONES).map(([clave, texto]) => (
+          <button key={clave} type="button" className={'btn ' + (vista === clave ? 'btn-primario' : 'btn-secundario')}
+            aria-pressed={vista === clave} onClick={() => setVista(clave)}>
+            {texto} ({contar(clave)})
+          </button>
+        ))}
+      </div>
+      <p className="texto-suave">
+        {vista === 'PAGADO_PENDIENTE_FIRMA' && 'Pago completo confirmado, pero falta la firma válida del veterinario asignado: no se pueden preparar. La columna «Firma» indica qué falta.'}
+        {vista === 'FIRMADO_Y_PAGADO' && 'Firma válida del veterinario asignado y pago completo. Solo los marcados «Listo para preparar» pueden empezar la preparación.'}
+        {vista === 'OTROS' && 'Borradores, pedidos sin pago completo y cancelados.'}
+      </p>
       <p className="texto-suave">Busca pedidos por número, clínica, fecha y estado; consulta su firma y su pago y entra a gestionarlos.</p>
 
       <div className="filtros-panel">
@@ -88,8 +109,23 @@ export default function AdminPedidos() {
             { key: 'creadoPorNombre', label: 'Creado por', soloEscritorio: true },
             { key: 'fechaCreacion', label: 'Fecha', render: (p) => fechaCorta(p.fechaCreacion) },
             { key: 'estado', label: 'Estado', render: (p) => <BadgeEstadoPedido estado={p.estado} /> },
-            { key: 'firma', label: 'Firma', soloEscritorio: true, render: (p) => <Etiqueta info={infoEstadoFirma(p)} /> },
-            { key: 'pago', label: 'Pago', soloEscritorio: true, render: (p) => <Etiqueta info={infoEstadoPago(p)} /> },
+            {
+              key: 'firma', label: 'Firma', render: (p) => (
+                <>
+                  <Etiqueta info={infoEstadoFirma(p)} />
+                  {p.autorizacion?.motivoFirma && p.autorizacion.clasificacion === 'PAGADO_PENDIENTE_FIRMA' && <small className="texto-suave">{p.autorizacion.motivoFirma}</small>}
+                </>
+              ),
+            },
+            {
+              key: 'pago', label: 'Pago', render: (p) => (
+                <>
+                  <Etiqueta info={infoEstadoPago(p)} />
+                  {p.devolucionPendiente && <small className="error-campo">Devolución pendiente</small>}
+                  {p.autorizacion?.listoParaPreparar && <small><strong>Listo para preparar</strong></small>}
+                </>
+              ),
+            },
             { key: 'total', label: 'Total', render: (p) => (totalPedido(p) != null ? dinero(totalPedido(p)) : '—') },
             { key: 'gestion', label: '', render: (p) => <Link className="btn btn-mini btn-secundario" to={`/admin/pedidos/${p.id}`}>Gestionar</Link> },
           ]}

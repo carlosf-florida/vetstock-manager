@@ -146,7 +146,7 @@ export default function AdminPedidoDetalle() {
         <h2>Acciones del almacén</h2>
         <AccionesAdmin
           estado={estado}
-          firmaFirmada={estadoFirmaPedido(pedido) === 'FIRMADO'}
+          autorizacion={pedido.autorizacion}
           pagoPagado={estadoPagoPedido(pedido) === 'PAGADO'}
           procesando={procesando}
           enviarFirma={enviarFirma}
@@ -170,6 +170,10 @@ export default function AdminPedidoDetalle() {
         <div className="estado-autorizacion-pago">
           <p><strong>Responsable:</strong> {pedido.veterinarioNombre || '—'}{pedido.numeroColegiadoResponsable ? ` · Nº colegiado: ${pedido.numeroColegiadoResponsable}` : ''}</p>
           <p><strong>Estado:</strong> <span className={`etiqueta ${firma.clase}`}>{firma.texto}</span></p>
+          {pedido.autorizacion?.motivoFirma && <p className="error-campo">{pedido.autorizacion.motivoFirma}</p>}
+          {pedido.devolucionPendiente && (
+            <p className="caja-aviso">Rechazado tras el pago: <strong>devolución pendiente</strong> (se gestiona fuera de la aplicación). {pedido.motivoCancelacion}</p>
+          )}
         </div>
         {estadoFirmaPedido(pedido) === 'FIRMADO' ? (
           <div className="firma-resumen">
@@ -194,7 +198,7 @@ export default function AdminPedidoDetalle() {
         <h2>Pago</h2>
         <p><span className={`etiqueta ${pago.clase}`}>{pago.texto}</span></p>
         <PagoSeccion pedido={pedido} puedePagar={false} />
-        <p className="texto-suave">El pago lo realiza la clínica después de la firma del veterinario y lo confirma la notificación del proveedor. Administración no puede marcarlo como pagado.</p>
+        <p className="texto-suave">El pago lo realiza la clínica (antes o después de la firma) y lo confirma la notificación del proveedor. Administración no puede marcarlo como pagado.</p>
       </div>
 
       <div className="tarjeta">
@@ -225,19 +229,22 @@ export default function AdminPedidoDetalle() {
   )
 }
 
-function AccionesAdmin({ estado, firmaFirmada, pagoPagado, procesando, enviarFirma, cancelar, iniciarPreparacion, preparar, expedir }) {
+function AccionesAdmin({ estado, autorizacion, pagoPagado, procesando, enviarFirma, cancelar, iniciarPreparacion, preparar, expedir }) {
+  const firmaOk = Boolean(autorizacion?.firmaValida)
+  // Preparar exige firma válida del veterinario asignado + pago completo (el backend lo vuelve a comprobar)
+  const listo = Boolean(autorizacion?.listoParaPreparar)
   return (
     <div className="acciones-fila acciones-envueltas">
       {estado === 'BORRADOR' && (
         <button type="button" className="btn btn-primario" onClick={enviarFirma} disabled={procesando}>Enviar a firma</button>
       )}
-      {estado === 'PENDIENTE_FIRMA' && pagoPagado && !firmaFirmada && (
-        <span className="etiqueta est-pendiente-firma">Pago confirmado; falta la firma para preparar</span>
+      {['PENDIENTE_FIRMA', 'FIRMADO', 'LISTO_PREPARAR'].includes(estado) && pagoPagado && !firmaOk && (
+        <span className="etiqueta est-pendiente-firma">Pagado, pero sin firma válida: no se puede preparar</span>
       )}
-      {estado === 'FIRMADO' && !pagoPagado && (
+      {estado === 'FIRMADO' && !pagoPagado && firmaOk && (
         <span className="etiqueta est-firmado">Esperando pago: no se puede preparar todavía</span>
       )}
-      {estado === 'LISTO_PREPARAR' && (
+      {estado === 'LISTO_PREPARAR' && listo && (
         <button type="button" className="btn btn-primario" onClick={iniciarPreparacion} disabled={procesando}>Iniciar preparación</button>
       )}
       {estado === 'EN_PREPARACION' && (
@@ -246,7 +253,7 @@ function AccionesAdmin({ estado, firmaFirmada, pagoPagado, procesando, enviarFir
       {estado === 'PREPARADO' && (
         <button type="button" className="btn btn-primario" onClick={expedir} disabled={procesando}>Expedir</button>
       )}
-      {['BORRADOR', 'PENDIENTE_FIRMA', 'FIRMADO'].includes(estado) && (
+      {['BORRADOR', 'PENDIENTE_FIRMA', 'FIRMADO'].includes(estado) && !pagoPagado && (
         <button type="button" className="btn btn-peligro" onClick={cancelar} disabled={procesando}>Cancelar pedido</button>
       )}
       {estado === 'CANCELADO' && <span className="etiqueta est-cancelado">Pedido cancelado</span>}

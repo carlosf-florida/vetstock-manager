@@ -18,10 +18,23 @@ export function estadoPagoPedido(pedido) {
   return 'PENDIENTE'
 }
 
-export function infoEstadoFirma(pedido) {
+// El backend calcula pedido.autorizacion (firma válida, pago completo y clasificación).
+// Una firma solo es válida si la hizo el veterinario asignado sobre el contenido actual.
+export function firmaValida(pedido) {
+  if (pedido?.autorizacion) return pedido.autorizacion.firmaValida
   return estadoFirmaPedido(pedido) === 'FIRMADO'
-    ? { texto: 'Firmada', clase: 'est-firmado' }
-    : { texto: 'Pendiente', clase: 'est-pendiente-firma' }
+}
+
+export function infoEstadoFirma(pedido) {
+  if (firmaValida(pedido)) return { texto: 'Firma válida', clase: 'est-firmado' }
+  if (pedido?.fechaFirma) return { texto: 'Firma no válida', clase: 'est-pago-fallado' }
+  return { texto: 'Pendiente de firma', clase: 'est-pendiente-firma' }
+}
+
+export const CLASIFICACIONES = {
+  PAGADO_PENDIENTE_FIRMA: 'Pagados pendientes de firma',
+  FIRMADO_Y_PAGADO: 'Firmados y pagados',
+  OTROS: 'Otros pendientes',
 }
 
 export function infoEstadoPago(pedido) {
@@ -35,8 +48,10 @@ export function nombreRolFirmante(rol) {
   return ROLES_FIRMANTE[rol] || rol || 'Usuario autorizado'
 }
 
+// Se puede firmar antes o después del pago, y sustituir una firma no válida, mientras no
+// haya empezado la preparación. El backend vuelve a comprobarlo todo.
 export function puedeFirmarPedido(pedido, usuario) {
-  if (!pedido || !usuario || pedido.estado !== 'PENDIENTE_FIRMA' || estadoFirmaPedido(pedido) === 'FIRMADO') {
+  if (!pedido || !usuario || !['PENDIENTE_FIRMA', 'FIRMADO', 'LISTO_PREPARAR'].includes(pedido.estado) || firmaValida(pedido)) {
     return false
   }
 
@@ -46,10 +61,10 @@ export function puedeFirmarPedido(pedido, usuario) {
     && usuario.username === pedido.veterinarioUsername
 }
 
-// Orden obligatorio: primero firma el veterinario asignado y después paga la clínica.
+// Se puede pagar en cuanto el pedido se envía a firma (antes o después de firmar).
 // Administración no paga en nombre del cliente (el backend también lo impide).
 export function puedePagarPedido(pedido, usuario) {
-  if (!pedido || pedido.estado !== 'FIRMADO' || !pedido.fechaFirma) return false
+  if (!pedido || !['PENDIENTE_FIRMA', 'FIRMADO'].includes(pedido.estado)) return false
   if (usuario?.rol === 'ADMIN') return false
   return !pedido.fechaPago && estadoPagoPedido(pedido) !== 'PAGADO'
 }

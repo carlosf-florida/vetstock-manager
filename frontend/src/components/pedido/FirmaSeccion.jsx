@@ -11,7 +11,7 @@ const TAM_MAX_IMAGEN = 5 * 1024 * 1024 // 5 MB
  * contenido exacto que se autoriza. La autorización del firmante se valida en
  * el servidor; el número de colegiado solo identifica al responsable.
  */
-export default function FirmaSeccion({ pedido, onFirmado }) {
+export default function FirmaSeccion({ pedido, onFirmado, onRechazado }) {
   const canvasRef = useRef(null)
   const dibujando = useRef(false)
   const [metodo, setMetodo] = useState('DIBUJO')
@@ -227,10 +227,65 @@ export default function FirmaSeccion({ pedido, onFirmado }) {
 
       <div className="acciones-fila">
         <button type="button" className="btn btn-primario btn-grande" onClick={firmar} disabled={firmando}>
-          {firmando ? 'Firmando…' : 'Firmar y continuar al pago'}
+          {firmando ? 'Firmando…' : pedido.fechaPago ? 'Firmar y autorizar' : 'Firmar y continuar al pago'}
         </button>
       </div>
       {firmando && <p className="texto-suave">Enviando la firma al servidor…</p>}
+
+      <RechazoPedido pedido={pedido} onRechazado={onRechazado} />
+    </div>
+  )
+}
+
+/** El veterinario asignado puede rechazar el pedido en lugar de firmarlo (indicando el motivo). */
+function RechazoPedido({ pedido, onRechazado }) {
+  const [abierto, setAbierto] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function rechazar() {
+    if (!motivo.trim()) {
+      setError('Indica el motivo del rechazo.')
+      return
+    }
+    setEnviando(true)
+    setError(null)
+    try {
+      await api.patch(`/api/pedidos/${pedido.id}/rechazar`, { motivo: motivo.trim() })
+      onRechazado?.()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  if (!abierto) {
+    return (
+      <p className="texto-suave">
+        ¿No autorizas este pedido?{' '}
+        <button type="button" className="btn btn-mini btn-peligro" onClick={() => setAbierto(true)}>Rechazar pedido</button>
+      </p>
+    )
+  }
+  return (
+    <div className="caja-aviso">
+      <label className="campo">
+        <span>Motivo del rechazo *</span>
+        <textarea className="input" rows="2" maxLength={200} value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+      </label>
+      <p className="texto-suave">
+        El pedido se cancelará y se liberará el stock.
+        {pedido.fechaPago && ' Como ya está pagado, quedará marcado con «devolución pendiente» para que la distribuidora devuelva el importe (fuera de esta aplicación).'}
+      </p>
+      <ErrorBox mensaje={error} />
+      <div className="acciones-fila">
+        <button type="button" className="btn btn-peligro" onClick={rechazar} disabled={enviando}>
+          {enviando ? 'Rechazando…' : 'Confirmar rechazo'}
+        </button>
+        <button type="button" className="btn btn-secundario" onClick={() => setAbierto(false)} disabled={enviando}>Volver</button>
+      </div>
     </div>
   )
 }

@@ -111,6 +111,18 @@ veterinario asignado»). En Odoo se crearon los campos `x_vetstock_*` y los dos 
 compartidos, y el favorito «Pagados pendientes de firma» encuentra esos pedidos. El pedido
 S00001 (VSM-9) no superó la comprobación fiscal porque se creó en USD en una fase anterior.
 
+### Prueba en vivo: pago antes de la firma (Docker + Odoo real)
+
+Pedido de prueba #15 (2 × guantes, 20,70 €) de `aux.sanroque`, con la API real:
+
+| Paso | VetStock | Odoo (S00007) |
+|---|---|---|
+| Enviar a firma y pagar (pasarela de demostración) | PENDIENTE_FIRMA · «Pagados pendientes de firma» · «Falta la firma de Dr. Antonio García» | Exportado solo; `x_vetstock_pagado=true`, `firma_valida=false`; aparece en el favorito «Pagados pendientes de firma» |
+| Admin intenta preparar | Rechazado (400) | — |
+| La auxiliar intenta firmar | Rechazado (403) | — |
+| Firma el Dr. García | LISTO_PREPARAR · «Firmados y pagados» · listo | Mismo pedido S00007, `firma_valida=true`; pasa al favorito «Firmados y pagados» |
+| Admin inicia la preparación | EN_PREPARACION · sigue «Firmados y pagados», ya no «listo» | `x_vetstock_estado=EN_PREPARACION`; un solo pedido VSM-15; estado comercial sin tocar (borrador) |
+
 ## 3. Guía de comprobación manual (para repetirla)
 
 Reinicia los datos (ver [instalacion-windows.md](instalacion-windows.md), apartado 4) y sigue el

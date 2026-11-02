@@ -1,3 +1,79 @@
-# Base de datos
+# Base de datos (MySQL)
 
-En esta carpeta se guardarán los scripts de creación, migraciones y datos iniciales de la base de datos MySQL de VetStock Manager.
+Todo lo relativo a la base de datos de VetStock Manager vive en esta carpeta.
+
+## Contenido
+
+- `migrations/001_esquema_inicial.sql` — esquema completo + datos de prueba. Un solo script idempotente (borra y recrea la base `vetstock`).
+- `migrations/002_veterinario_responsable.sql` — añade el veterinario responsable asignado a cada clínica sin borrar datos existentes.
+- `migrations/003_reparar_textos_utf8.sql` — repara textos de prueba mal codificados y guarda sus valores anteriores.
+- `migrations/004_firma_pago_independientes.sql` — añade colegiado opcional a la firma y seguimiento de sincronización del pedido, sin borrar datos. Se puede repetir.
+- `migrations/005_iva_pedidos.sql` — conserva 0% en pedidos existentes y configura 4% para los nuevos. Añade `pedidos.iva_porcentaje`, sin recobrar pagos ni modificar firmas históricas.
+
+**Instalaciones existentes:** aplicar las migraciones 004 y 005 que falten, no volver a ejecutar el esquema inicial, que borra tablas. Firma y pago se consultan por separado; pagar antes de firmar mantiene `PENDIENTE_FIRMA` y puede exportarse a Odoo, pero no prepararse ni expedirse. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
+
+## Cómo cargarla
+
+```bash
+mysql -u root -p < migrations/001_esquema_inicial.sql
+```
+
+El backend se conecta con las credenciales de `backend/src/main/resources/application.properties` (sobrescribibles con las variables de entorno `DB_URL`, `DB_USER`, `DB_PASSWORD`). Hibernate está en `ddl-auto=none`: **las tablas solo se crean con este script**, nunca por el backend.
+
+## Tablas (15)
+
+| Tabla | Qué guarda | Relaciones |
+|---|---|---|
+| `usuarios` | Credenciales de acceso (contraseña cifrada con **BCrypt**) y rol (`ADMIN`, `VETERINARIO`, `AUXILIAR`) | 1 por cuenta |
+| `clinicas` | Clínicas clientes y su veterinario responsable de firma | N:1 opcional con `veterinarios` |
+| `veterinarios` | Datos de veterinario (nº de colegiado) | 1:1 con `usuarios`; N:1 con `clinicas` |
+| `auxiliares` | Auxiliares que pueden confirmar pedidos de su clínica con su firma propia | 1:1 con `usuarios`; N:1 con `clinicas` |
+| `productos` | Catálogo: `stock_actual` (físico), `stock_reservado` (en pedidos no expedidos) y `stock_minimo` (aviso de reposición) | — |
+| `pedidos` | Estado operativo, fechas independientes de firma/pago y `odoo_sincronizacion_pendiente`/`odoo_ultimo_error` | N:1 con `clinicas`, `veterinarios` (responsable) y `usuarios` (creador) |
+| `lineas_pedido` | Líneas: producto, cantidad y **precio unitario copiado** en el momento del pedido (histórico inmune a cambios de precio) | N:1 con `pedidos` y `productos` |
+| `firmas` | Una confirmación por pedido: firmante real en `usuario_id`, tipo (`DIBUJO`/`IMAGEN`), imagen PNG/JPG, colegiado opcional identificativo y copia inmutable | 1:1 con `pedidos`; N:1 con `usuarios` |
+| `pagos` | Intentos de pago: referencia única, importe, moneda, proveedor, estado y nº de intentos | N:1 con `pedidos` (varios intentos = varios registros) |
+| `destinos` | Destinos de envío (por ejemplo ciudades) | — |
+| `palets` | Palets de expedición con destino y fecha de expedición | N:1 con `destinos` |
+| `bultos` | Bultos individuales asignados a un palet | N:1 con `palets` y `pedidos` |
+| `documentos` | PDF adjuntos (máx. 10 MB) guardados en la base de datos, con tipo y quién lo subió | N:1 con `pedidos` y `usuarios` |
+| `movimientos_stock` | Historial de entradas/salidas manuales y consumos por expedición | N:1 con `productos` y `usuarios` |
+| `odoo_log` | Registro de cada operación con el ERP Odoo (tipo, referencia, éxito/fallo, detalle e id asignado en Odoo) | — |
+
+## Reglas de integridad
+
+- Claves foráneas en todas las relaciones, con `ON DELETE RESTRICT` para que no se borre nada con historial colgando.
+- `CHECK` en estados (`ck_ped_estado`, `ck_pag_estado`, `ck_fir_tipo`...), categorías y valores no negativos.
+- `UNIQUE` en usernames, códigos de producto, identificadores de bulto/palet y referencias de pago.
+
+## La reserva de stock
+
+`productos` lleva dos columnas y todas las transiciones son atómicas (una sola sentencia SQL condicionada dentro de una transacción, de modo que dos pedidos simultáneos no puedan reservar la misma unidad):
+
+- **Reservar** (al enviar a firma): `stock_reservado += n` si hay `stock_actual - stock_reservado >= n`.
+- **Liberar** (al cancelar): `stock_reservado -= n`.
+- **Descontar** (al expedir, una sola vez): `stock_actual -= n`, `stock_reservado -= n`.
+
+## Datos de prueba incluidos
+
+- 3 clínicas, 3 veterinarios, 2 auxiliares y 1 administrador.
+- 10 productos de las 3 categorías (MED, CLI, ALI) con stock variado (hay 3 bajo mínimo para ver el aviso).
+- 4 pedidos en distintos estados (borrador, pendiente de firma, en preparación y expedido con su histórico completo).
+- 3 destinos, movimientos de stock de ejemplo.
+
+### Cuentas de prueba
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| `admin` | `admin123` | ADMIN |
+| `dr.garcia` | `vet123` | VETERINARIO |
+| `dra.lopez` | `vet123` | VETERINARIO |
+| `dr.martin` | `vet123` | VETERINARIO |
+| `aux.sanroque` | `aux123` | AUXILIAR |
+| `aux.miravet` | `aux123` | AUXILIAR |
+
+## Notas para ampliaciones
+
+- **Integración con Odoo**: `productos`, `clinicas` y `pedidos` llevan columnas `odoo_id` (y fecha de sincronización) para enlazar cada fila con su homólogo en el ERP; `odoo_log` deja traza de cada envío.
+- Los informes del backend leen directamente estas tablas; para conectar **Power BI**, basta con conectarlo a MySQL y apuntar a `lineas_pedido`, `pedidos` y `productos`.
+- Los PDF se guardan en la base de datos por simplicidad del prototipo; en producción sería más habitual una carpeta o un almacenamiento de objetos.

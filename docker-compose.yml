@@ -1,0 +1,103 @@
+name: vetstock-manager
+
+services:
+  db-mysql:
+    build:
+      context: ./database
+    image: vetstock-manager-mysql:8.4
+    container_name: vetstock-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: vetstock
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  db-odoo:
+    image: postgres:16-alpine
+    container_name: vetstock-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: odoo
+      POSTGRES_PASSWORD: odoo
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odoo -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  odoo:
+    build:
+      context: ./docker/odoo
+    image: vetstock-manager-odoo:18.0
+    container_name: vetstock-odoo
+    restart: unless-stopped
+    depends_on:
+      db-odoo:
+        condition: service_healthy
+    environment:
+      HOST: db-odoo
+      PORT: 5432
+      USER: odoo
+      PASSWORD: odoo
+      ODOO_DB_NAME: vetstock_erp
+    ports:
+      - "8069:8069"
+    volumes:
+      - odoo-data:/var/lib/odoo
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8069/web/login >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 60
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+    container_name: vetstock-backend
+    restart: unless-stopped
+    depends_on:
+      db-mysql:
+        condition: service_healthy
+      odoo:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://db-mysql:3306/vetstock?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Europe/Madrid
+      DB_USER: root
+      DB_PASSWORD: root
+      ODOO_MODO: REAL
+      ODOO_URL: http://odoo:8069
+      ODOO_DB: vetstock_erp
+      ODOO_USUARIO: admin
+      ODOO_CLAVE: admin
+      PAGOS_TOKEN_NOTIFICACION: token-simulado-demo
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: vetstock-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:8080
+    ports:
+      - "5173:5173"
+
+volumes:
+  mysql-data:
+  postgres-data:
+  odoo-data:

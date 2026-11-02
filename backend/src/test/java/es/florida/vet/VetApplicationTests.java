@@ -1,10 +1,10 @@
-package com.vetstock;
+package es.florida.vet;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class BackendApplicationTests {
+class VetApplicationTests {
 
 	@Test
 	void contextLoads() {

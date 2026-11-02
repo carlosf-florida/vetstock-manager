@@ -1,0 +1,98 @@
+# VetStock Manager · Contrato de la API REST
+
+Autenticación por **sesión HTTP** (cookie `JSESSIONID`). Todas las rutas `/api/**` requieren sesión salvo las públicas. El backend comprueba rol y pertenencia a la clínica.
+
+Roles: `ADMIN` (almacén), `VETERINARIO` (responsable que puede confirmar), `AUXILIAR` (puede crear, pagar y confirmar pedidos de su clínica con su propia firma). La confirmación interna no es una firma certificada ni una prescripción veterinaria validada.
+
+HTTP: `200` OK · `201` creado · `400` regla de negocio/datos inválidos · `401` sin sesión · `403` sin permiso · `404` inexistente. Un fallo de integración Odoo puede devolver HTTP 200 con `exito: false`; la interfaz debe comprobar ambos.
+
+## Sesión
+
+| Método y ruta | Quién | Notas |
+|---|---|---|
+| `POST /api/auth/login` | público | FORMULARIO `application/x-www-form-urlencoded`, `username` y `password`; no JSON |
+| `POST /api/auth/logout` | sesión | Cierra la sesión |
+| `GET /api/auth/me` | sesión | Cuenta, rol y clínica |
+
+## Productos y stock
+
+- `GET /api/productos?busqueda=&categoria=&soloBajoStock=` y `GET /api/productos/{id}`: sesión; stock disponible calculado en backend.
+- `POST /api/productos`: ADMIN, `{codigo,nombre,descripcion,categoria,precio,stockInicial,stockMinimo}` → 201.
+- `PUT /api/productos/{id}` y `PATCH /api/productos/{id}/activar` o `/desactivar`: ADMIN.
+- `POST /api/stock/entrada` o `/salida`: ADMIN, `{productoId,cantidad,motivo}`. No permite retirar stock reservado.
+- `GET /api/stock/movimientos?productoId=`: ADMIN.
+
+## Clínicas y cuentas
+
+- `GET /api/clinicas` y `POST /api/clinicas` `{nombre,direccion,telefono}`: ADMIN.
+- `PUT /api/clinicas/{id}/responsable` `{veterinarioId}`: ADMIN; el veterinario debe pertenecer a la clínica.
+- `GET /api/veterinarios`: ADMIN ve todos; el cliente autenticado ve los de su clínica.
+- `POST /api/veterinarios` `{username,password,nombreCompleto,clinicaId,numeroColegiado,telefono}`: ADMIN.
+- `GET /api/auxiliares` y `POST /api/auxiliares` `{username,password,nombreCompleto,clinicaId}`: ADMIN.
+
+## Pedidos
+
+| Método y ruta | Quién | Reglas |
+|---|---|---|
+| `GET /api/pedidos?estado=&clinicaId=` | sesión | ADMIN todos; clientes solo su clínica |
+| `GET /api/pedidos/{id}` | sesión | Acceso a clínica comprobado |
+| `POST /api/pedidos` | ADMIN, VETERINARIO, AUXILIAR | `{observaciones,lineas:[{productoId,cantidad}]}`; responsable automático para clientes. ADMIN añade `clinicaId` y `veterinarioId`. Precio calculado por backend; 201 BORRADOR |
+| `PUT /api/pedidos/{id}/lineas` | creador o ADMIN | Solo BORRADOR |
+| `PATCH /api/pedidos/{id}/enviar-firma` | ADMIN o su clínica | Confirma el pedido, reserva stock, pasa a PENDIENTE_FIRMA |
+| `PATCH /api/pedidos/{id}/firmar` | responsable o auxiliar de la misma clínica | `{tipoFirma:"DIBUJO"/"IMAGEN",imagenBase64,nombreArchivo?,confirmacion:true,numeroColegiado?}`. Guarda identidad REAL del firmante, rol, fecha y copia inmutable; rechaza firma repetida |
+| `GET /api/pedidos/{id}/firma` | ADMIN o su clínica | Responsable y firmante separados; colegiado identificativo opcional |
+| `GET /api/pedidos/{id}/firma/imagen` | ADMIN o su clínica | Imagen PNG/JPG |
+| `PATCH /api/pedidos/{id}/cancelar` | ADMIN o su clínica | Libera reserva. Cliente no puede cancelar un pedido ya pagado; debe contactar con administración |
+| `GET /api/pagos?pedidoId={id}` | ADMIN o su clínica | Intentos de pago, del más reciente al más antiguo; un intento pendiente puede continuarse con su referencia |
+
+Firma con ratón o imagen PNG/JPG de hasta 5 MB. `numeroColegiado` es opcional, debe coincidir si se informa y **no sustituye a la firma ni autentica**. No se atribuye al veterinario una firma del auxiliar.
+
+`PedidoResponse` añade `estadoFirma` (PENDIENTE/FIRMADO), `estadoPago` (PENDIENTE/PAGADO), `firmanteNombre`, `firmanteRol`, `veterinarioUsername`, `numeroColegiadoResponsable`, `odooId`, `odooSincronizacionPendiente` y `odooUltimoError`.
+
+También devuelve `baseImponible`, `ivaPorcentaje`, `importeIva` y `moneda` (EUR). `total` es **base más IVA**, calculado por el backend. Los precios unitarios e importes de líneas son netos. Pedidos nuevos: IVA del 4% configurado para el prototipo, con redondeo por línea HALF_UP. Históricos anteriores a la migración 005: conservan 0% y el importe original. No se aceptan tasas ni importes calculados por el navegador. Ver `docs/iva-pedidos.md`.
+
+`FirmaResponse` incluye responsable (`veterinarioNombre`, `veterinarioUsername`) separado de `firmanteNombre`, `firmanteUsername`, `firmanteRol`, `numeroColegiado`.
+
+## Estados operativos, firma y pago
+
+```text
+BORRADOR → PENDIENTE_FIRMA
+  Firma primero: PENDIENTE_FIRMA → FIRMADO → pago → LISTO_PREPARAR
+  Pago primero:  PENDIENTE_FIRMA (pagado) → firma → LISTO_PREPARAR
+LISTO_PREPARAR → EN_PREPARACION → PREPARADO → EXPEDIDO
+```
+
+Pagar sin firmar no habilita preparación. Se mantienen reserva y estado PENDIENTE_FIRMA. Firma y pago completados habilitan preparación; el stock físico solo se descuenta al expedir. CANCELADO es final.
+
+## Pagos SIMULADOS
+
+- `POST /api/pagos/{pedidoId}/iniciar`: ADMIN o su clínica; PENDIENTE_FIRMA o FIRMADO y aún sin pago confirmado. 201 `{referencia,importe,moneda,proveedor:"SIMULADO",urlSimulada}`. `importe` incluye IVA; `urlSimulada` usa `/pago-simulado/{referencia}`. Si ya existe un intento pendiente, retomarlo en esa ruta sin crear otro. Reintento tras fallo con referencia nueva.
+- `POST /api/pagos/simulado/{referencia}` `{resultado:"CONFIRMADO"/"FALLADO"}`: público, simula el proveedor; no integración bancaria real.
+- `POST /api/pagos/notificacion`: público pero autenticado por `X-Notificacion-Token`; valida importe/moneda e idempotencia. CONFIRMADO registra pago; habilita preparación únicamente si existe firma y solicita exportación Odoo tras commit.
+- `GET /api/pagos?estado=`: ADMIN; con `pedidoId` también la propia clínica.
+
+## Odoo / ERP
+
+Rutas manuales solo ADMIN:
+
+| Ruta | Función |
+|---|---|
+| `GET /api/odoo/estado` | Modo y contadores |
+| `POST /api/odoo/probar-conexion` | Probar conexión |
+| `POST /api/odoo/sincronizar/productos` | Crea/actualiza textos por código, sin duplicar |
+| `POST /api/odoo/sincronizar/clientes` | Crea/actualiza contactos por ID guardado; acentos y responsable |
+| `POST /api/odoo/pedidos/{id}/exportar` | Crea o actualiza pedido PAGADO, incluso por firmar; permite reintento y conserva ID |
+| `GET /api/odoo/log` | Últimas 50 operaciones |
+
+El pago confirmado, la firma posterior y las transiciones de logística solicitan automáticamente actualizar Odoo después del commit local. El resumen del pedido en `sale.order.note` muestra «Por firmar»/«Firmado», responsable y firmante real/rol. No se confunde con el estado comercial de Odoo ni registra un cobro bancario real. Referencia `client_order_ref=VSM-{id}`. Fallar Odoo no deshace pagos o firmas; queda pendiente para reintento manual. Sin sincronización bidireccional ni reintentos periódicos aún.
+
+## Logística, documentos, informes y dashboard
+
+- ADMIN: `PATCH /api/pedidos/{id}/iniciar-preparacion`, `/preparar`, `/expedir`; exigen pago y firma.
+- ADMIN: `GET /api/bultos?pedidoId=&paletId=`, `POST /api/bultos` `{identificador,pedidoId}`, `PATCH /api/bultos/{id}/asignar-palet` `{paletId}`.
+- ADMIN: `GET /api/palets`, `POST /api/palets` `{identificador,destinoId}`, `GET /api/palets/{id}`.
+- ADMIN: `GET /api/destinos`, `POST /api/destinos` `{nombre}`.
+- ADMIN: `POST /api/pedidos/{id}/documentos`, multipart PDF ≤10 MB con `archivo` y `tipo` PEDIDO/FACTURA/ALBARAN.
+- ADMIN o su clínica: `GET /api/pedidos/{id}/documentos`, `GET /api/documentos/{id}/descargar`.
+- ADMIN: `GET /api/informes/productos-top?limite=10`, `/pedidos-por-mes`, `/stock-bajo`, `/pendientes`, `/tiempos`, `/destinos`.
+- Sesión: `GET /api/dashboard`, datos según rol.

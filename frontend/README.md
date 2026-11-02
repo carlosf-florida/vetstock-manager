@@ -18,13 +18,13 @@ En desarrollo, Vite hace de **proxy**: el navegador llama a `/api/...` en el 517
 | Ruta | Qué hace |
 |---|---|
 | `/login` | Inicio de sesión |
-| `/catalogo` | Catálogo con búsqueda por texto, filtros de categoría y aviso de stock bajo |
-| `/carrito` | Carrito (persistido en `localStorage`) y envío a firma con veterinario asignado |
-| `/pedidos` | Mis pedidos con filtros por estado |
-| `/pedidos/:id` | Detalle: cronología completa, líneas, firma, pago y documentos |
-| `/pedidos/:id/firmar` | Firma con dibujo táctil/ratón o subiendo una imagen |
-| `/pago-simulado/:referencia` | Pantalla del "banco" simulado (confirmar / fallar / reintento) |
-| `/acceso-no-permitido` | Error 403 amigable |
+| `/catalogo` | Catálogo con búsqueda, categoría, precio máximo y aviso de stock bajo |
+| `/carrito` | Carrito (guardado en `localStorage`) y creación del pedido; administración elige clínica y veterinario |
+| `/mis-pedidos` | Pedidos de la clínica con filtros por estado, firma y pago |
+| `/pedidos/:id` | Detalle: líneas, cronología, firma (pestaña «Firmar» del veterinario asignado), pago y documentos |
+| `/pago-simulado/:referencia` | Pasarela de pago de demostración (pago correcto, fallido y reintento) |
+
+Si un usuario sin rol de administración abre una ruta `/admin/...`, se muestra la página «Acceso no permitido».
 
 ### Administración (almacén)
 | Ruta | Qué hace |

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nuevo pedido - VetStock Manager</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+    <header class="cabecera" id="cabecera"></header>
+    <div id="mensajes" class="mensajes"></div>
+    <main class="contenedor">
+        <h1>Nuevo pedido</h1>
+
+        <div class="tarjeta">
+            <h2>1. Datos del pedido</h2>
+            <div class="formulario">
+                <div class="campo"><label for="veterinario">Veterinario *</label><select id="veterinario"></select></div>
+                <div class="campo"><label for="observaciones">Observaciones</label><input id="observaciones" maxlength="255"></div>
+            </div>
+        </div>
+
+        <div class="tarjeta">
+            <h2>2. Añadir productos</h2>
+            <div class="fila">
+                <div class="campo filtro" style="flex: 3;"><label for="producto">Producto</label><select id="producto"></select></div>
+                <div class="campo filtro"><label for="cantidad">Cantidad</label><input id="cantidad" type="number" min="1" value="1"></div>
+                <button class="btn" type="button" id="btnAnadir">Añadir</button>
+            </div>
+        </div>
+
+        <div class="tarjeta">
+            <h2>3. Líneas del pedido</h2>
+            <div class="tabla-scroll" id="tablaLineas"></div>
+            <div class="acciones" style="margin-top: 1rem;">
+                <button class="btn btn-principal" type="button" id="btnCrear">Crear pedido</button>
+                <a class="btn" href="pedidos.html">Cancelar</a>
+            </div>
+            <p class="nota">Al crear el pedido se reserva el stock y el veterinario podrá autorizarlo.</p>
+        </div>
+    </main>
+    <script src="js/comun.js"></script>
+    <script src="js/pedido-nuevo.js"></script>
+</body>
+</html>

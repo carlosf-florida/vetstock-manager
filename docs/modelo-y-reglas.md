@@ -25,6 +25,16 @@ completo con datos ficticios y se puede volver a ejecutar para reiniciar la
 demo. Las migraciones `002`–`007` actualizan bases antiguas sin borrar datos, y
 `008` crea las vistas para Power BI.
 
+## Veterinario responsable de cada clínica
+
+Cada clínica tiene un veterinario responsable que se configura en
+**Administración → Clínicas** (`PUT /api/clinicas/{id}/responsable`, solo ADMIN). Debe
+pertenecer a la misma clínica. Los pedidos que crean sus usuarios toman
+automáticamente a ese responsable como firmante asignado, y una clínica sin
+responsable no puede crear pedidos. Administración, al crear un pedido en nombre de
+una clínica, puede elegir otro veterinario de esa misma clínica. El nº de colegiado
+es opcional e identificativo: no autentica ni sustituye a la firma.
+
 ## Estados del pedido
 
 ```

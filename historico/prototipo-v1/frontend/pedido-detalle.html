@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Detalle del pedido - VetStock Manager</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+    <header class="cabecera" id="cabecera"></header>
+    <div id="mensajes" class="mensajes"></div>
+    <main class="contenedor">
+        <div class="barra-superior">
+            <h1 id="titulo">Pedido</h1>
+            <a class="btn" href="pedidos.html">← Volver a pedidos</a>
+        </div>
+
+        <div class="tarjeta" id="bloqueDatos"></div>
+
+        <div class="tarjeta">
+            <h2>Productos</h2>
+            <div class="tabla-scroll" id="tablaLineas"></div>
+        </div>
+
+        <div class="tarjeta">
+            <h2>Seguimiento</h2>
+            <ul class="linea-tiempo" id="seguimiento"></ul>
+        </div>
+
+        <div class="tarjeta oculto" id="bloqueAcciones">
+            <h2>Acciones</h2>
+            <div class="acciones" id="acciones"></div>
+        </div>
+    </main>
+    <script src="js/comun.js"></script>
+    <script src="js/pedido-detalle.js"></script>
+</body>
+</html>

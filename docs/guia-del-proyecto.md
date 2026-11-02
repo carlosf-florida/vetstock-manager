@@ -1,4 +1,6 @@
-# VetStock Manager · Arquitectura y patrones de diseño
+# Guía del proyecto VetStock Manager
+
+Qué hace cada parte del proyecto, cómo se conectan y qué archivos tocar para cada cambio.
 
 ## Visión general
 
@@ -79,9 +81,9 @@ Spring elige una según la propiedad `vetstock.odoo.modo`:
 `OdooSincronizacionService` orquesta el flujo y deja traza en la tabla
 `odoo_log`; las tablas `productos`, `clinicas` y `pedidos` guardan el
 `odoo_id` asignado por el ERP. Todo es **idempotente**: sincronizar dos veces
-no duplica productos ni clientes. Esta integración se ha verificado de extremo
-a extremo contra un servidor Odoo real (los pedidos exportados aparecen como
-pedidos de venta S00001, S00002... en el ERP).
+no duplica productos ni clientes. En una fase anterior se comprobó contra un
+servidor Odoo real (pedidos de venta S00001, S00002...); en la revisión actual
+solo se han ejecutado sus pruebas unitarias.
 
 Para levantar el servidor Odoo de pruebas: `bash scripts/arrancar_odoo.sh`.
 
@@ -105,7 +107,7 @@ sin pago: BORRADOR / PENDIENTE_FIRMA / FIRMADO → CANCELADO (manual o caducidad
 
 - **Reserva de stock**: al enviar a firma (atómica y concurrente, con actualización condicionada en SQL y transacción).
 - **Firma**: solo el veterinario asignado al pedido, con su propia identidad y copia inmutable. El colegiado opcional identifica al responsable; no autentica ni sustituye a la imagen o dibujo.
-- **Firma y pago completados**: ambos necesarios para `LISTO_PREPARAR`, independientemente de su orden.
+- **Orden firma → pago**: solo se paga un pedido FIRMADO; el pago confirmado lo deja en `LISTO_PREPARAR`.
 - **Descuento de stock físico**: solo al expedir, una sola vez.
 
 ## Seguridad

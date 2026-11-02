@@ -1,0 +1,132 @@
+/* VetStock Manager - estilos (diseño responsive sencillo) */
+:root {
+    --verde: #0f766e;
+    --verde-oscuro: #115e59;
+    --fondo: #f3f6f5;
+    --tarjeta: #ffffff;
+    --texto: #1f2937;
+    --gris: #6b7280;
+    --borde: #d9e2e0;
+    --rojo: #b91c1c;
+    --naranja: #b45309;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--fondo);
+    color: var(--texto);
+    line-height: 1.4;
+}
+
+h1 { font-size: 1.6rem; margin: 0 0 1rem; }
+h2 { font-size: 1.2rem; margin: 0 0 .8rem; }
+a { color: var(--verde); }
+
+/* ---------- Cabecera y menú ---------- */
+.cabecera { background: var(--verde); color: #fff; }
+.cabecera-interior {
+    max-width: 1100px; margin: 0 auto; padding: .7rem 1rem;
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.logo { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.15rem; }
+#menu { display: flex; gap: .3rem; flex: 1; flex-wrap: wrap; }
+#menu a { color: #fff; text-decoration: none; padding: .4rem .8rem; border-radius: 6px; }
+#menu a:hover, #menu a.activo { background: var(--verde-oscuro); }
+.usuario { display: flex; align-items: center; gap: .6rem; font-size: .9rem; }
+.btn-menu { display: none; background: none; border: 1px solid #fff; color: #fff; font-size: 1.2rem; border-radius: 6px; cursor: pointer; }
+
+/* ---------- Estructura ---------- */
+.contenedor { max-width: 1100px; margin: 1.2rem auto; padding: 0 1rem; }
+.tarjeta { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+.oculto { display: none !important; }
+.fila { display: flex; gap: .8rem; flex-wrap: wrap; align-items: end; }
+.barra-superior { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; }
+
+/* ---------- Tarjetas de resumen ---------- */
+.resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.dato { background: var(--tarjeta); border: 1px solid var(--borde); border-left: 5px solid var(--verde); border-radius: 10px; padding: 1rem; text-decoration: none; color: var(--texto); display: block; }
+.dato .numero { font-size: 2rem; font-weight: 700; }
+.dato .texto { color: var(--gris); font-size: .9rem; }
+.dato.aviso { border-left-color: var(--naranja); }
+
+/* ---------- Formularios ---------- */
+.formulario { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .8rem; }
+.campo { display: flex; flex-direction: column; gap: .25rem; }
+.campo.ancho { grid-column: 1 / -1; }
+label { font-size: .85rem; font-weight: 600; }
+input, select, textarea {
+    padding: .5rem .6rem; border: 1px solid var(--borde); border-radius: 6px;
+    font: inherit; background: #fff; width: 100%;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--verde); border-color: var(--verde); }
+.filtro { min-width: 170px; flex: 1; }
+.opciones { display: flex; gap: 1rem; align-items: center; padding: .5rem 0; }
+.opciones label { font-weight: 400; display: flex; gap: .3rem; align-items: center; }
+.opciones input { width: auto; }
+
+/* ---------- Botones ---------- */
+.btn {
+    display: inline-block; padding: .5rem 1rem; border: 1px solid var(--verde); background: #fff;
+    color: var(--verde); border-radius: 6px; cursor: pointer; font: inherit; text-decoration: none;
+}
+.btn:hover { background: #e6f2f0; }
+.btn-principal { background: var(--verde); color: #fff; }
+.btn-principal:hover { background: var(--verde-oscuro); }
+.btn-peligro { border-color: var(--rojo); color: var(--rojo); }
+.btn-peligro:hover { background: #fdecec; }
+.btn-secundario { border-color: #fff; background: transparent; color: #fff; padding: .3rem .7rem; }
+.btn-secundario:hover { background: var(--verde-oscuro); }
+.btn-pequeno { padding: .25rem .6rem; font-size: .85rem; }
+.acciones { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+/* ---------- Tablas ---------- */
+.tabla-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: #fff; }
+th, td { padding: .55rem .6rem; text-align: left; border-bottom: 1px solid var(--borde); font-size: .92rem; white-space: nowrap; }
+th { background: #eaf1ef; font-size: .82rem; text-transform: uppercase; letter-spacing: .03em; }
+td.num, th.num { text-align: right; }
+.vacio { color: var(--gris); padding: 1rem; text-align: center; }
+tr.fila-bajo td { background: #fff7ed; }
+
+/* ---------- Etiquetas de estado ---------- */
+.estado, .etiqueta { display: inline-block; padding: .15rem .6rem; border-radius: 999px; font-size: .8rem; font-weight: 600; }
+.estado-PENDIENTE_AUTORIZACION { background: #fef3c7; color: #92400e; }
+.estado-AUTORIZADO { background: #dbeafe; color: #1e40af; }
+.estado-PREPARADO { background: #ede9fe; color: #5b21b6; }
+.estado-ENVIADO { background: #dcfce7; color: #166534; }
+.estado-CANCELADO { background: #fee2e2; color: #991b1b; }
+.etiqueta-ok { background: #dcfce7; color: #166534; }
+.etiqueta-no { background: #e5e7eb; color: #374151; }
+.etiqueta-bajo { background: #ffedd5; color: #9a3412; }
+.etiqueta-ENTRADA { background: #dcfce7; color: #166534; }
+.etiqueta-SALIDA { background: #fee2e2; color: #991b1b; }
+
+/* ---------- Mensajes ---------- */
+.mensajes { position: fixed; top: 70px; right: 12px; left: 12px; max-width: 420px; margin-left: auto; z-index: 20; }
+.mensaje { padding: .7rem 1rem; border-radius: 8px; margin-bottom: .5rem; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.2); cursor: pointer; }
+.mensaje-exito { background: #15803d; }
+.mensaje-error { background: var(--rojo); }
+
+/* ---------- Detalle de pedido ---------- */
+.detalle { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: .6rem 1.5rem; }
+.detalle div span { display: block; color: var(--gris); font-size: .8rem; }
+.linea-tiempo { list-style: none; padding: 0; margin: 0; }
+.linea-tiempo li { padding: .3rem 0; border-bottom: 1px dashed var(--borde); }
+
+/* ---------- Login ---------- */
+.login { max-width: 380px; margin: 8vh auto; }
+.login h1 { text-align: center; color: var(--verde); }
+.nota { color: var(--gris); font-size: .8rem; }
+
+/* ---------- Móvil ---------- */
+@media (max-width: 700px) {
+    .btn-menu { display: block; margin-left: auto; }
+    #menu { display: none; width: 100%; flex-direction: column; }
+    #menu.abierto { display: flex; }
+    .usuario { width: 100%; justify-content: space-between; }
+    h1 { font-size: 1.3rem; }
+    .filtro { min-width: 100%; }
+}

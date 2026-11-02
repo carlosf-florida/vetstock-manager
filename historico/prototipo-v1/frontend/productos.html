@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Productos - VetStock Manager</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+    <header class="cabecera" id="cabecera"></header>
+    <div id="mensajes" class="mensajes"></div>
+    <main class="contenedor">
+        <div class="barra-superior">
+            <h1>Productos</h1>
+            <button class="btn btn-principal" id="btnNuevo">+ Nuevo producto</button>
+        </div>
+
+        <div class="tarjeta oculto" id="bloqueFormulario">
+            <h2 id="tituloFormulario">Nuevo producto</h2>
+            <form id="formProducto" class="formulario">
+                <div class="campo"><label for="codigo">Código *</label><input id="codigo" maxlength="20" required></div>
+                <div class="campo"><label for="nombre">Nombre *</label><input id="nombre" maxlength="100" required></div>
+                <div class="campo"><label for="categoria">Categoría *</label>
+                    <select id="categoria" required>
+                        <option value="MEDICAMENTO">Medicamento</option>
+                        <option value="MATERIAL_CLINICO">Material clínico</option>
+                        <option value="HIGIENE">Higiene</option>
+                        <option value="ALIMENTACION">Alimentación</option>
+                    </select></div>
+                <div class="campo"><label for="stockMinimo">Stock mínimo *</label><input id="stockMinimo" type="number" min="0" value="0" required></div>
+                <div class="campo" id="campoStockInicial"><label for="stockInicial">Stock inicial</label><input id="stockInicial" type="number" min="0" value="0"></div>
+                <div class="campo ancho"><label for="descripcion">Descripción</label><input id="descripcion" maxlength="255"></div>
+                <div class="acciones">
+                    <button class="btn btn-principal" type="submit">Guardar</button>
+                    <button class="btn" type="button" id="btnCancelar">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="tarjeta">
+            <div class="fila">
+                <div class="campo filtro"><label for="filtroBuscar">Buscar</label><input id="filtroBuscar" placeholder="Nombre o código"></div>
+                <div class="campo filtro"><label for="filtroCategoria">Categoría</label>
+                    <select id="filtroCategoria">
+                        <option value="">Todas</option>
+                        <option value="MEDICAMENTO">Medicamento</option>
+                        <option value="MATERIAL_CLINICO">Material clínico</option>
+                        <option value="HIGIENE">Higiene</option>
+                        <option value="ALIMENTACION">Alimentación</option>
+                    </select></div>
+                <div class="opciones"><label><input type="checkbox" id="filtroBajo"> Solo stock bajo</label></div>
+            </div>
+        </div>
+
+        <div class="tarjeta"><div class="tabla-scroll" id="tablaProductos"></div></div>
+    </main>
+    <script src="js/comun.js"></script>
+    <script src="js/productos.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pedidos - VetStock Manager</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+    <header class="cabecera" id="cabecera"></header>
+    <div id="mensajes" class="mensajes"></div>
+    <main class="contenedor">
+        <div class="barra-superior">
+            <h1 id="titulo">Pedidos</h1>
+            <a class="btn btn-principal solo-admin oculto" href="pedido-nuevo.html">+ Nuevo pedido</a>
+        </div>
+
+        <div class="tarjeta">
+            <div class="fila">
+                <div class="campo filtro"><label for="filtroEstado">Estado</label>
+                    <select id="filtroEstado">
+                        <option value="">Todos</option>
+                        <option value="PENDIENTE_AUTORIZACION">Pendiente de autorización</option>
+                        <option value="AUTORIZADO">Autorizado</option>
+                        <option value="PREPARADO">Preparado</option>
+                        <option value="ENVIADO">Enviado</option>
+                        <option value="CANCELADO">Cancelado</option>
+                    </select></div>
+                <div class="campo filtro solo-admin oculto"><label for="filtroVeterinario">Veterinario</label>
+                    <select id="filtroVeterinario"><option value="">Todos</option></select></div>
+            </div>
+        </div>
+
+        <div class="tarjeta"><div class="tabla-scroll" id="tablaPedidos"></div></div>
+    </main>
+    <script src="js/comun.js"></script>
+    <script src="js/pedidos.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inicio - VetStock Manager</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+    <header class="cabecera" id="cabecera"></header>
+    <div id="mensajes" class="mensajes"></div>
+    <main class="contenedor">
+        <h1 id="saludo">Inicio</h1>
+        <div class="resumen" id="tarjetas"></div>
+
+        <div class="tarjeta oculto" id="bloqueStockBajo">
+            <h2>Productos con stock bajo</h2>
+            <div class="tabla-scroll" id="tablaStockBajo"></div>
+        </div>
+
+        <div class="tarjeta">
+            <h2>Últimos pedidos</h2>
+            <div class="tabla-scroll" id="tablaUltimos"></div>
+        </div>
+    </main>
+    <script src="js/comun.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>

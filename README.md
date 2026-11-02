@@ -74,10 +74,10 @@ cd backend
 | [Power BI](docs/power-bi.md) | Vistas preparadas y cómo conectarse sin publicar datos |
 | [Pendientes](docs/pendientes.md) | Lo que falta y lo necesario para producción |
 | [Guion de defensa](docs/guion-defensa.md) | Demo de 10 minutos para clase |
-| [Arquitectura](docs/arquitectura.md) | Capas y patrones |
+| [Guía del proyecto](docs/guia-del-proyecto.md) | Módulos, capas, patrones y qué archivo tocar |
 | [Base de datos](database/README.md) | Scripts, migraciones y datos ficticios |
 | [Frontend](frontend/README.md) | Páginas y estructura |
-| [IVA](docs/iva-pedidos.md) · [Responsable de clínica](docs/responsable-clinica.md) | Decisiones anteriores que siguen vigentes |
+| [IVA](docs/iva-pedidos.md) | Decisión sobre el IVA del prototipo |
 | [Scrum (sprint 1)](docs/scrum/README.md) | Planificación inicial (histórico) |
 
 ## Estructura
@@ -87,8 +87,9 @@ backend/    API REST Spring Boot (paquete es.florida.vet)
 frontend/   React + Vite
 database/   migrations/001 (esquema + datos) … 008 (vistas Power BI)
 docs/       documentación del proyecto
-scripts/    arrancar_odoo.sh y scripts antiguos (histórico)
+scripts/    arrancar_odoo.sh (Odoo opcional)
+historico/  prototipo v1 (solo consulta, no se usa)
 docker/     imagen de Odoo (integración ERP opcional)
 ```
 
-La integración con **Odoo 18** es opcional (adaptador `ODOO_MODO=SIMULADO` por defecto); ver [docs/arquitectura.md](docs/arquitectura.md).
+La integración con **Odoo 18** es opcional (adaptador `ODOO_MODO=SIMULADO` por defecto); ver [docs/guia-del-proyecto.md](docs/guia-del-proyecto.md).

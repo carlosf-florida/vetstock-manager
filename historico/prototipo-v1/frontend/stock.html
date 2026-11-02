@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Stock - VetStock Manager</title>
+    <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+    <header class="cabecera" id="cabecera"></header>
+    <div id="mensajes" class="mensajes"></div>
+    <main class="contenedor">
+        <h1>Control de stock</h1>
+
+        <div class="tarjeta">
+            <h2>Registrar movimiento</h2>
+            <form id="formMovimiento" class="formulario">
+                <div class="campo"><label for="producto">Producto *</label><select id="producto" required></select></div>
+                <div class="campo"><label for="cantidad">Cantidad *</label><input id="cantidad" type="number" min="1" required></div>
+                <div class="campo"><label for="motivo">Motivo *</label><input id="motivo" maxlength="150" placeholder="Ej.: Compra a proveedor, producto caducado..." required></div>
+                <div class="campo ancho">
+                    <div class="opciones">
+                        <label><input type="radio" name="tipo" value="entrada" checked> Entrada (llega mercancía)</label>
+                        <label><input type="radio" name="tipo" value="salida"> Salida (merma o ajuste)</label>
+                    </div>
+                </div>
+                <div class="acciones"><button class="btn btn-principal" type="submit">Registrar</button></div>
+            </form>
+            <p class="nota">Las salidas por envío de pedidos se registran solas al marcar el pedido como enviado.</p>
+        </div>
+
+        <div class="tarjeta">
+            <div class="fila">
+                <div class="campo filtro"><label for="filtroProducto">Historial de movimientos de</label>
+                    <select id="filtroProducto"><option value="">Todos los productos</option></select></div>
+            </div>
+        </div>
+
+        <div class="tarjeta"><div class="tabla-scroll" id="tablaMovimientos"></div></div>
+    </main>
+    <script src="js/comun.js"></script>
+    <script src="js/stock.js"></script>
+</body>
+</html>

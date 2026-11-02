@@ -14,7 +14,7 @@ Actualizado el 2 de noviembre de 2026. Entrega: finales de febrero de 2027.
 | Media | Marcar un palet como expedido desde la interfaz (el endpoint existe: `PATCH /api/palets/{id}/expedir`) |
 | Media | Informe Power BI en Desktop sobre las vistas, si hay acceso a Power BI |
 | Baja | Paginación en el servidor si crecen mucho los pedidos (ahora la tabla pagina en el cliente) |
-| Baja | Actualizar `backend/README.md` y `docs/arquitectura.md` si se cambian más reglas |
+| Baja | Actualizar `backend/README.md` y `docs/guia-del-proyecto.md` si se cambian más reglas |
 
 ## Decisiones que conviene confirmar
 

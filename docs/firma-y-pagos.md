@@ -75,3 +75,9 @@ Un pago confirmado solicita exportar el pedido a Odoo después del commit
 (adaptador `ODOO_MODO=REAL`; por defecto `SIMULADO`). Si Odoo falla, el pago no se
 deshace y el pedido queda marcado para reintentar desde administración. Exportar a
 Odoo no registra cobros ni facturas fiscales.
+
+Sincronización de clínicas y productos: el contacto (`res.partner`) se actualiza por
+`clinicas.odoo_id`, sin crear duplicados por corregir un acento, y conserva las notas
+manuales; si el ID vinculado no existe, falla de forma explícita. Los productos se
+actualizan por `default_code` sin alterar impuestos ni tarifas, y los pedidos usan
+`client_order_ref = VSM-{id}` para poder reintentar sin duplicar.

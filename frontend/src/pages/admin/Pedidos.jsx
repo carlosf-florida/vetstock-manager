@@ -5,7 +5,7 @@ import { dinero, fechaCorta, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO, totalPedido }
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox } from '../../components/Spinner.jsx'
 import { BadgeEstadoPedido } from '../../components/Badges.jsx'
-import { CLASIFICACIONES, infoEstadoFirma, infoEstadoPago } from '../../pedidoEstado.js'
+import { CLASIFICACIONES, SITUACIONES, infoEstadoFirma, infoEstadoPago } from '../../pedidoEstado.js'
 
 function Etiqueta({ info }) {
   return <span className={`etiqueta ${info.clase}`}>{info.texto}</span>
@@ -21,6 +21,8 @@ export default function AdminPedidos() {
   const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
   // Vista por firma y pago: la clasificación la calcula el backend (pedido.autorizacion)
   const [vista, setVista] = useState(paramsUrl.get('vista') || '')
+  // Desde las tarjetas del resumen: ?situacion=FIRMA | PAGO | LISTO (misma regla que el contador)
+  const [situacion, setSituacion] = useState(paramsUrl.get('situacion') || '')
   const [clinicaId, setClinicaId] = useState('')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
@@ -50,7 +52,8 @@ export default function AdminPedidos() {
   // Filtro por fecha de creación: las fechas llegan en ISO y se compara el día (AAAA-MM-DD)
   const contar = (clave) => (pedidos || []).filter((p) => p.autorizacion?.clasificacion === clave).length
 
-  const filasFiltradas = (pedidos || []).filter((p) => !vista || p.autorizacion?.clasificacion === vista).filter((p) => {
+  const filasFiltradas = (pedidos || []).filter((p) => !vista || p.autorizacion?.clasificacion === vista)
+    .filter((p) => !situacion || (SITUACIONES[situacion]?.cumple(p) ?? true)).filter((p) => {
     const dia = (p.fechaCreacion || '').slice(0, 10)
     return (!desde || dia >= desde) && (!hasta || dia <= hasta)
   })
@@ -75,6 +78,12 @@ export default function AdminPedidos() {
           </button>
         ))}
       </div>
+      {situacion && SITUACIONES[situacion] && (
+        <p className="caja-aviso">
+          Mostrando: <strong>{SITUACIONES[situacion].texto}</strong>{' '}
+          <button type="button" className="btn btn-mini btn-secundario" onClick={() => setSituacion('')}>Quitar filtro</button>
+        </p>
+      )}
       <p className="texto-suave">
         {vista === 'PAGADO_PENDIENTE_FIRMA' && 'Pago completo confirmado, pero falta la firma válida del veterinario asignado: no se pueden preparar. La columna «Firma» indica qué falta.'}
         {vista === 'FIRMADO_Y_PAGADO' && 'Firma válida del veterinario asignado y pago completo. Solo los marcados «Listo para preparar» pueden empezar la preparación.'}

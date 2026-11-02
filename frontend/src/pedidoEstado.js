@@ -37,6 +37,23 @@ export function necesitaFirma(pedido) {
   return ['PENDIENTE_FIRMA', 'FIRMADO', 'LISTO_PREPARAR'].includes(pedido?.estado) && !firmaValida(pedido)
 }
 
+// Enviado a firma (firmado o no) y sin pago confirmado
+export function necesitaPago(pedido) {
+  return ['PENDIENTE_FIRMA', 'FIRMADO'].includes(pedido?.estado) && !pedido?.fechaPago
+}
+
+export function enPreparacion(pedido) {
+  return ['EN_PREPARACION', 'PREPARADO'].includes(pedido?.estado)
+}
+
+/** Situaciones del inicio y de Mis pedidos (?situacion=...): misma regla en los dos sitios. */
+export const SITUACIONES = {
+  FIRMA: { texto: 'Falta la firma del veterinario', cumple: (p) => necesitaFirma(p) },
+  PAGO: { texto: 'Falta el pago', cumple: (p) => necesitaPago(p) },
+  PREPARACION: { texto: 'En preparación', cumple: (p) => enPreparacion(p) },
+  LISTO: { texto: 'Listo para preparar (firma válida y pago)', cumple: (p) => Boolean(p?.autorizacion?.listoParaPreparar) },
+}
+
 export const CLASIFICACIONES = {
   PAGADO_PENDIENTE_FIRMA: 'Pagados pendientes de firma',
   FIRMADO_Y_PAGADO: 'Firmados y pagados',

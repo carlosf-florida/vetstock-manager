@@ -30,9 +30,10 @@ export default function AdminDashboard() {
   if (!datos) return <SinDatos mensaje="No se ha podido cargar el resumen." />
 
   const tarjetas = [
-    { etiqueta: 'Pendientes de firma', valor: datos.pendientesFirma, icono: '✍️', enlace: '/admin/pedidos?estado=PENDIENTE_FIRMA' },
-    { etiqueta: 'Pendientes de pago', valor: datos.pendientesPago, icono: '💳', enlace: '/admin/pedidos?estado=FIRMADO' },
-    { etiqueta: 'Listos para preparar', valor: datos.listosPreparar, icono: '✅', enlace: '/admin/pedidos?estado=LISTO_PREPARAR' },
+    // Cada tarjeta abre la lista con el mismo criterio con el que se cuenta en el backend
+    { etiqueta: 'Pendientes de firma', valor: datos.pendientesFirma, icono: '✍️', enlace: '/admin/pedidos?situacion=FIRMA' },
+    { etiqueta: 'Pendientes de pago', valor: datos.pendientesPago, icono: '💳', enlace: '/admin/pedidos?situacion=PAGO' },
+    { etiqueta: 'Listos para preparar', valor: datos.listosPreparar, icono: '✅', enlace: '/admin/pedidos?situacion=LISTO' },
     { etiqueta: 'En preparación', valor: datos.enPreparacion, icono: '🛠️', enlace: '/admin/pedidos?estado=EN_PREPARACION' },
     { etiqueta: 'Preparados', valor: datos.preparados, icono: '📦', enlace: '/admin/pedidos?estado=PREPARADO' },
     { etiqueta: 'Expedidos', valor: datos.expedidos, icono: '🚚', enlace: '/admin/pedidos?estado=EXPEDIDO' },

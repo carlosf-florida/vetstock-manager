@@ -4,6 +4,7 @@ import es.florida.vet.dto.PedidoResponse;
 import es.florida.vet.dto.ProductoResponse;
 import es.florida.vet.entity.Pedido;
 import es.florida.vet.enums.EstadoPedido;
+import es.florida.vet.repository.PagoRepository;
 import es.florida.vet.repository.PedidoRepository;
 import es.florida.vet.repository.ProductoRepository;
 import org.springframework.stereotype.Service;
@@ -20,13 +21,16 @@ public class DashboardService {
     private final PedidoRepository pedidoRepository;
     private final ProductoRepository productoRepository;
     private final SesionService sesionService;
+    private final PagoRepository pagoRepository;
 
     public DashboardService(PedidoRepository pedidoRepository,
                             ProductoRepository productoRepository,
-                            SesionService sesionService) {
+                            SesionService sesionService,
+                            PagoRepository pagoRepository) {
         this.pedidoRepository = pedidoRepository;
         this.productoRepository = productoRepository;
         this.sesionService = sesionService;
+        this.pagoRepository = pagoRepository;
     }
 
     @Transactional(readOnly = true)
@@ -37,7 +41,12 @@ public class DashboardService {
             List<Pedido> ultimos = pedidoRepository.findAllByOrderByFechaCreacionDesc();
             datos.put("pendientesFirma", ultimos.stream().filter(DashboardService::necesitaFirma).count());
             datos.put("pendientesPago", ultimos.stream().filter(DashboardService::pagoPendiente).count());
-            datos.put("listosPreparar", pedidoRepository.countByEstado(EstadoPedido.LISTO_PREPARAR));
+            // Listo de verdad = firma válida y pago completo (mismo cálculo que la lista de pedidos)
+            Map<Long, java.math.BigDecimal> confirmados = new java.util.HashMap<>();
+            pagoRepository.findByEstado(es.florida.vet.enums.EstadoPago.CONFIRMADO)
+                    .forEach(pago -> confirmados.put(pago.getPedido().getId(), pago.getImporte()));
+            datos.put("listosPreparar", ultimos.stream()
+                    .filter(p -> AutorizacionPedido.de(p, confirmados.get(p.getId())).listoParaPreparar()).count());
             datos.put("enPreparacion", pedidoRepository.countByEstado(EstadoPedido.EN_PREPARACION));
             datos.put("preparados", pedidoRepository.countByEstado(EstadoPedido.PREPARADO));
             datos.put("expedidos", pedidoRepository.countByEstado(EstadoPedido.EXPEDIDO));

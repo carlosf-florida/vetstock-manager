@@ -7,7 +7,7 @@ import { totalPedido } from '../format.js'
 import Tabla from '../components/Tabla.jsx'
 import { BadgeEstadoPedido } from '../components/Badges.jsx'
 import { ErrorBox } from '../components/Spinner.jsx'
-import { infoEstadoFirma, infoEstadoPago, necesitaFirma, puedeFirmarPedido } from '../pedidoEstado.js'
+import { infoEstadoFirma, infoEstadoPago, necesitaFirma, puedeFirmarPedido, SITUACIONES } from '../pedidoEstado.js'
 
 export default function MisPedidos() {
   const { usuario } = useAuth()
@@ -16,9 +16,9 @@ export default function MisPedidos() {
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [paramsUrl] = useSearchParams()
-  // Desde el inicio se llega con ?firma=PENDIENTE (falta la firma válida) o ?estado=FIRMADO (pendiente de pago)
+  // Desde las tarjetas del inicio se llega con ?situacion=FIRMA | PAGO | PREPARACION
   const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
-  const [pendienteFirma, setPendienteFirma] = useState(paramsUrl.get('firma') || '')
+  const [situacion, setSituacion] = useState(paramsUrl.get('situacion') || '')
 
   async function cargar() {
     setCargando(true)
@@ -98,14 +98,14 @@ export default function MisPedidos() {
           filtros={[
             { etiqueta: 'Estado', valor: estado, setValor: setEstado, opciones: opcionesEstado, cumple: (p, v) => p.estado === v },
             {
-              etiqueta: 'Firma',
-              valor: pendienteFirma,
-              setValor: setPendienteFirma,
+              etiqueta: 'Situación',
+              valor: situacion,
+              setValor: setSituacion,
               opciones: [
                 { value: '', label: 'Todas' },
-                { value: 'PENDIENTE', label: 'Falta la firma del veterinario' },
+                ...Object.entries(SITUACIONES).map(([clave, s]) => ({ value: clave, label: s.texto })),
               ],
-              cumple: (p) => necesitaFirma(p),
+              cumple: (p, v) => SITUACIONES[v]?.cumple(p) ?? true,
             },
           ]}
           textoVacio="Todavía no tienes pedidos, o ninguno coincide con el filtro."

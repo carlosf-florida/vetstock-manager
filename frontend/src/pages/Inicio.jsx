@@ -6,6 +6,7 @@ import { dinero, estimarImportesPedido, fechaCorta } from '../format.js'
 import { EVENTO_CARRITO, anadirAlCarrito, leerCarrito, unidadesCarrito } from '../carrito.js'
 import { useNotificaciones } from '../components/Notificaciones.jsx'
 import { BadgeEstadoPedido } from '../components/Badges.jsx'
+import { SITUACIONES } from '../pedidoEstado.js'
 import { ErrorBox, Spinner } from '../components/Spinner.jsx'
 
 const MAX_HABITUALES = 4
@@ -18,7 +19,7 @@ const MAX_HABITUALES = 4
 export default function Inicio() {
   const { usuario } = useAuth()
   const { notificar } = useNotificaciones()
-  const [resumen, setResumen] = useState(null)
+  const [pedidos, setPedidos] = useState([])
   const [habituales, setHabituales] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
@@ -35,13 +36,11 @@ export default function Inicio() {
     setCargando(true)
     setError(null)
     try {
-      const [datos, pedidos, productos] = await Promise.all([
-        api.get('/api/dashboard'),
-        api.get('/api/pedidos'),
-        api.get('/api/productos'),
-      ])
-      setResumen(datos)
-      setHabituales(productosHabituales(pedidos, productos))
+      // Las tarjetas se calculan con la MISMA lista y las mismas reglas que «Mis pedidos»,
+      // así el número de cada tarjeta coincide con lo que se ve al pulsarla.
+      const [lista, productos] = await Promise.all([api.get('/api/pedidos'), api.get('/api/productos')])
+      setPedidos(Array.isArray(lista) ? lista : [])
+      setHabituales(productosHabituales(lista, productos))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -98,26 +97,26 @@ export default function Inicio() {
 
         <TarjetaContador
           titulo="Pendientes de firma"
-          valor={resumen?.pendientesFirma}
+          valor={pedidos.filter(SITUACIONES.FIRMA.cumple).length}
           cargando={cargando}
           explicacion={usuario?.rol === 'VETERINARIO'
             ? 'Pedidos de tu clínica que necesitan tu firma, los haya hecho quien los haya hecho.'
             : 'Pedidos que esperan la firma del veterinario responsable.'}
-          enlace="/mis-pedidos?firma=PENDIENTE"
+          enlace="/mis-pedidos?situacion=FIRMA"
         />
         <TarjetaContador
           titulo="Pendientes de pago"
-          valor={resumen?.pendientesPago}
+          valor={pedidos.filter(SITUACIONES.PAGO.cumple).length}
           cargando={cargando}
-          explicacion="Pedidos ya firmados que falta pagar para que se preparen."
-          enlace="/mis-pedidos?estado=FIRMADO"
+          explicacion="Pedidos enviados a firma que aún no están pagados (firmados o no)."
+          enlace="/mis-pedidos?situacion=PAGO"
         />
         <TarjetaContador
           titulo="En preparación"
-          valor={resumen?.enCamino}
+          valor={pedidos.filter(SITUACIONES.PREPARACION.cumple).length}
           cargando={cargando}
           explicacion="Pedidos firmados y pagados que el almacén está preparando."
-          enlace="/mis-pedidos"
+          enlace="/mis-pedidos?situacion=PREPARACION"
         />
       </div>
 
@@ -128,9 +127,9 @@ export default function Inicio() {
         <div className="inicio-columnas">
           <article className="tarjeta">
             <h2>Últimos pedidos</h2>
-            {resumen?.ultimosPedidos?.length > 0 ? (
+            {pedidos.length > 0 ? (
               <ul className="lista-simple">
-                {resumen.ultimosPedidos.slice(0, 3).map((p) => (
+                {pedidos.slice(0, 3).map((p) => (
                   <li key={p.id}>
                     <Link to={`/pedidos/${p.id}`}>Pedido #{p.id}</Link>
                     <span className="texto-suave">{fechaCorta(p.fechaCreacion)}</span>

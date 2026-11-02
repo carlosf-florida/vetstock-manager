@@ -11,7 +11,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: vetstock
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -71,7 +71,7 @@ services:
       db-mysql:
         condition: service_healthy
       odoo:
-        condition: service_healthy
+        condition: service_started
     environment:
       DB_URL: jdbc:mysql://db-mysql:3306/vetstock?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Europe/Madrid
       DB_USER: root

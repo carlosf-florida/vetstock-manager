@@ -26,7 +26,7 @@ Tecnologías: Spring Boot 4 (Java 21), MySQL, React + Vite y pruebas JUnit.
 Admin → Pedidos: «Pagados pendientes de firma», «Firmados y pagados» y «Otros pendientes».
 Explicar: «Pagado no basta: hace falta la firma VÁLIDA del veterinario asignado sobre el
 contenido actual. Lo decide una regla fija en el backend (`AutorizacionPedido`), no una IA.»
-En Odoo → Ventas → Pedidos → Favoritos aparecen las mismas dos listas.
+En Odoo → Sales → Orders aparecen las mismas dos listas como entradas de menú.
 
 ## 3. Seguridad y reglas (2 min)
 

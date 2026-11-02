@@ -195,11 +195,52 @@ public class OdooJsonRpcConnector implements OdooConnector {
             }
         }
         String abiertos = "('x_vetstock_estado', 'not in', ['CANCELADO', 'BORRADOR'])";
-        asegurarFiltro(FILTRO_PENDIENTES_FIRMA,
-                "[('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', False), " + abiertos + "]");
-        asegurarFiltro(FILTRO_FIRMADOS_PAGADOS,
-                "[('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', True), " + abiertos + "]");
+        String pendientes = "[('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', False), " + abiertos + "]";
+        String firmados = "[('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', True), " + abiertos + "]";
+        asegurarFiltro(FILTRO_PENDIENTES_FIRMA, pendientes);
+        asegurarFiltro(FILTRO_FIRMADOS_PAGADOS, firmados);
+        // Accesos directos en Ventas → Pedidos. El menú «Pedidos» estándar oculta los presupuestos
+        // (estado borrador), que es como llegan los pedidos de VetStock: por eso tienen su propia acción.
+        int vista = asegurarVistaClasificacion();
+        asegurarMenu(FILTRO_PENDIENTES_FIRMA, pendientes, vista, 90);
+        asegurarMenu(FILTRO_FIRMADOS_PAGADOS, firmados, vista, 91);
         clasificacionPreparada = true;
+    }
+
+    private static final String NOMBRE_VISTA = "vetstock.sale.order.clasificacion.list";
+
+    /** Lista propia con las columnas de VetStock (no modifica las vistas estándar de Ventas). */
+    private int asegurarVistaClasificacion() {
+        JsonNode existentes = buscar("ir.ui.view", array().add(array().add("name").add("=").add(NOMBRE_VISTA)));
+        if (!existentes.isEmpty()) return existentes.get(0).asInt();
+        String arch = "<list string=\"Pedidos VetStock\" create=\"0\">"
+                + "<field name=\"name\"/><field name=\"client_order_ref\" string=\"Pedido VetStock\"/>"
+                + "<field name=\"partner_id\"/><field name=\"date_order\"/>"
+                + "<field name=\"amount_total\" sum=\"Total\"/>"
+                + "<field name=\"x_vetstock_pagado\" string=\"Pagado\"/>"
+                + "<field name=\"x_vetstock_firma_valida\" string=\"Firma válida\"/>"
+                + "<field name=\"x_vetstock_estado\" string=\"Estado VetStock\"/>"
+                + "<field name=\"state\" widget=\"badge\"/></list>";
+        ObjectNode valores = json.createObjectNode().put("name", NOMBRE_VISTA).put("model", "sale.order")
+                .put("type", "list").put("arch", arch);
+        return crear("ir.ui.view", valores);
+    }
+
+    /** Acción + entrada de menú bajo Ventas → Pedidos con el mismo dominio que el favorito. */
+    private void asegurarMenu(String nombre, String dominioTexto, int vistaId, int secuencia) {
+        if (!buscar("ir.ui.menu", array().add(array().add("name").add("=").add(nombre))).isEmpty()) return;
+        JsonNode padre = buscar("ir.model.data", array()
+                .add(array().add("module").add("=").add("sale"))
+                .add(array().add("name").add("=").add("sale_order_menu")));
+        if (padre.isEmpty()) return; // sin el menú estándar de Ventas, quedan solo los favoritos
+        int idPadre = leerRegistro("ir.model.data", padre.get(0).asInt(), "res_id").path("res_id").asInt();
+        ObjectNode accion = json.createObjectNode().put("name", nombre).put("type", "ir.actions.act_window")
+                .put("res_model", "sale.order").put("view_mode", "list,form").put("view_id", vistaId)
+                .put("domain", dominioTexto).put("context", "{'create': False}");
+        int idAccion = crear("ir.actions.act_window", accion);
+        ObjectNode menu = json.createObjectNode().put("name", nombre).put("parent_id", idPadre)
+                .put("action", "ir.actions.act_window," + idAccion).put("sequence", secuencia);
+        crear("ir.ui.menu", menu);
     }
 
     /** Filtro favorito COMPARTIDO (sin usuario): lo ven todos los usuarios de Ventas. */

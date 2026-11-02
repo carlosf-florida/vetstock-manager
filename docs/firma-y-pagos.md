@@ -86,8 +86,14 @@ Por eso VetStock **copia** su clasificación en tres campos propios de `sale.ord
 | `x_vetstock_firma_valida` | Firma válida del veterinario asignado |
 | `x_vetstock_estado` | Estado logístico en VetStock |
 
-Y crea dos **filtros favoritos compartidos** en Ventas → Pedidos (desplegable de filtros →
-Favoritos): «Pagados pendientes de firma (VetStock)» y «Firmados y pagados (VetStock)».
+Y crea **dos entradas de menú** en **Sales → Orders** (Ventas → Pedidos): «Pagados pendientes
+de firma (VetStock)» y «Firmados y pagados (VetStock)», con una lista propia que muestra
+*Pedido VetStock*, *Pagado*, *Firma válida* y *Estado VetStock*. También deja las mismas
+listas como **filtros favoritos compartidos** (flecha ▼ del buscador → Favoritos).
+
+> Ojo: el menú estándar **Sales → Orders → Orders** solo enseña pedidos *confirmados* y oculta
+> los presupuestos, que es como llegan los pedidos de VetStock (VetStock no confirma pedidos en
+> Odoo). Por eso las entradas de VetStock tienen su propia acción, sin ese filtro.
 No se cambia el estado comercial (`state`) ni se duplican pedidos. Los valores se
 actualizan en cada sincronización (pago, firma, rechazo, logística). Solo se exportan
 pedidos pagados, así que «Otros pendientes» solo existe en VetStock.

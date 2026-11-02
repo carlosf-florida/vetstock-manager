@@ -67,7 +67,7 @@ public class SecurityConfig {
                 // Subir documentos: solo el almacén
                 .requestMatchers(HttpMethod.POST, "/api/pedidos/*/documentos").hasRole("ADMIN")
                 // Firma: solo veterinarios. El servicio comprueba que sea el asignado al pedido.
-                .requestMatchers(HttpMethod.PATCH, "/api/pedidos/*/firmar").hasRole("VETERINARIO")
+                .requestMatchers(HttpMethod.PATCH, "/api/pedidos/*/firmar", "/api/pedidos/*/rechazar").hasRole("VETERINARIO")
                 // El resto de la API: cualquier usuario con sesión iniciada
                 .requestMatchers("/api/**").authenticated()
                 // Archivos estáticos (build de React si se copia en el backend): públicos

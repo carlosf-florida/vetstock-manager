@@ -94,6 +94,12 @@ public class PedidoController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM).body(imagen);
     }
 
+    /** El veterinario asignado rechaza un pedido que no ha firmado. Cuerpo: {"motivo": "..."} */
+    @PatchMapping("/{id}/rechazar")
+    public PedidoResponse rechazar(@PathVariable Long id, @RequestBody java.util.Map<String, String> cuerpo, Authentication auth) {
+        return pedidoService.rechazar(id, cuerpo.get("motivo"), auth.getName());
+    }
+
     @PatchMapping("/{id}/cancelar")
     public PedidoResponse cancelar(@PathVariable Long id, Authentication auth) {
         return pedidoService.cancelar(id, auth.getName(), AuthUtil.esAdmin(auth));

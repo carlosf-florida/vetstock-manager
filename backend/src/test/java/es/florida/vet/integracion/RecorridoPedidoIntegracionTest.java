@@ -54,10 +54,10 @@ class RecorridoPedidoIntegracionTest extends IntegracionBase {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("PENDIENTE_FIRMA"));
         assertEquals(antes.get("stockReservado").asInt() + 5, producto(1).get("stockReservado").asInt());
 
-        // 3. Ni el auxiliar ni otro veterinario de la clínica pueden firmar; nadie puede pagar ni preparar aún
+        // 3. Ni el auxiliar ni otro veterinario de la clínica pueden firmar; nadie puede preparar aún
+        //    (pagar antes de firmar está permitido: se prueba en ClasificacionFirmaPagoIntegracionTest)
         patchJson(aux, "/api/pedidos/" + id + "/firmar", firmaDibujo()).andExpect(status().isForbidden());
         patchJson(draLopez(), "/api/pedidos/" + id + "/firmar", firmaDibujo()).andExpect(status().isForbidden());
-        postJson(aux, "/api/pagos/" + id + "/iniciar", "{}").andExpect(status().isBadRequest());
         patchJson(admin, "/api/pedidos/" + id + "/iniciar-preparacion", null).andExpect(status().isBadRequest());
 
         // 4. El veterinario asignado revisa y firma: queda FIRMADO (pendiente de pago) y bloqueado

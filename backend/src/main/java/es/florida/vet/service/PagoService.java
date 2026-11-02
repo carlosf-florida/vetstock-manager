@@ -35,13 +35,13 @@ import java.util.UUID;
  * IMPORTANTE: este proveedor NO es una integración bancaria real y no mueve
  * dinero. Imita el funcionamiento de pasarelas como Redsys:
  *
- *   1) iniciar()      -> solo para pedidos FIRMADOS; crea el intento de pago
+ *   1) iniciar()      -> pedido enviado a firma (firmado o aún sin firmar); crea el intento de pago
  *                        con referencia única y el importe calculado en el servidor
  *   2) el proveedor   -> llama a notificacion() (webhook) con el cuerpo firmado
  *                        con HMAC-SHA256 y una clave secreta compartida
  *   3) notificacion() -> verifica la firma, bloquea el pago, valida pedido,
  *                        importe y moneda, y es IDEMPOTENTE
- *   4) CONFIRMADO     -> el pedido pasa a LISTO_PREPARAR
+ *   4) CONFIRMADO     -> pedido pagado; pasa a LISTO_PREPARAR solo si ya tiene firma válida
  *
  * El backend NUNCA se fía de la pantalla de éxito del navegador y no
  * almacena datos sensibles de pago (números de tarjeta, etc.).
@@ -74,7 +74,7 @@ public class PagoService {
         this.sesionService = sesionService;
     }
 
-    /** Inicia el pago de un pedido firmado. Tras un fallo se reintenta con una referencia nueva. */
+    /** Inicia el pago de un pedido enviado a firma (firmado o no). Tras un fallo se reintenta con referencia nueva. */
     @Transactional
     public PagoIniciadoResponse iniciar(Long pedidoId, String username, boolean esAdmin) {
         if (esAdmin) {
@@ -88,8 +88,8 @@ public class PagoService {
         if (pedido.getFechaPago() != null) {
             throw new ReglaNegocioException("El pedido ya está pagado");
         }
-        if (pedido.getEstado() != EstadoPedido.FIRMADO || pedido.getFechaFirma() == null) {
-            throw new ReglaNegocioException("El veterinario asignado debe firmar el pedido antes de pagarlo");
+        if (pedido.getEstado() != EstadoPedido.PENDIENTE_FIRMA && pedido.getEstado() != EstadoPedido.FIRMADO) {
+            throw new ReglaNegocioException("Solo se puede pagar un pedido enviado a firma que aún no está pagado");
         }
         // Si ya hay un pago en curso se devuelve el mismo: así no se crean dos cobros
         Pago pendiente = pagoRepository.findByPedidoIdOrderByFechaInicioDesc(pedidoId).stream()
@@ -167,9 +167,9 @@ public class PagoService {
         switch (datos.resultado()) {
             case "CONFIRMADO" -> {
                 // Se comprueba aquí y no dentro de marcarPagado para no dejar la transacción marcada para rollback
-                if (pedido.getEstado() != EstadoPedido.FIRMADO || pedido.getFechaFirma() == null) {
+                if (pedido.getEstado() != EstadoPedido.PENDIENTE_FIRMA && pedido.getEstado() != EstadoPedido.FIRMADO) {
                     marcarResultado(pago, EstadoPago.FALLADO);
-                    throw new ReglaNegocioException("El pedido no está firmado; el pago no se puede aplicar");
+                    throw new ReglaNegocioException("El pedido no admite el pago en su estado actual");
                 }
                 marcarResultado(pago, EstadoPago.CONFIRMADO);
                 pedidoService.marcarPagado(pedido.getId());

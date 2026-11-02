@@ -1,6 +1,7 @@
 package es.florida.vet.dto;
 
 import es.florida.vet.entity.Pedido;
+import es.florida.vet.service.AutorizacionPedido;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,8 +22,15 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                              BigDecimal baseImponible, BigDecimal ivaPorcentaje,
                              BigDecimal importeIva, String moneda,
                              String modificadoPorNombre, LocalDateTime fechaModificacion,
-                             String motivoCancelacion) {
+                             String motivoCancelacion, boolean devolucionPendiente,
+                             AutorizacionPedido autorizacion) {
+
+    /** Sin el cálculo de firma y pago (listados del panel y del dashboard). */
     public static PedidoResponse desde(Pedido p) {
+        return desde(p, null);
+    }
+
+    public static PedidoResponse desde(Pedido p, AutorizacionPedido autorizacion) {
         var firma = p.getFirma();
         return new PedidoResponse(p.getId(), p.getClinica().getId(), p.getClinica().getNombre(),
                 p.getVeterinario().getId(), p.getVeterinario().getUsuario().getNombreCompleto(),
@@ -40,6 +48,6 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                 p.getOdooId(), p.isOdooSincronizacionPendiente(), p.getOdooUltimoError(),
                 p.getBaseImponible(), p.getIvaPorcentaje(), p.getImporteIva(), p.getMoneda(),
                 p.getModificadoPor() == null ? null : p.getModificadoPor().getNombreCompleto(),
-                p.getFechaModificacion(), p.getMotivoCancelacion());
+                p.getFechaModificacion(), p.getMotivoCancelacion(), p.isDevolucionPendiente(), autorizacion);
     }
 }

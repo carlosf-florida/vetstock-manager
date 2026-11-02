@@ -19,7 +19,8 @@ import java.time.LocalDateTime;
  * Firma de confirmación comercial interna de un pedido.
  *
  * Guarda la copia INMUTABLE del contenido autorizado (contenidoPedido en JSON),
- * la identidad real del responsable o auxiliar firmante y la fecha. La imagen viene de un dibujo
+ * la identidad real del firmante y la fecha. Solo es válida si la hizo el veterinario
+ * asignado y la copia coincide con el contenido actual (ver AutorizacionPedido). La imagen viene de un dibujo
  * (canvas) o de un archivo PNG/JPG subido.
  *
  * Esta firma es de demostración académica: NO es una firma electrónica
@@ -85,4 +86,14 @@ public class Firma {
     public LocalDateTime getFechaFirma() { return fechaFirma; }
     public String getNumeroColegiado() { return numeroColegiado; }
     public void setNumeroColegiado(String v) { this.numeroColegiado = v; }
+
+    /** Sustituye una firma NO válida por la del veterinario asignado (una sola firma por pedido). */
+    public void sustituir(Usuario usuario, String contenidoPedido, TipoFirma tipoFirma, byte[] imagen, String nombreArchivo) {
+        this.usuario = usuario;
+        this.contenidoPedido = contenidoPedido;
+        this.tipoFirma = tipoFirma;
+        this.imagen = imagen;
+        this.nombreArchivo = nombreArchivo;
+        this.fechaFirma = LocalDateTime.now();
+    }
 }

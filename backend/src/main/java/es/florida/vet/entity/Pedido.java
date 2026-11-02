@@ -105,7 +105,10 @@ public class Pedido {
     private LocalDateTime fechaCancelacion;
 
     @Column(name = "motivo_cancelacion", length = 255)
-    private String motivoCancelacion;   // cancelado por un usuario o reserva caducada
+    private String motivoCancelacion;   // cancelado por un usuario, rechazado por el veterinario o reserva caducada
+
+    @Column(name = "devolucion_pendiente", nullable = false)
+    private boolean devolucionPendiente; // pagado y después rechazado: devolver el dinero fuera de la aplicación
 
     public Pedido() {
     }
@@ -212,6 +215,8 @@ public class Pedido {
     public void setFechaCancelacion(LocalDateTime fecha) { this.fechaCancelacion = fecha; }
     public String getMotivoCancelacion() { return motivoCancelacion; }
     public void setMotivoCancelacion(String motivo) { this.motivoCancelacion = motivo; }
+    public boolean isDevolucionPendiente() { return devolucionPendiente; }
+    public void setDevolucionPendiente(boolean v) { this.devolucionPendiente = v; }
 
     private Integer odooId;                     // id del sale.order en Odoo (ERP)
     private LocalDateTime odooEnviado;

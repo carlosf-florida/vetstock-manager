@@ -22,6 +22,12 @@ import es.florida.vet.exception.AccesoDenegadoException;
 import es.florida.vet.exception.RecursoNoEncontradoException;
 import es.florida.vet.exception.ReglaNegocioException;
 import es.florida.vet.repository.BultoRepository;
+import es.florida.vet.repository.PagoRepository;
+import es.florida.vet.entity.Pago;
+import es.florida.vet.enums.EstadoPago;
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 import es.florida.vet.repository.AuxiliarRepository;
 import es.florida.vet.repository.FirmaRepository;
 import es.florida.vet.repository.MovimientoStockRepository;
@@ -46,7 +52,7 @@ import java.util.Set;
  *  - El stock se reserva de forma ATÓMICA al enviar a firma.
  *  - Solo firma el veterinario asignado al pedido, con su propia cuenta.
  *  - Al firmar se guarda una copia inmutable del contenido autorizado.
- *  - Orden obligatorio: firma -> pago confirmado -> LISTO_PREPARAR.
+ *  - Firma y pago en cualquier orden; LISTO_PREPARAR exige firma VÁLIDA y pago completo.
  *  - Las reservas sin pago caducan (ver ReservaCaducidadTask).
  *  - El pago confirmado solicita actualizar Odoo después del commit.
  *  - El stock físico se descuenta UNA SOLA VEZ, al expedir.
@@ -63,6 +69,7 @@ public class PedidoService {
     private final MovimientoStockRepository movimientoRepository;
     private final FirmaRepository firmaRepository;
     private final BultoRepository bultoRepository;
+    private final PagoRepository pagoRepository;
     private final SesionService sesionService;
     private final ApplicationEventPublisher eventos;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -74,6 +81,7 @@ public class PedidoService {
                          MovimientoStockRepository movimientoRepository,
                          FirmaRepository firmaRepository,
                          BultoRepository bultoRepository,
+                         PagoRepository pagoRepository,
                          SesionService sesionService,
                          ApplicationEventPublisher eventos) {
         this.pedidoRepository = pedidoRepository;
@@ -83,6 +91,7 @@ public class PedidoService {
         this.movimientoRepository = movimientoRepository;
         this.firmaRepository = firmaRepository;
         this.bultoRepository = bultoRepository;
+        this.pagoRepository = pagoRepository;
         this.sesionService = sesionService;
         this.eventos = eventos;
     }
@@ -108,9 +117,14 @@ public class PedidoService {
                 pedidos = List.of();
             }
         }
+        // Un solo acceso a pagos para toda la lista (no una consulta por pedido)
+        Map<Long, BigDecimal> confirmados = new HashMap<>();
+        for (Pago pago : pagoRepository.findByEstado(EstadoPago.CONFIRMADO)) {
+            confirmados.put(pago.getPedido().getId(), pago.getImporte());
+        }
         return pedidos.stream()
                 .filter(p -> estado == null || p.getEstado() == estado)
-                .map(PedidoResponse::desde)
+                .map(p -> PedidoResponse.desde(p, AutorizacionPedido.de(p, confirmados.get(p.getId()))))
                 .toList();
     }
 
@@ -118,7 +132,7 @@ public class PedidoService {
     public PedidoResponse obtener(Long id, String username, boolean esAdmin) {
         Pedido pedido = buscarPedido(id);
         comprobarAccesoAClinica(pedido, username, esAdmin);
-        return PedidoResponse.desde(pedido);
+        return respuesta(pedido);
     }
 
     // ------------------------------------------------------------------
@@ -168,7 +182,7 @@ public class PedidoService {
         pedido.setObservaciones(datos.observaciones());
         pedido.reemplazarLineas(construirLineas(datos.lineas()));
         pedido.registrarModificacion(usuario);
-        return PedidoResponse.desde(pedidoRepository.save(pedido));
+        return respuesta(pedidoRepository.save(pedido));
     }
 
     /** Reemplaza las líneas de un pedido que sigue en BORRADOR. */
@@ -185,7 +199,7 @@ public class PedidoService {
         }
         pedido.reemplazarLineas(construirLineas(datos.lineas()));
         pedido.registrarModificacion(usuario);
-        return PedidoResponse.desde(pedidoRepository.save(pedido));
+        return respuesta(pedidoRepository.save(pedido));
     }
 
     /** Valida productos, cantidades y precios; los precios los pone el servidor. */
@@ -228,7 +242,7 @@ public class PedidoService {
         }
         pedido.setEstado(EstadoPedido.PENDIENTE_FIRMA);
         pedido.setFechaEnvioFirma(LocalDateTime.now());
-        return PedidoResponse.desde(pedidoRepository.save(pedido));
+        return respuesta(pedidoRepository.save(pedido));
     }
 
     // ------------------------------------------------------------------
@@ -245,11 +259,14 @@ public class PedidoService {
         if (!esVeterinarioAsignado) {
             throw new AccesoDenegadoException("Solo el veterinario asignado al pedido puede firmarlo");
         }
-        if (pedido.getFechaFirma() != null || firmaRepository.findByPedidoId(id).isPresent()) {
-            throw new ReglaNegocioException("El pedido ya tiene una firma registrada");
+        // Se puede firmar antes o después del pago, pero nunca con la preparación empezada
+        List<EstadoPedido> firmables = List.of(EstadoPedido.PENDIENTE_FIRMA, EstadoPedido.FIRMADO, EstadoPedido.LISTO_PREPARAR);
+        if (!firmables.contains(pedido.getEstado())) {
+            throw new ReglaNegocioException("El pedido no se puede firmar en su estado actual");
         }
-        if (pedido.getEstado() != EstadoPedido.PENDIENTE_FIRMA) {
-            throw new ReglaNegocioException("El pedido no está pendiente de firma");
+        Firma anterior = firmaRepository.findByPedidoId(id).orElse(null);
+        if (anterior != null && AutorizacionPedido.motivoFirmaNoValida(pedido) == null) {
+            throw new ReglaNegocioException("El pedido ya tiene una firma válida del veterinario asignado");
         }
         if (datos.confirmacion() != Boolean.TRUE) {
             throw new ReglaNegocioException("Debes confirmar el pedido con tu propia identidad");
@@ -260,24 +277,63 @@ public class PedidoService {
             throw new ReglaNegocioException("El colegiado indicado no coincide con el veterinario responsable; es opcional, no una clave de firma");
         }
         byte[] imagen = decodificarImagen(datos.imagenBase64(), datos.tipoFirma(), datos.nombreArchivo());
-        Firma firma = new Firma(pedido, firmante,
-                contenidoInmutable(pedido, firmante, colegiado), tipoFirma(datos.tipoFirma()), imagen,
-                datos.nombreArchivo());
+        String contenido = contenidoInmutable(pedido, firmante, colegiado,
+                anterior == null ? null : anterior.getUsuario().getNombreCompleto());
+        Firma firma;
+        if (anterior == null) {
+            firma = new Firma(pedido, firmante, contenido, tipoFirma(datos.tipoFirma()), imagen, datos.nombreArchivo());
+        } else {
+            // Una firma NO válida (de otra persona o de un contenido anterior) se sustituye; la copia
+            // nueva guarda quién había firmado antes. Solo hay una firma por pedido.
+            firma = anterior;
+            firma.sustituir(firmante, contenido, tipoFirma(datos.tipoFirma()), imagen, datos.nombreArchivo());
+        }
         firma.setNumeroColegiado(colegiado);
         firmaRepository.save(firma);
         pedido.setFirma(firma);
         pedido.setFechaFirma(firma.getFechaFirma());
         if (pedido.getFechaPago() != null) {
-            // Datos antiguos: pedidos pagados antes de firmar con la regla anterior.
-            // Ya tienen pago confirmado, así que con la firma quedan listos para preparar.
+            // Ya estaba pagado: con la firma válida queda listo para preparar
             pedido.setEstado(EstadoPedido.LISTO_PREPARAR);
-            pedido.setFechaListoPreparar(LocalDateTime.now());
+            if (pedido.getFechaListoPreparar() == null) pedido.setFechaListoPreparar(LocalDateTime.now());
             programarSincronizacion(pedido);
         } else {
-            // Firmado y pendiente de pago: el pago solo se puede iniciar a partir de aquí
             pedido.setEstado(EstadoPedido.FIRMADO);
         }
-        return PedidoResponse.desde(pedidoRepository.save(pedido));
+        return respuesta(pedidoRepository.save(pedido));
+    }
+
+    /**
+     * El veterinario asignado rechaza un pedido que no ha firmado: se cancela y libera el stock.
+     * Si ya estaba pagado queda marcado «devolución pendiente»: la devolución del dinero se
+     * gestiona fuera de la aplicación (no hay reembolsos en este proyecto).
+     */
+    @Transactional
+    public PedidoResponse rechazar(Long id, String motivo, String username) {
+        Pedido pedido = buscarPedido(id);
+        Usuario usuario = sesionService.usuarioActual(username);
+        boolean esVeterinarioAsignado = usuario.getRol() == es.florida.vet.enums.Rol.VETERINARIO
+                && pedido.getVeterinario().getUsuario().getUsername().equals(username);
+        if (!esVeterinarioAsignado) {
+            throw new AccesoDenegadoException("Solo el veterinario asignado puede rechazar el pedido");
+        }
+        List<EstadoPedido> rechazables = List.of(EstadoPedido.PENDIENTE_FIRMA, EstadoPedido.FIRMADO, EstadoPedido.LISTO_PREPARAR);
+        if (!rechazables.contains(pedido.getEstado())) {
+            throw new ReglaNegocioException("El pedido no se puede rechazar en su estado actual");
+        }
+        if (AutorizacionPedido.motivoFirmaNoValida(pedido) == null) {
+            throw new ReglaNegocioException("Ya has autorizado este pedido con tu firma; no se puede rechazar");
+        }
+        String texto = motivo == null ? "" : motivo.trim();
+        if (texto.isEmpty() || texto.length() > 200) {
+            throw new ReglaNegocioException("Indica el motivo del rechazo (máximo 200 caracteres)");
+        }
+        cancelarYLiberar(pedido, "Rechazado por " + usuario.getNombreCompleto() + ": " + texto);
+        if (pedido.getFechaPago() != null) {
+            pedido.setDevolucionPendiente(true);
+            programarSincronizacion(pedido);
+        }
+        return respuesta(pedidoRepository.save(pedido));
     }
 
     private byte[] decodificarImagen(String base64, String tipoFirma, String nombreArchivo) {
@@ -315,7 +371,7 @@ public class PedidoService {
     }
 
     /** Copia inmutable del contenido autorizado, en JSON, para que quede registro. */
-    private String contenidoInmutable(Pedido pedido, Usuario firmante, String colegiado) {
+    private String contenidoInmutable(Pedido pedido, Usuario firmante, String colegiado, String sustituyeFirmaDe) {
         try {
             var contenido = new java.util.LinkedHashMap<String, Object>();
             contenido.put("pedidoId", pedido.getId());
@@ -326,6 +382,7 @@ public class PedidoService {
             contenido.put("firmanteRol", firmante.getRol().name());
             contenido.put("numeroColegiadoIdentificativo", colegiado);
             contenido.put("tipoConfirmacion", "CONFIRMACION_INTERNA_NO_CERTIFICADA");
+            if (sustituyeFirmaDe != null) contenido.put("sustituyeFirmaNoValidaDe", sustituyeFirmaDe);
             contenido.put("observaciones", pedido.getObservaciones());
             contenido.put("baseImponible", pedido.getBaseImponible().toPlainString());
             contenido.put("ivaPorcentaje", pedido.getIvaPorcentaje().toPlainString());
@@ -379,7 +436,7 @@ public class PedidoService {
         }
         Usuario usuario = sesionService.usuarioActual(username);
         cancelarYLiberar(pedido, "Cancelado por " + usuario.getNombreCompleto());
-        return PedidoResponse.desde(pedidoRepository.save(pedido));
+        return respuesta(pedidoRepository.save(pedido));
     }
 
     /**
@@ -421,12 +478,16 @@ public class PedidoService {
     public void marcarPagado(Long pedidoId) {
         Pedido pedido = buscarPedido(pedidoId);
         if (pedido.getFechaPago() != null) return;
-        if (pedido.getEstado() != EstadoPedido.FIRMADO || pedido.getFechaFirma() == null) {
-            throw new ReglaNegocioException("Solo se puede registrar el pago de un pedido firmado");
+        if (pedido.getEstado() != EstadoPedido.PENDIENTE_FIRMA && pedido.getEstado() != EstadoPedido.FIRMADO) {
+            throw new ReglaNegocioException("El pedido no puede recibir un pago en este estado");
         }
         pedido.setFechaPago(LocalDateTime.now());
-        pedido.setEstado(EstadoPedido.LISTO_PREPARAR);
-        pedido.setFechaListoPreparar(LocalDateTime.now());
+        // Pagado: si ya tiene la firma válida del veterinario asignado, queda listo para preparar;
+        // si no, sigue esperando la firma (aparece en «Pagados pendientes de firma»).
+        if (AutorizacionPedido.motivoFirmaNoValida(pedido) == null) {
+            pedido.setEstado(EstadoPedido.LISTO_PREPARAR);
+            pedido.setFechaListoPreparar(LocalDateTime.now());
+        }
         programarSincronizacion(pedido);
         pedidoRepository.save(pedido);
     }
@@ -440,8 +501,10 @@ public class PedidoService {
         Pedido pedido = buscarPedido(id);
         comprobarTransicion(pedido, destino);
         Usuario usuario = sesionService.usuarioActual(username);
-        if (pedido.getFechaPago() == null || pedido.getFechaFirma() == null) {
-            throw new ReglaNegocioException("No se puede preparar ni expedir un pedido sin firma del veterinario y pago confirmado");
+        AutorizacionPedido autorizacion = autorizacion(pedido);
+        if (!autorizacion.firmaValida() || !autorizacion.pagoCompleto()) {
+            throw new ReglaNegocioException("No se puede preparar ni expedir sin firma válida del veterinario asignado y pago completo confirmado"
+                    + (autorizacion.motivoFirma() != null ? ": " + autorizacion.motivoFirma() : ""));
         }
 
         switch (destino) {
@@ -473,12 +536,26 @@ public class PedidoService {
         }
         pedido.setEstado(destino);
         programarSincronizacion(pedido);
-        return PedidoResponse.desde(pedidoRepository.save(pedido));
+        return respuesta(pedidoRepository.save(pedido));
     }
 
     // ------------------------------------------------------------------
     // Auxiliares
     // ------------------------------------------------------------------
+
+    /** Situación de firma y pago del pedido (ver AutorizacionPedido). */
+    @Transactional(readOnly = true)
+    public AutorizacionPedido autorizacion(Pedido pedido) {
+        BigDecimal importeConfirmado = pagoRepository.findByPedidoIdOrderByFechaInicioDesc(pedido.getId()).stream()
+                .filter(p -> p.getEstado() == EstadoPago.CONFIRMADO)
+                .map(Pago::getImporte)
+                .findFirst().orElse(null);
+        return AutorizacionPedido.de(pedido, importeConfirmado);
+    }
+
+    private PedidoResponse respuesta(Pedido pedido) {
+        return PedidoResponse.desde(pedido, autorizacion(pedido));
+    }
 
     private void programarSincronizacion(Pedido pedido) {
         pedido.setOdooSincronizacionPendiente(true);

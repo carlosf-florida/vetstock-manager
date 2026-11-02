@@ -60,8 +60,9 @@ public class DashboardService {
         return datos;
     }
 
-    /** Pendiente de pago = ya firmado y sin pago confirmado (sin firma todavía no se puede pagar). */
+    /** Pendiente de pago = enviado a firma (firmado o no) y sin pago confirmado. */
     private static boolean pagoPendiente(Pedido p) {
-        return p.getFechaPago() == null && p.getEstado() == EstadoPedido.FIRMADO;
+        return p.getFechaPago() == null && (p.getEstado() == EstadoPedido.PENDIENTE_FIRMA
+                || p.getEstado() == EstadoPedido.FIRMADO);
     }
 }

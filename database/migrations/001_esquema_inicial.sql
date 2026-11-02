@@ -147,7 +147,8 @@ CREATE TABLE pedidos (
     fecha_preparacion     DATETIME,
     fecha_expedicion      DATETIME,
     fecha_cancelacion     DATETIME,
-    motivo_cancelacion    VARCHAR(255),      -- usuario que cancela o reserva caducada
+    motivo_cancelacion    VARCHAR(255),      -- usuario que cancela, rechazo del veterinario o reserva caducada
+    devolucion_pendiente  BOOLEAN NOT NULL DEFAULT FALSE, -- pagado y rechazado: devolver fuera de la app
     odoo_id               INT NULL,   -- id del sale.order en Odoo (ERP)
     odoo_enviado          DATETIME,   -- cuándo se exportó a Odoo
     odoo_sincronizacion_pendiente BOOLEAN NOT NULL DEFAULT FALSE,

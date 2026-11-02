@@ -96,7 +96,7 @@ class PedidoFirmaPagoTest {
     @BeforeEach
     void prepararServicio() {
         pedidoService = new PedidoService(pedidoRepository, productoRepository, veterinarioRepository,
-                auxiliarRepository, movimientoRepository, firmaRepository, bultoRepository, sesionService, eventos);
+                auxiliarRepository, movimientoRepository, firmaRepository, bultoRepository, pagoRepository, sesionService, eventos);
         lenient().when(pedidoRepository.save(any(Pedido.class)))
                 .thenAnswer(invocacion -> invocacion.getArgument(0));
         lenient().when(firmaRepository.save(any(Firma.class)))
@@ -243,15 +243,34 @@ class PedidoFirmaPagoTest {
     }
 
     @Test
-    @DisplayName("no se puede iniciar el pago de un pedido pendiente de firma")
-    void noSePuedePagarSinFirma() {
+    @DisplayName("se puede pagar un pedido pendiente de firma; al confirmarse sigue pendiente de firma")
+    void sePuedePagarAntesDeFirmar() {
         ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
         permitirAccesoFirma(contexto, contexto.responsable(), true);
 
-        assertThrows(ReglaNegocioException.class,
-                () -> servicioPago().iniciar(PEDIDO_ID, contexto.responsable().getUsername(), false));
+        servicioPago().iniciar(PEDIDO_ID, contexto.responsable().getUsername(), false);
+        verify(pagoRepository).save(any(Pago.class));
 
-        verify(pagoRepository, never()).save(any(Pago.class));
+        pedidoService.marcarPagado(PEDIDO_ID);
+        assertNotNull(contexto.pedido().getFechaPago());
+        assertEquals(EstadoPedido.PENDIENTE_FIRMA, contexto.pedido().getEstado());
+    }
+
+    @Test
+    @DisplayName("la firma de otra persona o de un contenido anterior no es válida")
+    void firmaNoValidaSiNoEsDelAsignadoOCambiaElContenido() {
+        ContextoPedido contexto = pedidoFirmado(PEDIDO_ID);
+        assertNull(es.florida.vet.service.AutorizacionPedido.motivoFirmaNoValida(contexto.pedido()));
+
+        Usuario auxiliar = usuario(31L, "ana.aux", "Ana Auxiliar", Rol.AUXILIAR);
+        contexto.pedido().getFirma().sustituir(auxiliar, contexto.pedido().getFirma().getContenidoPedido(),
+                es.florida.vet.enums.TipoFirma.DIBUJO, null, null);
+        assertTrue(es.florida.vet.service.AutorizacionPedido.motivoFirmaNoValida(contexto.pedido()).startsWith("Firmado por Ana Auxiliar"));
+
+        contexto.pedido().getFirma().sustituir(contexto.responsable(), "{\"total\":\"99.00\",\"lineas\":[]}",
+                es.florida.vet.enums.TipoFirma.DIBUJO, null, null);
+        assertEquals("La firma corresponde a un contenido anterior del pedido",
+                es.florida.vet.service.AutorizacionPedido.motivoFirmaNoValida(contexto.pedido()));
     }
 
     @Test
@@ -468,7 +487,11 @@ class PedidoFirmaPagoTest {
     private ContextoPedido pedidoFirmado(Long pedidoId) {
         ContextoPedido contexto = pedidoPendiente(pedidoId);
         contexto.pedido().setEstado(EstadoPedido.FIRMADO);
-        contexto.pedido().setFechaFirma(LocalDateTime.now().minusMinutes(5));
+        // Firma válida: del veterinario asignado y con la copia igual al contenido actual (sin líneas, total 0)
+        Firma firma = new Firma(contexto.pedido(), contexto.responsable(), "{\"total\":\"0.00\",\"lineas\":[]}",
+                es.florida.vet.enums.TipoFirma.DIBUJO, null, null);
+        contexto.pedido().setFirma(firma);
+        contexto.pedido().setFechaFirma(firma.getFechaFirma());
         return contexto;
     }
 

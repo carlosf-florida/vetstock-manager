@@ -154,8 +154,9 @@ logística. `PedidoOdooEventListener` lo procesa **AFTER_COMMIT**, y el servicio
 Odoo usa una transacción nueva y bloqueo por pedido. Un fallo del ERP no
 deshace el pago ni la firma; queda pendiente para reintento manual. La nota de
 `sale.order` contiene un único bloque de estado de firma, conservando las notas
-manuales. Usa delimitadores de texto porque Odoo elimina atributos HTML. No
-altera el estado comercial, impuestos ni registra cobros reales.
+manuales. Usa delimitadores de texto porque Odoo elimina atributos HTML. Cuando el
+pedido está pagado y con firma válida, lo confirma en Odoo (presupuesto → pedido de venta);
+no altera impuestos ni registra cobros reales.
 
 ### La máquina de estados (detallada)
 

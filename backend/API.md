@@ -93,7 +93,7 @@ Rutas manuales solo ADMIN:
 | `POST /api/odoo/pedidos/{id}/exportar` | Crea o actualiza pedido PAGADO, incluso por firmar; permite reintento y conserva ID |
 | `GET /api/odoo/log` | Últimas 50 operaciones |
 
-El pago confirmado, la firma posterior y las transiciones de logística solicitan automáticamente actualizar Odoo después del commit local. El resumen del pedido en `sale.order.note` muestra «Por firmar»/«Firmado», responsable y firmante real/rol. No se confunde con el estado comercial de Odoo ni registra un cobro bancario real. Referencia `client_order_ref=VSM-{id}`. Fallar Odoo no deshace pagos o firmas; queda pendiente para reintento manual. Sin sincronización bidireccional ni reintentos periódicos aún.
+El pago confirmado, la firma posterior y las transiciones de logística solicitan automáticamente actualizar Odoo después del commit local. El resumen del pedido en `sale.order.note` muestra «Por firmar»/«Firmado», responsable y firmante real/rol. Cuando el pedido está pagado y con firma válida se confirma en Odoo (`action_confirm`: presupuesto → pedido de venta), solo si estaba en presupuesto; no reactiva pedidos cancelados ni registra cobros reales. Referencia `client_order_ref=VSM-{id}`. Fallar Odoo no deshace pagos o firmas; queda pendiente para reintento manual. Sin sincronización bidireccional ni reintentos periódicos aún.
 
 ## Logística, documentos, informes y dashboard
 

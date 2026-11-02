@@ -26,7 +26,8 @@ Tecnologías: Spring Boot 4 (Java 21), MySQL, React + Vite y pruebas JUnit.
 Admin → Pedidos: «Pagados pendientes de firma», «Firmados y pagados» y «Otros pendientes».
 Explicar: «Pagado no basta: hace falta la firma VÁLIDA del veterinario asignado sobre el
 contenido actual. Lo decide una regla fija en el backend (`AutorizacionPedido`), no una IA.»
-En Odoo → Sales → Orders aparecen las mismas dos listas como entradas de menú.
+En Odoo → Sales → Orders aparecen las mismas dos listas como entradas de menú; cuando el
+veterinario firma un pedido ya pagado, Odoo lo pasa solo de presupuesto a pedido de venta.
 
 ## 3. Seguridad y reglas (2 min)
 
@@ -37,7 +38,7 @@ En Odoo → Sales → Orders aparecen las mismas dos listas como entradas de men
 
 ## 4. Calidad (1 min)
 
-- `mvnw.cmd test` → **60 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo.
+- `mvnw.cmd test` → **62 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo.
 - Las pruebas encontraron errores reales (el script SQL no se podía repetir, editar líneas fallaba), y están corregidos.
 
 ## 5. Límites honestos (1 min)

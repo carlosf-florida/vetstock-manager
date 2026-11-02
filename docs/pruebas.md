@@ -20,7 +20,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 ### Última ejecución registrada
 
 - Fecha: 2 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
-- Resultado: **60 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
+- Resultado: **62 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
 - La prueba de concurrencia se repitió 3 veces seguidas con el mismo resultado.
 
 ### Correspondencia con las pruebas pedidas
@@ -122,6 +122,15 @@ Pedido de prueba #15 (2 × guantes, 20,70 €) de `aux.sanroque`, con la API rea
 | La auxiliar intenta firmar | Rechazado (403) | — |
 | Firma el Dr. García | LISTO_PREPARAR · «Firmados y pagados» · listo | Mismo pedido S00007, `firma_valida=true`; pasa al favorito «Firmados y pagados» |
 | Admin inicia la preparación | EN_PREPARACION · sigue «Firmados y pagados», ya no «listo» | `x_vetstock_estado=EN_PREPARACION`; un solo pedido VSM-15; estado comercial sin tocar (borrador) |
+
+### Prueba en vivo: confirmación automática en Odoo
+
+- S00007 (VSM-15, ya firmado y pagado): al sincronizar pasó de *Quotation* a *Sales Order*.
+- Pedido nuevo #17: pagado sin firma → S00008 en *Quotation* («Pagados pendientes de firma»);
+  firma del Dr. García → S00008 pasa sola a *Sales Order* («Firmados y pagados»), sin pulsar
+  nada en Odoo.
+- Pruebas automáticas: `OdooJsonRpcConnectorTest.pedidoFirmadoYPagadoSeConfirma` y
+  `noSeConfirmaSinFirmaNiDosVecesNiSiEstaCancelado`.
 
 ## 3. Guía de comprobación manual (para repetirla)
 

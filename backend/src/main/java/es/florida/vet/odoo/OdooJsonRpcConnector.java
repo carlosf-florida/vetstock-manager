@@ -667,8 +667,51 @@ public class OdooJsonRpcConnector implements OdooConnector {
                 .replace("\"", "&quot;").replace("'", "&#39;");
     }
 
+    /**
+     * Exporta (crea o actualiza) el pedido y, si en VetStock ya está PAGADO y con FIRMA VÁLIDA,
+     * lo confirma en Odoo (Presupuesto → Pedido de venta) para que salga a preparar.
+     * Es una regla fija, no una decisión «inteligente»: nadie tiene que pulsar «Confirm».
+     */
     @Override
     public Resultado crearPedido(FichaPedido ficha) {
+        Resultado exportado = exportarPedido(ficha);
+        if (!exportado.exito() || exportado.odooId() == null) {
+            return exportado;
+        }
+        try {
+            return confirmarSiFirmadoYPagado(exportado, ficha);
+        } catch (Exception e) {
+            return Resultado.fallo("Pedido exportado, pero no se pudo confirmar en Odoo: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Solo confirma presupuestos (draft/sent). Un pedido cancelado en Odoo no se reactiva y uno
+     * ya confirmado no se toca, así que repetir la sincronización no tiene efectos (idempotente).
+     */
+    private Resultado confirmarSiFirmadoYPagado(Resultado exportado, FichaPedido ficha) {
+        boolean listo = Boolean.TRUE.equals(ficha.pagoCompleto()) && Boolean.TRUE.equals(ficha.firmaValida())
+                && !"CANCELADO".equals(ficha.estadoPedido());
+        if (!listo) {
+            return exportado;
+        }
+        int id = exportado.odooId();
+        String estado = leerRegistro("sale.order", id, "state").path("state").asText();
+        switch (estado) {
+            case "draft", "sent" -> {
+                ejecutar("sale.order", "action_confirm", array().add(array().add(id)), null);
+                return Resultado.ok(id, exportado.detalle() + "; firmado y pagado: confirmado en Odoo como pedido de venta");
+            }
+            case "cancel" -> {
+                return Resultado.ok(id, exportado.detalle() + "; está cancelado en Odoo, no se confirma automáticamente");
+            }
+            default -> {
+                return exportado; // ya confirmado
+            }
+        }
+    }
+
+    private Resultado exportarPedido(FichaPedido ficha) {
         try {
             validarFichaFiscal(ficha);
             if (ficha.odooPedidoId() != null) {

@@ -202,6 +202,38 @@ class OdooJsonRpcConnectorTest {
     }
 
     /** Servidor JSON-RPC mínimo que registra todas las peticiones para las aserciones. */
+    private static OdooConnector.FichaPedido fichaClasificada(boolean pagado, boolean firmaValida, String estado) {
+        return new OdooConnector.FichaPedido("VSM-15", 7,
+                List.of(new OdooConnector.LineaPedido("CLI-001", 2, new BigDecimal("9.95"))),
+                99, firmaValida ? "FIRMADO" : "PENDIENTE", "Dr. Antonio García", null, null, null, estado,
+                null, null, null, null, null, pagado, firmaValida);
+    }
+
+    @Test
+    @DisplayName("un pedido pagado y con firma válida se confirma en Odoo (presupuesto → pedido de venta)")
+    void pedidoFirmadoYPagadoSeConfirma() {
+        OdooConnector.Resultado resultado = odoo.crearPedido(fichaClasificada(true, true, "LISTO_PREPARAR"));
+
+        assertTrue(resultado.exito(), resultado.detalle());
+        assertTrue(stub.hayEjecucion("sale.order", "action_confirm"));
+        assertTrue(resultado.detalle().contains("confirmado en Odoo"));
+    }
+
+    @Test
+    @DisplayName("pagado sin firma válida, ya confirmado o cancelado en Odoo: no se llama a action_confirm")
+    void noSeConfirmaSinFirmaNiDosVecesNiSiEstaCancelado() {
+        assertTrue(odoo.crearPedido(fichaClasificada(true, false, "PENDIENTE_FIRMA")).exito());
+        assertFalse(stub.hayEjecucion("sale.order", "action_confirm"));
+
+        stub.estadoPedidoOdoo = "sale";
+        assertTrue(odoo.crearPedido(fichaClasificada(true, true, "LISTO_PREPARAR")).exito());
+        assertFalse(stub.hayEjecucion("sale.order", "action_confirm"));
+
+        stub.estadoPedidoOdoo = "cancel";
+        assertTrue(odoo.crearPedido(fichaClasificada(true, true, "LISTO_PREPARAR")).exito());
+        assertFalse(stub.hayEjecucion("sale.order", "action_confirm"));
+    }
+
     private static final class OdooStub {
         private static final ObjectMapper JSON = new ObjectMapper();
         private static final ArrayNode ARRAY_VACIO = JSON.createArrayNode();
@@ -282,10 +314,22 @@ class OdooJsonRpcConnectorTest {
                 case "sale.order" -> switch (operacion) {
                     case "search" -> ARRAY_VACIO.deepCopy();
                     case "create" -> arrayConEntero(99);
+                    case "read" -> pedidoLeidoConEstado();
                     default -> JSON.getNodeFactory().booleanNode(true);
                 };
+                // Campos x_, filtros, vista y menús de la clasificación: ya existen en este Odoo de prueba
+                case "ir.model", "ir.model.fields", "ir.filters", "ir.ui.view", "ir.ui.menu" ->
+                        "search".equals(operacion) ? arrayConEntero(5) : JSON.getNodeFactory().booleanNode(true);
                 default -> JSON.getNodeFactory().booleanNode(true);
             };
+        }
+
+        private String estadoPedidoOdoo = "draft";
+
+        private JsonNode pedidoLeidoConEstado() {
+            ArrayNode lista = JSON.createArrayNode();
+            lista.addObject().put("id", 99).put("note", "").put("state", estadoPedidoOdoo);
+            return lista;
         }
 
         private boolean hayLlamada(String servicio, String metodo) {

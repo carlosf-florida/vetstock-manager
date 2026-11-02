@@ -91,12 +91,28 @@ de firma (VetStock)» y «Firmados y pagados (VetStock)», con una lista propia 
 *Pedido VetStock*, *Pagado*, *Firma válida* y *Estado VetStock*. También deja las mismas
 listas como **filtros favoritos compartidos** (flecha ▼ del buscador → Favoritos).
 
-> Ojo: el menú estándar **Sales → Orders → Orders** solo enseña pedidos *confirmados* y oculta
-> los presupuestos, que es como llegan los pedidos de VetStock (VetStock no confirma pedidos en
-> Odoo). Por eso las entradas de VetStock tienen su propia acción, sin ese filtro.
-No se cambia el estado comercial (`state`) ni se duplican pedidos. Los valores se
-actualizan en cada sincronización (pago, firma, rechazo, logística). Solo se exportan
-pedidos pagados, así que «Otros pendientes» solo existe en VetStock.
+> Ojo: el menú estándar **Sales → Orders → Orders** solo enseña pedidos *confirmados*. Los
+> pedidos pagados pendientes de firma llegan como *presupuesto*, por eso las entradas de
+> VetStock tienen su propia acción, sin ese filtro.
+
+### Confirmación automática en Odoo
+
+Regla fija (no es un agente de IA): cuando un pedido está **pagado y con firma válida** del
+veterinario asignado, VetStock lo **confirma en Odoo** (Presupuesto → Pedido de venta,
+`action_confirm`) para que salga a preparar. Nadie tiene que pulsar «Confirm».
+
+| Situación en VetStock | Odoo |
+|---|---|
+| Pagado, pendiente de firma | Presupuesto (draft), en «Pagados pendientes de firma» |
+| El veterinario asignado firma | Se confirma solo → **Pedido de venta**, en «Firmados y pagados» |
+| Ya confirmado en Odoo | No se toca (repetir la sincronización no tiene efectos) |
+| Cancelado en Odoo | **No** se reactiva |
+| Rechazado por el veterinario | Nunca se confirma |
+
+Solo se confirma tras comprobar importes y moneda EUR. Si Odoo falla al confirmar, el pedido
+queda pendiente de sincronizar y se reintenta desde Admin → Odoo. No se duplican pedidos y
+no se registran cobros ni facturas en Odoo. Solo se exportan pedidos pagados, así que
+«Otros pendientes» solo existe en VetStock.
 
 ## Odoo (opcional, de fases anteriores)
 

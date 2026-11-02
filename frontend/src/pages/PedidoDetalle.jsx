@@ -126,7 +126,8 @@ export default function PedidoDetalle() {
         <BadgeEstadoPedido estado={estado} />
       </div>
       {pedido.clinicaNombre && <p className="texto-suave">Clínica: {pedido.clinicaNombre}</p>}
-      {pedido.veterinarioNombre && <p className="texto-suave">Responsable: {pedido.veterinarioNombre}{pedido.numeroColegiadoResponsable ? ` · Nº colegiado: ${pedido.numeroColegiadoResponsable}` : ''}</p>}
+      {pedido.creadoPorNombre && <p className="texto-suave">Realizado por: <strong>{pedido.creadoPorNombre}</strong></p>}
+      {pedido.veterinarioNombre && <p className="texto-suave">Responsable de firma: {pedido.veterinarioNombre}{pedido.numeroColegiadoResponsable ? ` · Nº colegiado: ${pedido.numeroColegiadoResponsable}` : ''}</p>}
       {pedido.observaciones && <p className="texto-suave">Observaciones: {pedido.observaciones}</p>}
 
       <ErrorBox mensaje={accionError} />

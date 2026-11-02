@@ -101,9 +101,9 @@ export default function Inicio() {
           valor={resumen?.pendientesFirma}
           cargando={cargando}
           explicacion={usuario?.rol === 'VETERINARIO'
-            ? 'Pedidos de tu clínica que esperan la firma de su veterinario asignado.'
-            : 'Pedidos que esperan la firma del veterinario asignado.'}
-          enlace="/mis-pedidos?estado=PENDIENTE_FIRMA"
+            ? 'Pedidos de tu clínica que necesitan tu firma, los haya hecho quien los haya hecho.'
+            : 'Pedidos que esperan la firma del veterinario responsable.'}
+          enlace="/mis-pedidos?firma=PENDIENTE"
         />
         <TarjetaContador
           titulo="Pendientes de pago"

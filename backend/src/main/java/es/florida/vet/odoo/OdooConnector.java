@@ -50,7 +50,7 @@ public interface OdooConnector {
                        String firmanteNombre, String firmanteRol, String numeroColegiado,
                        String estadoPedido, BigDecimal ivaPorcentaje, BigDecimal baseImponible,
                        BigDecimal importeIva, BigDecimal total, String moneda,
-                       Boolean pagoCompleto, Boolean firmaValida) {
+                       Boolean pagoCompleto, Boolean firmaValida, String creadoPorNombre) {
         /** Sin clasificación firma/pago (null): no se escriben los campos x_vetstock_* en Odoo. */
         public FichaPedido(String referencia, Integer odooClienteId, List<LineaPedido> lineas,
                            Integer odooPedidoId, String estadoFirma, String responsableNombre,
@@ -59,7 +59,7 @@ public interface OdooConnector {
                            BigDecimal importeIva, BigDecimal total, String moneda) {
             this(referencia, odooClienteId, lineas, odooPedidoId, estadoFirma, responsableNombre,
                     firmanteNombre, firmanteRol, numeroColegiado, estadoPedido, ivaPorcentaje, baseImponible,
-                    importeIva, total, moneda, null, null);
+                    importeIva, total, moneda, null, null, null);
         }
 
         public FichaPedido(String referencia, Integer odooClienteId, List<LineaPedido> lineas,

@@ -35,7 +35,7 @@ public class DashboardService {
 
         if (esAdmin) {
             List<Pedido> ultimos = pedidoRepository.findAllByOrderByFechaCreacionDesc();
-            datos.put("pendientesFirma", pedidoRepository.countByEstado(EstadoPedido.PENDIENTE_FIRMA));
+            datos.put("pendientesFirma", ultimos.stream().filter(DashboardService::necesitaFirma).count());
             datos.put("pendientesPago", ultimos.stream().filter(DashboardService::pagoPendiente).count());
             datos.put("listosPreparar", pedidoRepository.countByEstado(EstadoPedido.LISTO_PREPARAR));
             datos.put("enPreparacion", pedidoRepository.countByEstado(EstadoPedido.EN_PREPARACION));
@@ -50,7 +50,7 @@ public class DashboardService {
             Long clinica = sesionService.clinicaDelUsuario(usuario).orElse(null);
             List<Pedido> pedidos = (clinica == null) ? List.of()
                     : pedidoRepository.findByClinicaIdOrderByFechaCreacionDesc(clinica);
-            datos.put("pendientesFirma", pedidos.stream().filter(p -> p.getEstado() == EstadoPedido.PENDIENTE_FIRMA).count());
+            datos.put("pendientesFirma", pedidos.stream().filter(DashboardService::necesitaFirma).count());
             datos.put("pendientesPago", pedidos.stream().filter(DashboardService::pagoPendiente).count());
             datos.put("enCamino", pedidos.stream().filter(p -> p.getEstado() == EstadoPedido.PREPARADO
                     || p.getEstado() == EstadoPedido.EN_PREPARACION).count());
@@ -58,6 +58,16 @@ public class DashboardService {
             datos.put("ultimosPedidos", pedidos.stream().limit(5).map(PedidoResponse::desde).toList());
         }
         return datos;
+    }
+
+    /**
+     * Necesita firma = aún en el circuito de firma y sin firma VÁLIDA del veterinario asignado
+     * (incluye pedidos con una firma de otra persona), lo haya creado quien lo haya creado.
+     */
+    private static boolean necesitaFirma(Pedido p) {
+        return (p.getEstado() == EstadoPedido.PENDIENTE_FIRMA || p.getEstado() == EstadoPedido.FIRMADO
+                || p.getEstado() == EstadoPedido.LISTO_PREPARAR)
+                && AutorizacionPedido.motivoFirmaNoValida(p) != null;
     }
 
     /** Pendiente de pago = enviado a firma (firmado o no) y sin pago confirmado. */

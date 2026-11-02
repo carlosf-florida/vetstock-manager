@@ -169,6 +169,8 @@ public class OdooJsonRpcConnector implements OdooConnector {
             {"x_vetstock_pagado", "boolean", "VetStock: pago completo confirmado"},
             {"x_vetstock_firma_valida", "boolean", "VetStock: firma válida del veterinario asignado"},
             {"x_vetstock_estado", "char", "VetStock: estado logístico"},
+            {"x_vetstock_realizado_por", "char", "VetStock: realizado por"},
+            {"x_vetstock_responsable_firma", "char", "VetStock: responsable de firma"},
     };
     private static final String FILTRO_PENDIENTES_FIRMA = "Pagados pendientes de firma (VetStock)";
     private static final String FILTRO_FIRMADOS_PAGADOS = "Firmados y pagados (VetStock)";
@@ -212,15 +214,22 @@ public class OdooJsonRpcConnector implements OdooConnector {
     /** Lista propia con las columnas de VetStock (no modifica las vistas estándar de Ventas). */
     private int asegurarVistaClasificacion() {
         JsonNode existentes = buscar("ir.ui.view", array().add(array().add("name").add("=").add(NOMBRE_VISTA)));
-        if (!existentes.isEmpty()) return existentes.get(0).asInt();
         String arch = "<list string=\"Pedidos VetStock\" create=\"0\">"
                 + "<field name=\"name\"/><field name=\"client_order_ref\" string=\"Pedido VetStock\"/>"
                 + "<field name=\"partner_id\"/><field name=\"date_order\"/>"
+                + "<field name=\"x_vetstock_realizado_por\" string=\"Realizado por\"/>"
+                + "<field name=\"x_vetstock_responsable_firma\" string=\"Responsable de firma\"/>"
                 + "<field name=\"amount_total\" sum=\"Total\"/>"
                 + "<field name=\"x_vetstock_pagado\" string=\"Pagado\"/>"
                 + "<field name=\"x_vetstock_firma_valida\" string=\"Firma válida\"/>"
                 + "<field name=\"x_vetstock_estado\" string=\"Estado VetStock\"/>"
                 + "<field name=\"state\" widget=\"badge\"/></list>";
+        if (!existentes.isEmpty()) {
+            // La vista ya existe (versión anterior): se actualizan sus columnas
+            int id = existentes.get(0).asInt();
+            escribir("ir.ui.view", id, json.createObjectNode().put("arch", arch));
+            return id;
+        }
         ObjectNode valores = json.createObjectNode().put("name", NOMBRE_VISTA).put("model", "sale.order")
                 .put("type", "list").put("arch", arch);
         return crear("ir.ui.view", valores);
@@ -261,6 +270,8 @@ public class OdooJsonRpcConnector implements OdooConnector {
         valores.put("x_vetstock_pagado", ficha.pagoCompleto());
         valores.put("x_vetstock_firma_valida", ficha.firmaValida());
         valores.put("x_vetstock_estado", ficha.estadoPedido());
+        valores.put("x_vetstock_realizado_por", ficha.creadoPorNombre());
+        valores.put("x_vetstock_responsable_firma", ficha.responsableNombre());
     }
 
     @Override
@@ -947,7 +958,8 @@ public class OdooJsonRpcConnector implements OdooConnector {
         return "<p><strong>VetStock Manager (" + escaparHtml(referencia) + ")</strong></p>"
                 + "<p>Pago: Confirmado</p>"
                 + "<p>Estado de firma: " + (firmado ? "Firmado" : "Por firmar") + "</p>"
-                + "<p>Responsable: " + responsable + "</p>"
+                + (textoNoVacio(ficha.creadoPorNombre()) ? "<p>Realizado por: " + escaparHtml(ficha.creadoPorNombre()) + "</p>" : "")
+                + "<p>Responsable de firma: " + responsable + "</p>"
                 + "<p>Firmante: " + firmante + (firmado ? rol : "") + "</p>"
                 + colegiado
                 + "<p>Estado VetStock del pedido: " + estadoPedido + "</p>"

@@ -67,6 +67,10 @@ guardados (no se almacenan, así nunca se desincronizan):
 | **Firmados y pagados** | Firma válida y pago completo. «Listo para preparar» solo si el estado es `LISTO_PREPARAR` (no cuenta si ya está en preparación, preparado o expedido) |
 | **Otros pendientes** | Todo lo demás: borradores, sin pago completo, cancelados |
 
+El veterinario ve en **Mis pedidos → Firma: «Falta la firma del veterinario»** todos los pedidos de
+su clínica que necesitan su firma válida, los haya hecho quien los haya hecho (columna «Realizado por»),
+aunque su estado logístico sea «Listo para preparar» (se marcan «Bloqueado»).
+
 Los pedidos antiguos firmados por una auxiliar (regla anterior) aparecen como
 «Pagados pendientes de firma»: el veterinario asignado puede firmarlos y su firma
 sustituye a la no válida (una sola firma por pedido).

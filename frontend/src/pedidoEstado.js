@@ -31,6 +31,12 @@ export function infoEstadoFirma(pedido) {
   return { texto: 'Pendiente de firma', clase: 'est-pendiente-firma' }
 }
 
+// Pedido que todavía necesita la firma VÁLIDA del veterinario asignado (sin firma, o con una firma
+// que no vale: de otra persona o de un contenido anterior), sea cual sea su estado logístico.
+export function necesitaFirma(pedido) {
+  return ['PENDIENTE_FIRMA', 'FIRMADO', 'LISTO_PREPARAR'].includes(pedido?.estado) && !firmaValida(pedido)
+}
+
 export const CLASIFICACIONES = {
   PAGADO_PENDIENTE_FIRMA: 'Pagados pendientes de firma',
   FIRMADO_Y_PAGADO: 'Firmados y pagados',

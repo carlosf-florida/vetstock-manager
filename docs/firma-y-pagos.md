@@ -85,10 +85,12 @@ Por eso VetStock **copia** su clasificación en tres campos propios de `sale.ord
 | `x_vetstock_pagado` | Pago completo confirmado en VetStock |
 | `x_vetstock_firma_valida` | Firma válida del veterinario asignado |
 | `x_vetstock_estado` | Estado logístico en VetStock |
+| `x_vetstock_realizado_por` | Quién hizo el pedido (auxiliar, veterinario o administración) |
+| `x_vetstock_responsable_firma` | Veterinario responsable que debe firmarlo (siempre el asignado) |
 
 Y crea **dos entradas de menú** en **Sales → Orders** (Ventas → Pedidos): «Pagados pendientes
 de firma (VetStock)» y «Firmados y pagados (VetStock)», con una lista propia que muestra
-*Pedido VetStock*, *Pagado*, *Firma válida* y *Estado VetStock*. También deja las mismas
+*Pedido VetStock*, *Realizado por*, *Responsable de firma*, *Pagado*, *Firma válida* y *Estado VetStock*. También deja las mismas
 listas como **filtros favoritos compartidos** (flecha ▼ del buscador → Favoritos).
 
 > Ojo: el menú estándar **Sales → Orders → Orders** solo enseña pedidos *confirmados*. Los

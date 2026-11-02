@@ -111,8 +111,14 @@ class ClasificacionFirmaPagoIntegracionTest extends IntegracionBase {
         assertTrue(autorizacion(admin(), id).get("listoParaPreparar").asBoolean());
 
         // 1) La firma pasa a ser de la auxiliar (como en los pedidos antiguos)
+        int pendientesAntes = json(getJson(drGarcia(), "/api/dashboard")).get("pendientesFirma").asInt();
         long idAuxiliar = jdbc.queryForObject("SELECT id FROM usuarios WHERE username = 'aux.sanroque'", Long.class);
         jdbc.update("UPDATE firmas SET usuario_id = ? WHERE pedido_id = ?", idAuxiliar, id);
+        // Aunque su estado sea LISTO_PREPARAR, el veterinario lo cuenta como pendiente de SU firma
+        assertEquals(pendientesAntes + 1, json(getJson(drGarcia(), "/api/dashboard")).get("pendientesFirma").asInt());
+        JsonNode visto = json(getJson(drGarcia(), "/api/pedidos/" + id));
+        assertEquals("Sonia Ruiz (Auxiliar)", visto.get("creadoPorNombre").asText());
+        assertEquals("Dr. Antonio García", visto.get("veterinarioNombre").asText());
         JsonNode a = autorizacion(admin(), id);
         assertEquals("PAGADO_PENDIENTE_FIRMA", a.get("clasificacion").asText());
         assertTrue(a.get("motivoFirma").asText().startsWith("Firmado por Sonia Ruiz"));

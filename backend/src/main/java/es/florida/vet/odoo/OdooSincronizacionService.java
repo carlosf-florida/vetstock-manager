@@ -238,7 +238,8 @@ public class OdooSincronizacionService {
                 pedido.getOdooId(), firmado ? "FIRMADO" : "PENDIENTE",
                 nombreResponsable(pedido), firmanteNombre, firmanteRol, numeroColegiado, estadoPedido,
                 pedido.getIvaPorcentaje(), pedido.getBaseImponible(), pedido.getImporteIva(),
-                pedido.getTotal(), pedido.getMoneda(), autorizacion.pagoCompleto(), autorizacion.firmaValida());
+                pedido.getTotal(), pedido.getMoneda(), autorizacion.pagoCompleto(), autorizacion.firmaValida(),
+                pedido.getCreadoPor() == null ? null : pedido.getCreadoPor().getNombreCompleto());
     }
 
     private java.math.BigDecimal importeConfirmado(Pedido pedido) {

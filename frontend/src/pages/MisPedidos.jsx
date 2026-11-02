@@ -7,7 +7,7 @@ import { totalPedido } from '../format.js'
 import Tabla from '../components/Tabla.jsx'
 import { BadgeEstadoPedido } from '../components/Badges.jsx'
 import { ErrorBox } from '../components/Spinner.jsx'
-import { infoEstadoFirma, infoEstadoPago, puedeFirmarPedido } from '../pedidoEstado.js'
+import { infoEstadoFirma, infoEstadoPago, necesitaFirma, puedeFirmarPedido } from '../pedidoEstado.js'
 
 export default function MisPedidos() {
   const { usuario } = useAuth()
@@ -16,9 +16,9 @@ export default function MisPedidos() {
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
   const [paramsUrl] = useSearchParams()
-  // Desde el inicio se llega con ?estado=PENDIENTE_FIRMA o ?estado=FIRMADO (pendiente de pago)
+  // Desde el inicio se llega con ?firma=PENDIENTE (falta la firma válida) o ?estado=FIRMADO (pendiente de pago)
   const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
-  const [pendienteFirma, setPendienteFirma] = useState('')
+  const [pendienteFirma, setPendienteFirma] = useState(paramsUrl.get('firma') || '')
 
   async function cargar() {
     setCargando(true)
@@ -46,7 +46,10 @@ export default function MisPedidos() {
   return (
     <section>
       <h1>Mis pedidos</h1>
-      <p className="texto-suave">Consulta por separado la firma y el pago de cada pedido. La preparación solo comienza cuando ambos están completados.</p>
+      <p className="texto-suave">
+        Todos los pedidos de tu clínica, los haya hecho quien los haya hecho. Firma siempre el veterinario
+        responsable; la preparación solo empieza con su firma válida y el pago completo.
+      </p>
 
       <ErrorBox mensaje={error} onReintentar={cargar} />
 
@@ -55,7 +58,17 @@ export default function MisPedidos() {
           columns={[
             { key: 'id', label: 'Nº pedido', render: (p) => <Link to={`/pedidos/${p.id}`}>#{p.id}</Link> },
             { key: 'fechaCreacion', label: 'Fecha', render: (p) => fechaCorta(p.fechaCreacion || p.fecha) },
-            { key: 'estado', label: 'Estado', render: (p) => <BadgeEstadoPedido estado={p.estado} /> },
+            { key: 'creadoPorNombre', label: 'Realizado por', soloEscritorio: true },
+            { key: 'veterinarioNombre', label: 'Responsable de firma', soloEscritorio: true },
+            {
+              key: 'estado', label: 'Estado', render: (p) => (
+                <>
+                  <BadgeEstadoPedido estado={p.estado} />
+                  {/* Pedidos antiguos con una firma que no vale: no se preparan hasta que firme el veterinario */}
+                  {p.estado === 'LISTO_PREPARAR' && necesitaFirma(p) && <small className="error-campo">Bloqueado: falta la firma del veterinario</small>}
+                </>
+              ),
+            },
             {
               key: 'firma',
               label: 'Firma',
@@ -78,7 +91,7 @@ export default function MisPedidos() {
           ]}
           filas={pedidos || []}
           claveFila={(p) => p.id}
-          busquedaCampos={['id', 'estado', 'observaciones', 'firmanteNombre', 'veterinarioNombre']}
+          busquedaCampos={['id', 'estado', 'observaciones', 'firmanteNombre', 'veterinarioNombre', 'creadoPorNombre']}
           busquedaValor={busqueda}
           onBusqueda={setBusqueda}
           placeholderBusqueda="Buscar por número u observaciones…"
@@ -90,9 +103,9 @@ export default function MisPedidos() {
               setValor: setPendienteFirma,
               opciones: [
                 { value: '', label: 'Todas' },
-                { value: 'PENDIENTE', label: 'Pendiente de firma' },
+                { value: 'PENDIENTE', label: 'Falta la firma del veterinario' },
               ],
-              cumple: (p, v) => p.estado === 'PENDIENTE_FIRMA' && infoEstadoFirma(p).texto === 'Pendiente',
+              cumple: (p) => necesitaFirma(p),
             },
           ]}
           textoVacio="Todavía no tienes pedidos, o ninguno coincide con el filtro."

@@ -1,5 +1,8 @@
 package es.florida.vet.odoo;
 
+import es.florida.vet.repository.PagoRepository;
+import es.florida.vet.service.AutorizacionPedido;
+
 import es.florida.vet.entity.Clinica;
 import es.florida.vet.entity.Firma;
 import es.florida.vet.entity.OdooLog;
@@ -42,6 +45,7 @@ public class OdooSincronizacionService {
     private final ClinicaRepository clinicaRepository;
     private final PedidoRepository pedidoRepository;
     private final OdooLogRepository odooLogRepository;
+    private final PagoRepository pagoRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -53,12 +57,14 @@ public class OdooSincronizacionService {
                                      ProductoRepository productoRepository,
                                      ClinicaRepository clinicaRepository,
                                      PedidoRepository pedidoRepository,
-                                     OdooLogRepository odooLogRepository) {
+                                     OdooLogRepository odooLogRepository,
+                                     PagoRepository pagoRepository) {
         this.odoo = odoo;
         this.productoRepository = productoRepository;
         this.clinicaRepository = clinicaRepository;
         this.pedidoRepository = pedidoRepository;
         this.odooLogRepository = odooLogRepository;
+        this.pagoRepository = pagoRepository;
     }
 
     @Transactional
@@ -218,7 +224,9 @@ public class OdooSincronizacionService {
     private OdooConnector.FichaPedido fichaPedido(Pedido pedido, Integer odooClienteId,
                                                    List<OdooConnector.LineaPedido> lineas) {
         Firma firma = pedido.getFirma();
-        boolean firmado = firmaComercialConfirmada(pedido, firma);
+        // Misma regla que la preparación: firma del veterinario asignado sobre el contenido actual
+        AutorizacionPedido autorizacion = AutorizacionPedido.de(pedido, importeConfirmado(pedido));
+        boolean firmado = autorizacion.firmaValida();
         String firmanteNombre = firmado && firma.getUsuario() != null
                 ? firma.getUsuario().getNombreCompleto() : null;
         String firmanteRol = firmado && firma.getUsuario() != null && firma.getUsuario().getRol() != null
@@ -230,16 +238,14 @@ public class OdooSincronizacionService {
                 pedido.getOdooId(), firmado ? "FIRMADO" : "PENDIENTE",
                 nombreResponsable(pedido), firmanteNombre, firmanteRol, numeroColegiado, estadoPedido,
                 pedido.getIvaPorcentaje(), pedido.getBaseImponible(), pedido.getImporteIva(),
-                pedido.getTotal(), pedido.getMoneda());
+                pedido.getTotal(), pedido.getMoneda(), autorizacion.pagoCompleto(), autorizacion.firmaValida());
     }
 
-    /**
-     * Es una marca comercial informativa, no una comprobación de firma
-     * electrónica certificada. Sin relación de Firma o sin fecha, Odoo muestra
-     * siempre "Por firmar".
-     */
-    private boolean firmaComercialConfirmada(Pedido pedido, Firma firma) {
-        return firma != null && firma.getFechaFirma() != null && pedido.getFechaFirma() != null;
+    private java.math.BigDecimal importeConfirmado(Pedido pedido) {
+        return pagoRepository.findByPedidoIdOrderByFechaInicioDesc(pedido.getId()).stream()
+                .filter(p -> p.getEstado() == es.florida.vet.enums.EstadoPago.CONFIRMADO)
+                .map(es.florida.vet.entity.Pago::getImporte)
+                .findFirst().orElse(null);
     }
 
     private Map<String, Object> registrarFallo(Pedido pedido, String detalle) {

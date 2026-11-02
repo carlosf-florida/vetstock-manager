@@ -160,6 +160,68 @@ public class OdooJsonRpcConnector implements OdooConnector {
         return ids.get(0).asInt();
     }
 
+    // ------------------------------------------------------------------
+    // Clasificación firma/pago en Ventas (sin módulo propio ni Studio)
+    // ------------------------------------------------------------------
+
+    /** Campos propios (prefijo x_, permitidos en Odoo Community sin módulo) que rellena VetStock. */
+    private static final String[][] CAMPOS_CLASIFICACION = {
+            {"x_vetstock_pagado", "boolean", "VetStock: pago completo confirmado"},
+            {"x_vetstock_firma_valida", "boolean", "VetStock: firma válida del veterinario asignado"},
+            {"x_vetstock_estado", "char", "VetStock: estado logístico"},
+    };
+    private static final String FILTRO_PENDIENTES_FIRMA = "Pagados pendientes de firma (VetStock)";
+    private static final String FILTRO_FIRMADOS_PAGADOS = "Firmados y pagados (VetStock)";
+    private boolean clasificacionPreparada = false;
+
+    /**
+     * Crea (solo si no existen) los campos x_ en sale.order y dos filtros favoritos
+     * compartidos en Ventas. No cambia vistas, permisos ni el estado comercial.
+     */
+    private void asegurarClasificacionVentas() {
+        if (clasificacionPreparada) return;
+        JsonNode modelos = buscar("ir.model", array().add(array().add("model").add("=").add("sale.order")));
+        if (!modelos.isArray() || modelos.isEmpty()) {
+            throw new IllegalStateException("Odoo no tiene el modelo sale.order (¿falta la app Ventas?)");
+        }
+        int modeloId = modelos.get(0).asInt();
+        for (String[] campo : CAMPOS_CLASIFICACION) {
+            ArrayNode dominio = array().add(array().add("model").add("=").add("sale.order"))
+                    .add(array().add("name").add("=").add(campo[0]));
+            if (buscar("ir.model.fields", dominio).isEmpty()) {
+                ObjectNode valores = json.createObjectNode().put("name", campo[0]).put("ttype", campo[1])
+                        .put("field_description", campo[2]).put("model_id", modeloId).put("state", "manual");
+                crear("ir.model.fields", valores);
+            }
+        }
+        String abiertos = "('x_vetstock_estado', 'not in', ['CANCELADO', 'BORRADOR'])";
+        asegurarFiltro(FILTRO_PENDIENTES_FIRMA,
+                "[('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', False), " + abiertos + "]");
+        asegurarFiltro(FILTRO_FIRMADOS_PAGADOS,
+                "[('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', True), " + abiertos + "]");
+        clasificacionPreparada = true;
+    }
+
+    /** Filtro favorito COMPARTIDO (sin usuario): lo ven todos los usuarios de Ventas. */
+    private void asegurarFiltro(String nombre, String dominioTexto) {
+        ArrayNode dominio = array().add(array().add("model_id").add("=").add("sale.order"))
+                .add(array().add("name").add("=").add(nombre));
+        if (!buscar("ir.filters", dominio).isEmpty()) return;
+        ObjectNode valores = json.createObjectNode().put("name", nombre).put("model_id", "sale.order")
+                .put("domain", dominioTexto).put("context", "{}").put("is_default", false);
+        valores.put("user_id", false);
+        crear("ir.filters", valores);
+    }
+
+    /** Copia en el sale.order la clasificación calculada por VetStock (si la ficha la trae). */
+    private void aplicarClasificacion(ObjectNode valores, FichaPedido ficha) {
+        if (ficha.pagoCompleto() == null || ficha.firmaValida() == null) return;
+        asegurarClasificacionVentas();
+        valores.put("x_vetstock_pagado", ficha.pagoCompleto());
+        valores.put("x_vetstock_firma_valida", ficha.firmaValida());
+        valores.put("x_vetstock_estado", ficha.estadoPedido());
+    }
+
     @Override
     public Resultado probarConexion() {
         try {
@@ -601,6 +663,7 @@ public class OdooJsonRpcConnector implements OdooConnector {
             valores.put("origin", "VetStock Manager");
             valores.set("order_line", lineas);
             valores.put("note", actualizarNotaPedido("", ficha));
+            aplicarClasificacion(valores, ficha);
             int id = crear("sale.order", valores);
             if (tieneImportesFiscales(ficha)) {
                 return verificarImportesPedido(id, ficha,
@@ -622,6 +685,7 @@ public class OdooJsonRpcConnector implements OdooConnector {
         String anterior = nota.isTextual() ? nota.asText() : "";
         ObjectNode valores = json.createObjectNode();
         valores.put("note", actualizarNotaPedido(anterior, ficha));
+        aplicarClasificacion(valores, ficha);
         escribir("sale.order", id, valores);
         if (!tieneImportesFiscales(ficha)) {
             return Resultado.ok(id, detalle);

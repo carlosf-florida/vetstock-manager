@@ -50,6 +50,13 @@ public class Pedido {
     @JoinColumn(name = "creado_por_id", nullable = false)
     private Usuario creadoPor;
 
+    @ManyToOne
+    @JoinColumn(name = "modificado_por_id")
+    private Usuario modificadoPor;
+
+    @Column(name = "fecha_modificacion")
+    private LocalDateTime fechaModificacion;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private EstadoPedido estado = EstadoPedido.BORRADOR;
@@ -152,6 +159,13 @@ public class Pedido {
     public Clinica getClinica() { return clinica; }
     public Veterinario getVeterinario() { return veterinario; }
     public Usuario getCreadoPor() { return creadoPor; }
+    public Usuario getModificadoPor() { return modificadoPor; }
+    public LocalDateTime getFechaModificacion() { return fechaModificacion; }
+
+    public void registrarModificacion(Usuario usuario) {
+        this.modificadoPor = usuario;
+        this.fechaModificacion = LocalDateTime.now();
+    }
     public EstadoPedido getEstado() { return estado; }
     public void setEstado(EstadoPedido estado) { this.estado = estado; }
     public String getObservaciones() { return observaciones; }

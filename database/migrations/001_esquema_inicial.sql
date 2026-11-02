@@ -128,6 +128,8 @@ CREATE TABLE pedidos (
     clinica_id            BIGINT NOT NULL,   -- clínica a la que va el pedido
     veterinario_id        BIGINT NOT NULL,   -- veterinario firmante asignado
     creado_por_id         BIGINT NOT NULL,   -- usuario que lo creó (quedá registrado)
+    modificado_por_id     BIGINT,            -- último usuario que cambió las líneas
+    fecha_modificacion    DATETIME,
     estado                VARCHAR(30) NOT NULL DEFAULT 'BORRADOR',
     observaciones         VARCHAR(255),
     iva_porcentaje        DECIMAL(5,2) NOT NULL DEFAULT 4.00,
@@ -151,7 +153,8 @@ CREATE TABLE pedidos (
     CONSTRAINT ck_ped_iva CHECK (iva_porcentaje >= 0 AND iva_porcentaje <= 100),
     CONSTRAINT fk_ped_clinica      FOREIGN KEY (clinica_id)     REFERENCES clinicas(id),
     CONSTRAINT fk_ped_veterinario  FOREIGN KEY (veterinario_id) REFERENCES veterinarios(id),
-    CONSTRAINT fk_ped_creado_por   FOREIGN KEY (creado_por_id)  REFERENCES usuarios(id)
+    CONSTRAINT fk_ped_creado_por   FOREIGN KEY (creado_por_id)  REFERENCES usuarios(id),
+    CONSTRAINT fk_ped_modificado_por FOREIGN KEY (modificado_por_id) REFERENCES usuarios(id)
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_ped_estado  ON pedidos(estado);

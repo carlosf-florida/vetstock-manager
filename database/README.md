@@ -9,6 +9,7 @@ Todo lo relativo a la base de datos de VetStock Manager vive en esta carpeta.
 - `migrations/003_reparar_textos_utf8.sql` — repara textos de prueba mal codificados y guarda sus valores anteriores.
 - `migrations/004_firma_pago_independientes.sql` — añade colegiado opcional a la firma y seguimiento de sincronización del pedido, sin borrar datos. Se puede repetir.
 - `migrations/005_iva_pedidos.sql` — conserva 0% en pedidos existentes y configura 4% para los nuevos. Añade `pedidos.iva_porcentaje`, sin recobrar pagos ni modificar firmas históricas.
+- `migrations/006_modificacion_pedidos.sql` — guarda quién cambió por última vez las líneas de un pedido y cuándo. Se puede repetir.
 
 **Instalaciones existentes:** aplicar las migraciones 004 y 005 que falten, no volver a ejecutar el esquema inicial, que borra tablas. Firma y pago se consultan por separado; pagar antes de firmar mantiene `PENDIENTE_FIRMA` y puede exportarse a Odoo, pero no prepararse ni expedirse. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
 
@@ -27,7 +28,7 @@ El backend se conecta con las credenciales de `backend/src/main/resources/applic
 | `usuarios` | Credenciales de acceso (contraseña cifrada con **BCrypt**) y rol (`ADMIN`, `VETERINARIO`, `AUXILIAR`) | 1 por cuenta |
 | `clinicas` | Clínicas clientes y su veterinario responsable de firma | N:1 opcional con `veterinarios` |
 | `veterinarios` | Datos de veterinario (nº de colegiado) | 1:1 con `usuarios`; N:1 con `clinicas` |
-| `auxiliares` | Auxiliares que pueden confirmar pedidos de su clínica con su firma propia | 1:1 con `usuarios`; N:1 con `clinicas` |
+| `auxiliares` | Auxiliares que crean pedidos de su clínica y los dejan pendientes de firma | 1:1 con `usuarios`; N:1 con `clinicas` |
 | `productos` | Catálogo: `stock_actual` (físico), `stock_reservado` (en pedidos no expedidos) y `stock_minimo` (aviso de reposición) | — |
 | `pedidos` | Estado operativo, fechas independientes de firma/pago y `odoo_sincronizacion_pendiente`/`odoo_ultimo_error` | N:1 con `clinicas`, `veterinarios` (responsable) y `usuarios` (creador) |
 | `lineas_pedido` | Líneas: producto, cantidad y **precio unitario copiado** en el momento del pedido (histórico inmune a cambios de precio) | N:1 con `pedidos` y `productos` |
@@ -56,7 +57,7 @@ El backend se conecta con las credenciales de `backend/src/main/resources/applic
 
 ## Datos de prueba incluidos
 
-- 3 clínicas, 3 veterinarios, 2 auxiliares y 1 administrador.
+- 3 clínicas, 3 veterinarios, 1 auxiliar y 1 administrador.
 - 10 productos de las 3 categorías (MED, CLI, ALI) con stock variado (hay 3 bajo mínimo para ver el aviso).
 - 4 pedidos en distintos estados (borrador, pendiente de firma, en preparación y expedido con su histórico completo).
 - 3 destinos, movimientos de stock de ejemplo.
@@ -70,7 +71,6 @@ El backend se conecta con las credenciales de `backend/src/main/resources/applic
 | `dra.lopez` | `vet123` | VETERINARIO |
 | `dr.martin` | `vet123` | VETERINARIO |
 | `aux.sanroque` | `aux123` | AUXILIAR |
-| `aux.miravet` | `aux123` | AUXILIAR |
 
 ## Notas para ampliaciones
 

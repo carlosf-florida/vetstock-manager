@@ -48,6 +48,9 @@ public class PagoService {
     @Value("${vetstock.pagos.token-notificacion}")
     private String tokenNotificacionConfigurado;
 
+    @Value("${vetstock.pagos.simulado-activo:true}")
+    private boolean simuladoActivo = true;
+
     public PagoService(PagoRepository pagoRepository,
                        PedidoRepository pedidoRepository,
                        PedidoService pedidoService,
@@ -71,10 +74,13 @@ public class PagoService {
         if (pedido.getEstado() != EstadoPedido.FIRMADO && pedido.getEstado() != EstadoPedido.PENDIENTE_FIRMA) {
             throw new ReglaNegocioException("Confirma primero el pedido; puedes firmarlo ahora o más tarde");
         }
-        boolean yaHayPendiente = pagoRepository.findByPedidoIdOrderByFechaInicioDesc(pedidoId).stream()
-                .anyMatch(p -> p.getEstado() == EstadoPago.PENDIENTE);
-        if (yaHayPendiente) {
-            throw new ReglaNegocioException("Ya existe un pago en curso para este pedido");
+        // Si ya hay un pago en curso se devuelve el mismo: así no se crean dos cobros
+        Pago pendiente = pagoRepository.findByPedidoIdOrderByFechaInicioDesc(pedidoId).stream()
+                .filter(p -> p.getEstado() == EstadoPago.PENDIENTE)
+                .findFirst().orElse(null);
+        if (pendiente != null) {
+            return new PagoIniciadoResponse(pendiente.getReferencia(), pendiente.getImporte(),
+                    pendiente.getMoneda(), "SIMULADO", "/pago-simulado/" + pendiente.getReferencia());
         }
 
         // El importe SIEMPRE lo calcula el servidor a partir de las líneas
@@ -95,6 +101,9 @@ public class PagoService {
      */
     @Transactional
     public PagoResponse simuladoProcesar(String referencia, String resultado) {
+        if (!simuladoActivo) {
+            throw new AccesoDenegadoException("La pasarela de pago simulada está desactivada");
+        }
         Pago pago = pagoRepository.findByReferencia(referencia)
                 .orElseThrow(() -> new RecursoNoEncontradoException("El pago no existe"));
         NotificacionPagoRequest notificacion = new NotificacionPagoRequest(

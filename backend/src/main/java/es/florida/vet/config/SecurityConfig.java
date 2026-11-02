@@ -66,9 +66,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/informes/**", "/api/odoo/**").hasRole("ADMIN")
                 // Subir documentos: solo el almacén
                 .requestMatchers(HttpMethod.POST, "/api/pedidos/*/documentos").hasRole("ADMIN")
-                // Confirmación interna: auxiliar de la clínica o veterinario responsable.
-                // El servicio verifica la identidad real y la pertenencia a la clínica.
-                .requestMatchers(HttpMethod.PATCH, "/api/pedidos/*/firmar").hasAnyRole("VETERINARIO", "AUXILIAR")
+                // Firma: solo veterinarios. El servicio comprueba que sea el asignado al pedido.
+                .requestMatchers(HttpMethod.PATCH, "/api/pedidos/*/firmar").hasRole("VETERINARIO")
                 // El resto de la API: cualquier usuario con sesión iniciada
                 .requestMatchers("/api/**").authenticated()
                 // Archivos estáticos (build de React si se copia en el backend): públicos

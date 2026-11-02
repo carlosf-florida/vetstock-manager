@@ -1,5 +1,10 @@
 package es.florida.vet;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
+import es.florida.vet.entity.Producto;
+import es.florida.vet.dto.PagoIniciadoResponse;
+import es.florida.vet.dto.LineaPedidoRequest;
+import es.florida.vet.dto.LineasRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import es.florida.vet.dto.FirmaRequest;
@@ -48,6 +53,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -97,33 +104,37 @@ class PedidoFirmaPagoTest {
     }
 
     @Test
-    @DisplayName("un auxiliar de la misma clínica confirma con su usuario y conserva al veterinario responsable separado")
-    void auxiliarDeLaMismaClinicaFirmaConSuIdentidadSinFalsaAtribucion() throws Exception {
+    @DisplayName("un auxiliar de la clínica no puede firmar aunque vea el pedido")
+    void auxiliarNoPuedeFirmar() {
         ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
         Usuario usuarioAuxiliar = usuario(31L, "ana.aux", "Ana Auxiliar", Rol.AUXILIAR);
-        Auxiliar auxiliar = new Auxiliar(usuarioAuxiliar, contexto.clinica());
-        asignarId(auxiliar, 32L);
-        permitirFirma(contexto, usuarioAuxiliar);
+        new Auxiliar(usuarioAuxiliar, contexto.clinica());
+        permitirAccesoFirma(contexto, usuarioAuxiliar, true);
 
-        PedidoResponse respuesta = pedidoService.firmar(PEDIDO_ID, solicitudFirma(null), usuarioAuxiliar.getUsername());
+        assertThrows(AccesoDenegadoException.class,
+                () -> pedidoService.firmar(PEDIDO_ID, solicitudFirma(null), usuarioAuxiliar.getUsername()));
+
+        verify(firmaRepository, never()).save(any(Firma.class));
+        assertEquals(EstadoPedido.PENDIENTE_FIRMA, contexto.pedido().getEstado());
+        assertNull(contexto.pedido().getFechaFirma());
+    }
+
+    @Test
+    @DisplayName("el veterinario asignado firma con su identidad y queda guardada la copia del pedido")
+    void veterinarioAsignadoFirma() throws Exception {
+        ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
+        permitirFirma(contexto, contexto.responsable());
+
+        PedidoResponse respuesta = pedidoService.firmar(PEDIDO_ID, solicitudFirma(null),
+                contexto.responsable().getUsername());
 
         ArgumentCaptor<Firma> firmaGuardada = ArgumentCaptor.forClass(Firma.class);
         verify(firmaRepository).save(firmaGuardada.capture());
-        Firma firma = firmaGuardada.getValue();
-        JsonNode copiaInmutable = new ObjectMapper().readTree(firma.getContenidoPedido());
-
-        assertEquals(EstadoPedido.FIRMADO, contexto.pedido().getEstado());
+        JsonNode copia = new ObjectMapper().readTree(firmaGuardada.getValue().getContenidoPedido());
+        assertSame(contexto.responsable(), firmaGuardada.getValue().getUsuario());
+        assertEquals("VETERINARIO", copia.path("firmanteRol").asText());
         assertEquals(EstadoPedido.FIRMADO.name(), respuesta.estado());
-        assertNotNull(contexto.pedido().getFechaFirma());
-        assertSame(usuarioAuxiliar, firma.getUsuario());
-        assertEquals("Ana Auxiliar", copiaInmutable.path("firmanteNombre").asText());
-        assertEquals("ana.aux", copiaInmutable.path("firmanteUsername").asText());
-        assertEquals("AUXILIAR", copiaInmutable.path("firmanteRol").asText());
-        assertEquals("Dra. Responsable", copiaInmutable.path("veterinarioResponsable").asText());
-        assertEquals("Ana Auxiliar", respuesta.firmanteNombre());
-        assertEquals("AUXILIAR", respuesta.firmanteRol());
-        assertArrayEquals(java.util.Base64.getDecoder().decode(PNG_1X1), firma.getImagen());
-        verifyNoInteractions(eventos);
+        assertArrayEquals(java.util.Base64.getDecoder().decode(PNG_1X1), firmaGuardada.getValue().getImagen());
     }
 
     @Test
@@ -282,6 +293,58 @@ class PedidoFirmaPagoTest {
         assertEquals(EstadoPedido.PENDIENTE_FIRMA, contexto.pedido().getEstado());
         verify(pedidoRepository, never()).save(any(Pedido.class));
         verifyNoInteractions(eventos);
+    }
+
+    @Test
+    @DisplayName("un pedido pagado no se puede cancelar, tampoco desde administración")
+    void pedidoPagadoNoSeCancela() {
+        ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
+        contexto.pedido().setFechaPago(java.time.LocalDateTime.now());
+        when(pedidoRepository.findById(PEDIDO_ID)).thenReturn(Optional.of(contexto.pedido()));
+
+        assertThrows(ReglaNegocioException.class, () -> pedidoService.cancelar(PEDIDO_ID, "admin", true));
+
+        assertEquals(EstadoPedido.PENDIENTE_FIRMA, contexto.pedido().getEstado());
+        verify(productoRepository, never()).liberarReserva(anyLong(), anyInt());
+    }
+
+    @Test
+    @DisplayName("si administración cambia las líneas de un borrador queda registrado quién lo hizo")
+    void modificarLineasRegistraQuienLoHace() {
+        ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
+        contexto.pedido().setEstado(EstadoPedido.BORRADOR);
+        Usuario administrador = usuario(51L, "admin", "Admin Almacén", Rol.ADMIN);
+        Producto producto = new Producto();
+        asignarId(producto, 7L);
+        producto.setNombre("Guantes");
+        producto.setPrecio(new BigDecimal("12.50"));
+        when(pedidoRepository.findById(PEDIDO_ID)).thenReturn(Optional.of(contexto.pedido()));
+        when(sesionService.usuarioActual("admin")).thenReturn(administrador);
+        when(productoRepository.findById(7L)).thenReturn(Optional.of(producto));
+
+        PedidoResponse respuesta = pedidoService.modificarLineas(PEDIDO_ID,
+                new LineasRequest(java.util.List.of(new LineaPedidoRequest(7L, 3))), "admin", true);
+
+        assertSame(administrador, contexto.pedido().getModificadoPor());
+        assertNotNull(contexto.pedido().getFechaModificacion());
+        assertEquals("Admin Almacén", respuesta.modificadoPorNombre());
+        assertEquals(1, contexto.pedido().getLineas().size());
+    }
+
+    @Test
+    @DisplayName("iniciar el pago dos veces devuelve el mismo pago pendiente y no crea otro cobro")
+    void iniciarPagoDosVecesReutilizaElPendiente() {
+        ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
+        contexto.pedido().setEstado(EstadoPedido.FIRMADO);
+        Pago pendiente = new Pago(contexto.pedido(), contexto.pedido().getTotal(), "SIM-ABC", "token");
+        PagoService pagoService = new PagoService(pagoRepository, pedidoRepository, pedidoService, sesionService);
+        when(pedidoRepository.findById(PEDIDO_ID)).thenReturn(Optional.of(contexto.pedido()));
+        when(pagoRepository.findByPedidoIdOrderByFechaInicioDesc(PEDIDO_ID)).thenReturn(java.util.List.of(pendiente));
+
+        PagoIniciadoResponse respuesta = pagoService.iniciar(PEDIDO_ID, "admin", true);
+
+        assertEquals("SIM-ABC", respuesta.referencia());
+        verify(pagoRepository, never()).save(any(Pago.class));
     }
 
     private ContextoPedido pedidoPendiente(Long pedidoId) {

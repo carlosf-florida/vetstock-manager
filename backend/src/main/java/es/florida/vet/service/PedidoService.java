@@ -162,6 +162,7 @@ public class PedidoService {
         Pedido pedido = new Pedido(firmante.getClinica(), firmante, usuario);
         pedido.setObservaciones(datos.observaciones());
         pedido.reemplazarLineas(construirLineas(datos.lineas()));
+        pedido.registrarModificacion(usuario);
         return PedidoResponse.desde(pedidoRepository.save(pedido));
     }
 
@@ -233,11 +234,10 @@ public class PedidoService {
         Pedido pedido = buscarPedido(id);
         Usuario firmante = sesionService.usuarioActual(username);
         comprobarAccesoAClinica(pedido, username, false);
-        boolean esResponsable = firmante.getRol() == es.florida.vet.enums.Rol.VETERINARIO
+        boolean esVeterinarioAsignado = firmante.getRol() == es.florida.vet.enums.Rol.VETERINARIO
                 && pedido.getVeterinario().getUsuario().getUsername().equals(username);
-        boolean esAuxiliar = firmante.getRol() == es.florida.vet.enums.Rol.AUXILIAR;
-        if (!esResponsable && !esAuxiliar) {
-            throw new AccesoDenegadoException("Solo puede confirmar el responsable o un auxiliar de esta clínica con su propia firma");
+        if (!esVeterinarioAsignado) {
+            throw new AccesoDenegadoException("Solo el veterinario asignado al pedido puede firmarlo");
         }
         if (pedido.getFechaFirma() != null || firmaRepository.findByPedidoId(id).isPresent()) {
             throw new ReglaNegocioException("El pedido ya tiene una firma registrada");
@@ -365,8 +365,8 @@ public class PedidoService {
         Pedido pedido = buscarPedido(id);
         comprobarAccesoAClinica(pedido, username, esAdmin);
         comprobarTransicion(pedido, EstadoPedido.CANCELADO);
-        if (pedido.getFechaPago() != null && !esAdmin) {
-            throw new ReglaNegocioException("Para cancelar un pedido pagado debes contactar con administración");
+        if (pedido.getFechaPago() != null) {
+            throw new ReglaNegocioException("Un pedido pagado no se puede cancelar desde la aplicación");
         }
 
         if (pedido.getEstado().tieneReserva()) {
@@ -376,7 +376,6 @@ public class PedidoService {
         }
         pedido.setEstado(EstadoPedido.CANCELADO);
         pedido.setFechaCancelacion(LocalDateTime.now());
-        if (pedido.getFechaPago() != null) programarSincronizacion(pedido);
         return PedidoResponse.desde(pedidoRepository.save(pedido));
     }
 

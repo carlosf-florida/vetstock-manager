@@ -9,15 +9,17 @@ pedidos, documentos, bultos, palets, destinos e informes).
 > Los datos son ficticios, la pasarela de pago es **de demostración** (no cobra)
 > y la firma es una firma electrónica simple **sin validez legal certificada**.
 
-**Regla principal:** ningún pedido pasa a preparación sin la **firma del veterinario
-asignado** y el **pago confirmado** por la notificación del proveedor.
+**Regla principal:** ningún pedido pasa a preparación sin la **firma válida del veterinario
+asignado** y el **pago completo confirmado** por la notificación del proveedor. Administración
+los ve separados en «Pagados pendientes de firma», «Firmados y pagados» y «Otros pendientes»
+(también como favoritos en Odoo Ventas).
 
 ## Recorrido principal
 
 ```
 Cliente/auxiliar crea pedido ─► Envía a firma (reserva stock)
-   ─► Veterinario asignado revisa y firma ─► La clínica paga (pasarela demo)
-   ─► El backend verifica la notificación firmada ─► LISTO_PREPARAR
+   ─► En cualquier orden: el veterinario asignado revisa y firma · la clínica paga (pasarela demo,
+      el backend verifica la notificación firmada) ─► LISTO_PREPARAR
    ─► Admin: preparación, bultos, palet y destino ─► PREPARADO ─► EXPEDIDO (descuenta stock)
 ```
 
@@ -77,7 +79,7 @@ cd backend
 .\mvnw.cmd test
 ```
 
-53 pruebas automáticas (unitarias + integración contra MySQL real en la base
+60 pruebas automáticas (unitarias + integración contra MySQL real en la base
 `vetstock_test`). Resultados y guía manual: [docs/pruebas.md](docs/pruebas.md).
 
 ## Documentación

@@ -19,7 +19,11 @@
 4. El backend valida el tipo real del archivo por sus bytes (PNG/JPG), el tamaño
    y la confirmación. Guarda la firma con el firmante, la fecha y una **copia JSON**
    del contenido (líneas, precios, IVA, total). No reutiliza firmas anteriores.
-5. El pedido pasa a **FIRMADO (pendiente de pago)** y su contenido ya no se puede modificar.
+5. Si aún no está pagado pasa a **FIRMADO (pendiente de pago)**; si ya lo estaba, a **LISTO_PREPARAR**.
+6. La firma solo es **válida** si es del veterinario asignado y la copia coincide con el contenido
+   actual (ver `docs/modelo-y-reglas.md`). Una firma no válida (por ejemplo, de una auxiliar con la
+   regla antigua) se sustituye cuando firma el veterinario asignado.
+7. En lugar de firmar, el veterinario asignado puede **rechazar** el pedido indicando el motivo.
 
 El nº de colegiado es opcional y solo identifica; no es una contraseña. La
 imagen de la firma solo la pueden ver la clínica del pedido y administración
@@ -68,6 +72,25 @@ si el banco lo habilita, **Bizum**.
 6. **Transferencia:** solo tendría sentido con un proveedor que confirme automáticamente
    la recepción (por ejemplo, transferencia inmediata con notificación). No se ha
    implementado porque no se revisan justificantes a mano.
+
+## Odoo Ventas: «Pagados pendientes de firma» y «Firmados y pagados»
+
+Odoo 18 **Community** (sin Studio ni Odoo Sign) no sabe por sí mismo si un pedido de
+VetStock está pagado o firmado: en Odoo no se registran facturas ni pagos de VetStock.
+Por eso VetStock **copia** su clasificación en tres campos propios de `sale.order`
+(se crean solos la primera vez, sin módulo Python):
+
+| Campo | Contenido |
+|---|---|
+| `x_vetstock_pagado` | Pago completo confirmado en VetStock |
+| `x_vetstock_firma_valida` | Firma válida del veterinario asignado |
+| `x_vetstock_estado` | Estado logístico en VetStock |
+
+Y crea dos **filtros favoritos compartidos** en Ventas → Pedidos (desplegable de filtros →
+Favoritos): «Pagados pendientes de firma (VetStock)» y «Firmados y pagados (VetStock)».
+No se cambia el estado comercial (`state`) ni se duplican pedidos. Los valores se
+actualizan en cada sincronización (pago, firma, rechazo, logística). Solo se exportan
+pedidos pagados, así que «Otros pendientes» solo existe en VetStock.
 
 ## Odoo (opcional, de fases anteriores)
 

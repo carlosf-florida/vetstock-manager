@@ -20,7 +20,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 ### Última ejecución registrada
 
 - Fecha: 2 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
-- Resultado: **53 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
+- Resultado: **60 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
 - La prueba de concurrencia se repitió 3 veces seguidas con el mismo resultado.
 
 ### Correspondencia con las pruebas pedidas
@@ -46,6 +46,13 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 | Bultos, palets y expedición | `recorridoCompleto` (pasos 10-11) |
 | Recorrido completo de creación a expedición | `recorridoCompleto` |
 | Caducidad de reservas | `…caducidadDeReservas` y `caducidadCancelaYLiberaReserva` |
+| Pagado sin firma → «pagados pendientes de firma», no se prepara; al firmar pasa a «firmados y pagados» sin duplicarse | `ClasificacionFirmaPagoIntegracionTest.pagadoSinFirmaYDespuesFirmado` |
+| Firmado sin pago → no está listo | `…firmadoSinPago` |
+| Pago parcial → no cuenta como pagado | `…pagoParcialNoCuenta` |
+| En preparación → «firmado y pagado» pero no «listo» | `…pagadoSinFirmaYDespuesFirmado` |
+| Firma de otra persona o de un contenido anterior → no habilita preparación | `…firmaNoValida` y `PedidoFirmaPagoTest.firmaNoValidaSiNoEsDelAsignadoOCambiaElContenido` |
+| Rechazo solo del veterinario asignado; pagado → devolución pendiente | `…rechazoDelVeterinario` |
+| Permisos de la clasificación | `…permisosDeLaClasificacion` |
 
 ### Errores reales que encontraron estas pruebas (ya corregidos)
 
@@ -94,6 +101,15 @@ podían añadir 3 unidades de un producto con 2 disponibles.
 | Separación de cuentas y persistencia del carrito | Correcto (cada usuario ve solo el suyo) |
 | Filtro «Solo con stock disponible» | Corregido (antes mostraba solo los de stock bajo) |
 | Móvil 375 px: sin desplazamiento horizontal; cabecera en una línea; avisos sin tapar los botones | Correcto |
+
+## 2c. Clasificación firma/pago con los datos reales (Docker)
+
+Tras aplicar la migración 009 y desplegar (2 de noviembre de 2026), los 6 pedidos pagados
+de la base `vetstock` aparecen en «Pagados pendientes de firma»: 2 sin firma y 4 firmados
+por la auxiliar con la regla antigua («Firmado por Sonia Ruiz (Auxiliar), que no es el
+veterinario asignado»). En Odoo se crearon los campos `x_vetstock_*` y los dos favoritos
+compartidos, y el favorito «Pagados pendientes de firma» encuentra esos pedidos. El pedido
+S00001 (VSM-9) no superó la comprobación fiscal porque se creó en USD en una fase anterior.
 
 ## 3. Guía de comprobación manual (para repetirla)
 

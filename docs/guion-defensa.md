@@ -21,6 +21,13 @@ Tecnologías: Spring Boot 4 (Java 21), MySQL, React + Vite y pruebas JUnit.
    Explicar: «El pedido no se marca como pagado por volver a la página de éxito, sino cuando el backend recibe una notificación **firmada con HMAC** y comprueba el importe y la moneda.»
 4. **`admin`**: Pedidos (filtros y columnas de firma y pago) → *Iniciar preparación* → intentar *Marcar como preparado* sin bultos (regla) → Bultos → Palets (destino Valencia) → asignar → *Preparado* → *Expedir* → en Stock se ve que el físico baja una sola vez.
 
+## 2b. Firma y pago separados (1 min)
+
+Admin → Pedidos: «Pagados pendientes de firma», «Firmados y pagados» y «Otros pendientes».
+Explicar: «Pagado no basta: hace falta la firma VÁLIDA del veterinario asignado sobre el
+contenido actual. Lo decide una regla fija en el backend (`AutorizacionPedido`), no una IA.»
+En Odoo → Ventas → Pedidos → Favoritos aparecen las mismas dos listas.
+
 ## 3. Seguridad y reglas (2 min)
 
 - Los permisos están en el **backend**: entrar como `aux.mediterraneo` y abrir `/pedidos/2` → acceso denegado.
@@ -30,7 +37,7 @@ Tecnologías: Spring Boot 4 (Java 21), MySQL, React + Vite y pruebas JUnit.
 
 ## 4. Calidad (1 min)
 
-- `mvnw.cmd test` → **53 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo.
+- `mvnw.cmd test` → **60 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo.
 - Las pruebas encontraron errores reales (el script SQL no se podía repetir, editar líneas fallaba), y están corregidos.
 
 ## 5. Límites honestos (1 min)

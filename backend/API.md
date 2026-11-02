@@ -39,7 +39,7 @@ HTTP: `200` OK · `201` creado · `400` regla de negocio/datos inválidos · `40
 | `POST /api/pedidos` | ADMIN, VETERINARIO, AUXILIAR | `{observaciones (≤255),lineas:[{productoId,cantidad≥1}]}`; responsable automático para clientes. ADMIN añade `clinicaId` y `veterinarioId`. Precio calculado por backend; 201 BORRADOR |
 | `PUT /api/pedidos/{id}/lineas` | creador o ADMIN | Solo BORRADOR; guarda `modificadoPorNombre` y `fechaModificacion` |
 | `PATCH /api/pedidos/{id}/enviar-firma` | ADMIN o su clínica | Confirma el pedido, reserva stock, pasa a PENDIENTE_FIRMA |
-| `PATCH /api/pedidos/{id}/firmar` | solo el VETERINARIO asignado al pedido (resto: 403) | `{tipoFirma:"DIBUJO"/"IMAGEN",imagenBase64,nombreArchivo?,confirmacion:true,numeroColegiado?}`. Solo en PENDIENTE_FIRMA → FIRMADO. Guarda firmante, fecha y copia inmutable; rechaza firma repetida |
+| `PATCH /api/pedidos/{id}/firmar` | solo el VETERINARIO asignado al pedido (resto: 403); antes o después del pago; sustituye una firma no válida | `{tipoFirma:"DIBUJO"/"IMAGEN",imagenBase64,nombreArchivo?,confirmacion:true,numeroColegiado?}`. Solo en PENDIENTE_FIRMA → FIRMADO. Guarda firmante, fecha y copia inmutable; rechaza firma repetida |
 | `GET /api/pedidos/{id}/firma` | ADMIN o su clínica | Responsable y firmante separados; colegiado identificativo opcional |
 | `GET /api/pedidos/{id}/firma/imagen` | ADMIN o su clínica | Imagen PNG/JPG |
 | `PATCH /api/pedidos/{id}/cancelar` | ADMIN o su clínica | Libera la reserva y guarda `motivoCancelacion`. Un pedido pagado no se cancela (nadie) |
@@ -56,16 +56,25 @@ También devuelve `baseImponible`, `ivaPorcentaje`, `importeIva` y `moneda` (EUR
 ## Estados operativos, firma y pago
 
 ```text
-BORRADOR → PENDIENTE_FIRMA → (firma) FIRMADO → (pago confirmado) LISTO_PREPARAR
+BORRADOR → PENDIENTE_FIRMA → firma y pago en cualquier orden → LISTO_PREPARAR
 LISTO_PREPARAR → EN_PREPARACION → PREPARADO (≥1 bulto) → EXPEDIDO (bultos en palet)
 BORRADOR / PENDIENTE_FIRMA / FIRMADO sin pago → CANCELADO (manual o caducidad de 72 h)
+Sin firma válida → CANCELADO por rechazo del veterinario asignado (pagado: devolucionPendiente = true)
 ```
 
-No se puede pagar sin firma. Solo firma y pago confirmados habilitan la preparación; el stock físico solo se descuenta al expedir. CANCELADO es final.
+Solo firma VÁLIDA (veterinario asignado + contenido actual) y pago completo habilitan la preparación; el stock físico solo se descuenta al expedir. CANCELADO es final.
+
+Cada `PedidoResponse` de `GET /api/pedidos` y `GET /api/pedidos/{id}` incluye `autorizacion`:
+`{firmaValida, motivoFirma, pagoCompleto, importePendiente, clasificacion, listoParaPreparar}`,
+con `clasificacion` = `PAGADO_PENDIENTE_FIRMA` | `FIRMADO_Y_PAGADO` | `OTROS` (ver `docs/modelo-y-reglas.md`).
+
+| Ruta | Quién | Notas |
+|---|---|---|
+| `PATCH /api/pedidos/{id}/rechazar` | solo el VETERINARIO asignado | `{motivo}` (1–200 caracteres). Solo si no lo ha firmado él. Cancela, libera stock y, si estaba pagado, `devolucionPendiente = true` |
 
 ## Pagos (adaptador de DEMOSTRACIÓN)
 
-- `POST /api/pagos/{pedidoId}/iniciar`: solo usuarios de la clínica del pedido (ADMIN → 403); el pedido debe estar FIRMADO y sin pago confirmado (si no, 400). 201 `{referencia,importe,moneda,proveedor:"SIMULADO",urlSimulada}`. `importe` incluye IVA; `urlSimulada` usa `/pago-simulado/{referencia}`. Si ya existe un intento pendiente, retomarlo en esa ruta sin crear otro. Reintento tras fallo con referencia nueva.
+- `POST /api/pagos/{pedidoId}/iniciar`: solo usuarios de la clínica del pedido (ADMIN → 403); el pedido debe estar PENDIENTE_FIRMA o FIRMADO y sin pago confirmado (si no, 400). 201 `{referencia,importe,moneda,proveedor:"SIMULADO",urlSimulada}`. `importe` incluye IVA; `urlSimulada` usa `/pago-simulado/{referencia}`. Si ya existe un intento pendiente, retomarlo en esa ruta sin crear otro. Reintento tras fallo con referencia nueva.
 - `POST /api/pagos/simulado/{referencia}` `{resultado:"CONFIRMADO"/"FALLADO"}`: con sesión de la clínica del pedido. Simula la página del banco y envía al webhook una notificación firmada; devuelve el estado REAL del pago. Se desactiva con `PAGOS_SIMULADO_ACTIVO=false`. No es una integración bancaria.
 - `POST /api/pagos/notificacion` (webhook): sin sesión, autenticado con la cabecera `X-Firma-Notificacion` = Base64(HMAC-SHA256(`PAGOS_SECRETO_WEBHOOK`, cuerpo exacto)). Cuerpo `{referencia,importe,moneda,resultado}`. Firma ausente o mala → 403. Importe distinto del total o moneda distinta de EUR → intento FALLADO y 400. Ya resuelto → 200 sin efectos (idempotente). CONFIRMADO → pedido LISTO_PREPARAR y exportación a Odoo tras el commit.
 - Los intentos PENDIENTES de más de 60 min pasan a FALLADO automáticamente.

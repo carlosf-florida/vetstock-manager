@@ -160,7 +160,7 @@ altera el estado comercial, impuestos ni registra cobros reales.
 ### La máquina de estados (detallada)
 
 ```
-BORRADOR → PENDIENTE_FIRMA → FIRMADO (firma del veterinario asignado) → LISTO_PREPARAR (pago confirmado)
+BORRADOR → PENDIENTE_FIRMA → firma del veterinario asignado y pago confirmado (en cualquier orden) → LISTO_PREPARAR
 LISTO_PREPARAR → EN_PREPARACION → PREPARADO (≥1 bulto) → EXPEDIDO (bultos en palet)
 sin pago: BORRADOR / PENDIENTE_FIRMA / FIRMADO → CANCELADO (manual o caducidad 72 h)
 ```
@@ -169,7 +169,7 @@ sin pago: BORRADOR / PENDIENTE_FIRMA / FIRMADO → CANCELADO (manual o caducidad
 
 - **Reserva de stock**: al enviar a firma (atómica y concurrente, con actualización condicionada en SQL y transacción).
 - **Firma**: solo el veterinario asignado al pedido, con su propia identidad y copia inmutable. El colegiado opcional identifica al responsable; no autentica ni sustituye a la imagen o dibujo.
-- **Orden firma → pago**: solo se paga un pedido FIRMADO; el pago confirmado lo deja en `LISTO_PREPARAR`.
+- **Firma y pago en cualquier orden**: `AutorizacionPedido` decide con reglas fijas si la firma es válida (veterinario asignado + contenido actual) y si el pago es completo; solo con ambas se prepara.
 - **Descuento de stock físico**: solo al expedir, una sola vez.
 
 ## Seguridad

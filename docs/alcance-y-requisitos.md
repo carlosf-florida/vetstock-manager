@@ -26,7 +26,8 @@ clínica). Todos los permisos se comprueban en el backend.
 | Modificar líneas de un borrador | Sí (queda quién y cuándo) | Si lo creó | Si lo creó |
 | Ver pedidos | Todos | Solo de su clínica | Solo de su clínica |
 | Firmar | **No** | **No** | Solo los pedidos que tiene asignados |
-| Pagar | **No** (lo hace la clínica) | Sí, si está firmado | Sí, si está firmado |
+| Pagar | **No** (lo hace la clínica) | Sí, antes o después de la firma | Sí, antes o después de la firma |
+| Rechazar un pedido | No | No | Solo los suyos, si no los ha firmado |
 | Confirmar un pago a mano | **Nadie**: solo la notificación verificada del proveedor | — | — |
 | Preparación, bultos, palets, expedición | Sí | No | No |
 | Subir documentos PDF | Sí | No | No |
@@ -48,7 +49,10 @@ implementado y comprobado a mano en el navegador; **Parcial**; **Pendiente**.
 | RF-06 | Enviar a firma reserva stock de forma atómica (sin sobreventa) | Hecho |
 | RF-07 | Firma del veterinario asignado (dibujo o PNG/JPG ≤ 5 MB) tras revisar el contenido; copia inmutable | Hecho |
 | RF-08 | Bloqueo de productos y cantidades tras firmar | Hecho |
-| RF-09 | Pago obligatorio después de la firma, por pasarela **de demostración** | Hecho |
+| RF-09 | Pago obligatorio (antes o después de la firma), por pasarela **de demostración** | Hecho |
+| RF-25 | Separación «Pagados pendientes de firma» / «Firmados y pagados» / «Otros» con reglas fijas (firma válida + pago completo) | Hecho |
+| RF-26 | Rechazo del veterinario asignado con motivo; devolución pendiente si estaba pagado | Hecho (la devolución es manual, fuera de la app) |
+| RF-27 | Mismas listas en Odoo Ventas (campos x_vetstock_* y favoritos compartidos) | Hecho (solo pedidos pagados, que son los que se exportan) |
 | RF-10 | Confirmación del pago solo por notificación autenticada (HMAC), con validación de importe y moneda e idempotencia | Hecho |
 | RF-11 | Reintento de pagos fallidos sin duplicar cobros | Hecho |
 | RF-12 | Preparación solo con firma y pago | Hecho |

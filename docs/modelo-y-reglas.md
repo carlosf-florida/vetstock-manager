@@ -39,10 +39,12 @@ es opcional e identificativo: no autentica ni sustituye a la firma.
 
 ```
 BORRADOR ──enviar a firma (reserva stock)──► PENDIENTE_FIRMA
-PENDIENTE_FIRMA ──firma del veterinario asignado──► FIRMADO (pendiente de pago)
-FIRMADO ──notificación de pago CONFIRMADO verificada──► LISTO_PREPARAR
+Firma y pago en cualquier orden:
+  PENDIENTE_FIRMA ──firma──► FIRMADO (pendiente de pago) ──pago confirmado──► LISTO_PREPARAR
+  PENDIENTE_FIRMA ──pago confirmado──► PENDIENTE_FIRMA (pagado) ──firma──► LISTO_PREPARAR
 LISTO_PREPARAR ──► EN_PREPARACION ──(≥1 bulto)──► PREPARADO ──(bultos en palet)──► EXPEDIDO
-BORRADOR / PENDIENTE_FIRMA / FIRMADO (sin pago) ──cancelar o caducar──► CANCELADO (libera la reserva)
+Sin pago: BORRADOR / PENDIENTE_FIRMA / FIRMADO ──cancelar o caducar──► CANCELADO (libera la reserva)
+Sin firma válida: el veterinario asignado ──rechaza──► CANCELADO (si estaba pagado: devolución pendiente)
 ```
 
 La firma y el pago también se muestran por separado (Firma: Pendiente/Firmada;
@@ -52,18 +54,35 @@ medir tiempos en los informes.
 Estados de un intento de pago: `PENDIENTE` → `CONFIRMADO` o `FALLADO`. Un
 pedido puede tener varios intentos, pero solo uno PENDIENTE a la vez.
 
+## Firma válida, pago completo y clasificación
+
+Se calculan en `backend/.../service/AutorizacionPedido.java` a partir de los datos
+guardados (no se almacenan, así nunca se desincronizan):
+
+| Concepto | Regla (datos reales) |
+|---|---|
+| **Firma válida** | Hay fila en `firmas`, su `usuario_id` es el del veterinario asignado (`pedidos.veterinario_id`) y la copia `contenido_pedido` coincide con las líneas, cantidades, precios y total actuales |
+| **Pago completo** | `pedidos.fecha_pago` y un pago `CONFIRMADO` en `pagos` por el **total exacto**. Una factura, un pago pendiente o uno por menos importe no cuentan |
+| **Pagados pendientes de firma** | Pago completo, sin firma válida, no cancelado. Se muestra el motivo («Falta la firma de…», «Firmado por X, que no es el veterinario asignado», «contenido anterior») |
+| **Firmados y pagados** | Firma válida y pago completo. «Listo para preparar» solo si el estado es `LISTO_PREPARAR` (no cuenta si ya está en preparación, preparado o expedido) |
+| **Otros pendientes** | Todo lo demás: borradores, sin pago completo, cancelados |
+
+Los pedidos antiguos firmados por una auxiliar (regla anterior) aparecen como
+«Pagados pendientes de firma»: el veterinario asignado puede firmarlos y su firma
+sustituye a la no válida (una sola firma por pedido).
+
 ## Reglas de negocio
 
-1. **Ningún pedido pasa a preparación sin firma del veterinario asignado y pago confirmado.** Se comprueba al cambiar de estado, no solo por el nombre del estado.
+1. **Ningún pedido pasa a preparación sin firma VÁLIDA del veterinario asignado y pago completo confirmado.** Se comprueba al cambiar de estado, no por el nombre del estado.
 2. Solo firma el **veterinario asignado**, con su cuenta. Ni auxiliares, ni otros veterinarios, ni administración.
 3. La firma exige marcar que se ha revisado el contenido. Se guarda una copia JSON de líneas, precios, IVA, total, firmante y fecha. Una imagen subida no basta por sí sola, y no se reutilizan firmas anteriores.
 4. Tras enviar a firma no se pueden cambiar líneas; tras firmar, el contenido queda fijado en la copia.
-5. Solo se puede **pagar un pedido FIRMADO**. Administración no paga en nombre de la clínica.
+5. Se puede **pagar antes o después de la firma** (desde que el pedido se envía a firma). Administración no paga en nombre de la clínica.
 6. El pago se confirma únicamente por la **notificación del proveedor** firmada con HMAC. Se comprueban la referencia, el importe (contra el total del pedido) y la moneda. Las notificaciones repetidas no repiten efectos. Volver a la página de éxito no marca nada.
 7. Un pago fallido permite reintentar con una referencia nueva. Si ya hay uno PENDIENTE, se reutiliza (no hay cobros dobles).
 8. Precios e importes los calcula siempre el servidor (IVA del 4 % del prototipo, redondeo por línea).
 9. **Stock:** se reserva al enviar a firma, en una sola sentencia SQL condicionada (sin sobreventa en concurrencia). Al expedir se descuenta el físico y se libera la reserva, una sola vez.
 10. **Caducidad (decisión acordada):** cada 15 minutos, los pagos PENDIENTES de más de 60 min pasan a FALLADO. Los pedidos enviados a firma sin pago confirmado durante **72 h** se cancelan y liberan la reserva, con el motivo guardado. Un pedido con un pago en curso reciente no caduca en esa pasada.
-11. **Un pedido pagado no se cancela desde la aplicación** (no hay reembolsos en el alcance).
+11. **Un pedido pagado no se cancela desde la aplicación.** Solo el veterinario asignado puede **rechazarlo** mientras no lo haya firmado: se cancela, libera stock y queda «devolución pendiente» (el dinero se devuelve fuera de la aplicación; no hay reembolsos en el alcance).
 12. **Logística:** PREPARADO exige al menos un bulto. EXPEDIDO exige todos los bultos asignados a un palet (y, por tanto, a un destino). Un palet expedido no admite bultos.
 13. Documentos: solo PDF reales (cabecera `%PDF-`) de 10 MB como máximo. Los sube administración y los descarga la clínica del pedido.

@@ -12,8 +12,9 @@ Todo lo relativo a la base de datos de VetStock Manager vive en esta carpeta.
 - `migrations/006_modificacion_pedidos.sql` — guarda quién cambió por última vez las líneas de un pedido y cuándo. Se puede repetir.
 - `migrations/007_caducidad_reservas.sql` — añade `pedidos.motivo_cancelacion` para la caducidad de reservas (72 h sin pago). Se puede repetir.
 - `migrations/008_vistas_powerbi.sql` — vistas de solo lectura para Power BI (ver `docs/power-bi.md`). Se puede repetir.
+- `migrations/009_rechazo_devolucion.sql` — añade `pedidos.devolucion_pendiente` (pedido pagado y después rechazado por el veterinario). Se puede repetir.
 
-**Instalaciones existentes:** aplicar en orden las migraciones que falten (002–008) y no volver a ejecutar el esquema inicial si hay datos que conservar. Desde esta versión **solo se puede pagar un pedido firmado** (ver `docs/modelo-y-reglas.md`). Instrucciones para Windows: `docs/instalacion-windows.md`. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
+**Instalaciones existentes:** aplicar en orden las migraciones que falten (002–009) y no volver a ejecutar el esquema inicial si hay datos que conservar. Firma y pago pueden llegar en cualquier orden; solo se prepara con firma válida y pago completo (ver `docs/modelo-y-reglas.md`). Instrucciones para Windows: `docs/instalacion-windows.md`. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
 
 ## Cómo cargarla
 

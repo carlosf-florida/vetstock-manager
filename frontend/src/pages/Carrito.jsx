@@ -172,7 +172,7 @@ export default function Carrito() {
 
         <div className="aviso aviso-info">
           <strong>Responsable automático por clínica:</strong>{' '}
-          el pedido toma el veterinario responsable asignado a tu clínica. Cuando esté pendiente de firma, puede firmar ese veterinario o una persona auxiliar de la misma clínica con su propia firma.
+          el pedido toma el veterinario responsable asignado a tu clínica. Cuando esté pendiente de firma, solo ese veterinario puede firmarlo con su cuenta.
         </div>
 
         <label className="campo">

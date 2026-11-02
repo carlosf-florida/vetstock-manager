@@ -6,7 +6,7 @@ Los pedidos del cliente usan automáticamente ese responsable, sin elegirlo en e
 
 ## Responsable y firmante son distintos
 
-La confirmación interna puede registrarla el responsable o un auxiliar autenticado de la clínica con su propia firma. Se guarda quién confirmó realmente, su rol y la fecha. Nunca se atribuye al veterinario una firma del auxiliar. El nº de colegiado es opcional e identificativo, no un método de autenticación. La confirmación comercial del prototipo no valida una prescripción ni una firma certificada.
+Solo el veterinario asignado puede firmar. Un auxiliar crea el pedido y lo deja pendiente de firma. Se guarda quién firmó, su rol y la fecha. El nº de colegiado es opcional e identificativo, no un método de autenticación. La confirmación comercial del prototipo no valida una prescripción ni una firma certificada.
 
 ## Pagar y firmar en cualquier orden
 

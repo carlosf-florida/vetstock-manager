@@ -135,6 +135,7 @@ export default function AdminPedidoDetalle() {
         {pedido.clinicaNombre && <>Clínica: <strong>{pedido.clinicaNombre}</strong> · </>}
         {pedido.veterinarioNombre && <>Responsable: {pedido.veterinarioNombre} · </>}
         {pedido.creadoPorNombre && <>Creado por: {pedido.creadoPorNombre}</>}
+        {pedido.modificadoPorNombre && <> · Modificado por: {pedido.modificadoPorNombre} ({fecha(pedido.fechaModificacion)})</>}
       </p>
       {pedido.observaciones && <p className="texto-suave">Observaciones: {pedido.observaciones}</p>}
 
@@ -184,7 +185,7 @@ export default function AdminPedidoDetalle() {
             </p>
           </div>
         ) : estado === 'PENDIENTE_FIRMA' ? (
-          <p className="texto-suave">Esperando la firma del veterinario responsable o de una persona auxiliar de la misma clínica.</p>
+          <p className="texto-suave">Esperando la firma del veterinario asignado.</p>
         ) : (
           <p className="texto-suave">Este pedido aún no ha llegado al proceso de firma.</p>
         )}

@@ -1,6 +1,6 @@
 # VetStock Manager
 
-Gestión de pedidos y stock para clínicas veterinarias: los clientes (veterinarios y auxiliares) preparan y firman sus pedidos desde una portal web, y el almacén los prepara, agrupa en bultos y palets y los expide. Todo el ciclo —borrador, firma digital, pago, preparación y expedición— queda registrado con sus fechas.
+Gestión de pedidos y stock para clínicas veterinarias: los clientes (veterinarios y auxiliares) preparan sus pedidos desde un portal web, el veterinario asignado los firma, y el almacén los prepara, agrupa en bultos y palets y los expide. Todo el ciclo —borrador, firma digital, pago, preparación y expedición— queda registrado con sus fechas.
 
 Este proyecto es la evolución del prototipo original: el mismo enunciado reimplementado con **frontend React**, **backend Spring Boot** y **MySQL**, y documentado en `docs/`.
 
@@ -99,15 +99,14 @@ En Windows es `C:\Windows\System32\drivers\etc\hosts`; en macOS/Linux es
 | `admin` | `admin123` | ADMIN (almacén) | — |
 | `dr.garcia` | `vet123` | VETERINARIO | Clínica San Roque |
 | `dra.lopez` | `vet123` | VETERINARIO | Clínica San Roque |
-| `dr.martin` | `vet123` | VETERINARIO | Clínica Miravet |
+| `dr.martin` | `vet123` | VETERINARIO | Hospital Veterinario Mediterráneo |
 | `aux.sanroque` | `aux123` | AUXILIAR | Clínica San Roque |
-| `aux.miravet` | `aux123` | AUXILIAR | Clínica Miravet |
 
 ## Qué puede hacer cada rol
 
 - **ADMIN (almacén)**: catálogo y stock, movimientos de entrada/salida, clínicas y cuentas de clientes, ver todos los pedidos, iniciar preparación, preparar, expedir, bultos/palets/destinos, adjuntar documentos PDF, informes.
 - **VETERINARIO**: catálogo y pedidos de SU clínica, firmar SOLO los pedidos que le corresponden (dibujo táctil o imagen), ver la copia inmutable de lo firmado, descargar documentos.
-- **AUXILIAR**: catálogo y pedidos de SU clínica, crear y modificar borradores, confirmar, pagar y firmar con su propia identidad. El veterinario sigue siendo el responsable, pero nunca se le atribuye la firma del auxiliar.
+- **AUXILIAR**: catálogo y pedidos de SU clínica, crear y modificar borradores, enviarlos a firma y pagar. No puede firmar: el pedido queda pendiente hasta que lo firma el veterinario asignado.
 
 ## Flujo completo de un pedido
 
@@ -119,7 +118,7 @@ LISTO_PREPARAR → EN_PREPARACION → PREPARADO → EXPEDIDO
 ```
 
 - Al **enviar a firma** se reserva el stock (de forma atómica).
-- **Firma interna**: responsable o auxiliar de la clínica con su firma propia, por ratón o PNG/JPG, con identidad real y copia inmutable. El colegiado opcional solo identifica; no es contraseña ni sustituye a la firma.
+- **Firma**: solo el veterinario asignado al pedido, por ratón o PNG/JPG, con identidad real y copia inmutable. El colegiado opcional solo identifica; no es contraseña ni sustituye a la firma.
 - **Pago** (SIMULADO): se puede pagar antes o después de firmar. Una notificación confirmada solicita exportar a Odoo. Solo firma y pago completados habilitan preparación; notificaciones repetidas no duplican efectos.
 - Al **expedir** se descuenta el stock físico, una sola vez.
 
@@ -152,6 +151,7 @@ Más información en [`docs/arquitectura.md`](docs/arquitectura.md), el contrato
 - Las credenciales del servidor Odoo de pruebas van en variables de entorno (`ODOO_*`); en producción usaríamos una cuenta de API dedicada.
 - Los "documentos de factura" son adjuntos de demostración, no facturas fiscales válidas.
 - CSRF desactivado para simplificar el frontend React.
+- La pasarela de pago simulada (`/api/pagos/simulado/**`) es pública para poder hacer la demo. Se desactiva con `PAGOS_SIMULADO_ACTIVO=false`.
 - Los informes se calculan con SQL sobre las tablas del prototipo; la conexión con Power BI queda como ampliación natural.
 
 ## Documentación SCRUM

@@ -40,17 +40,10 @@ export function puedeFirmarPedido(pedido, usuario) {
     return false
   }
 
-  const auxiliarDeLaClinica = usuario.rol === 'AUXILIAR'
-    && usuario.clinicaId != null
-    && pedido.clinicaId != null
-    && String(usuario.clinicaId) === String(pedido.clinicaId)
-
-  // veterinarioId pertenece a la entidad Veterinario, no a Usuario: se compara el username.
-  const veterinarioResponsable = usuario.rol === 'VETERINARIO'
+  // Solo firma el veterinario asignado al pedido (se compara el username).
+  return usuario.rol === 'VETERINARIO'
     && Boolean(usuario.username)
     && usuario.username === pedido.veterinarioUsername
-
-  return auxiliarDeLaClinica || veterinarioResponsable
 }
 
 export function puedePagarPedido(pedido) {

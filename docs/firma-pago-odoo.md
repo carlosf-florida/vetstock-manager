@@ -2,7 +2,7 @@
 
 ## Qué cambia
 
-El pedido conserva el veterinario responsable asignado automáticamente a la clínica. La confirmación interna puede registrarla ese veterinario o un auxiliar autenticado de la misma clínica, siempre con su propia firma. Se guarda la cuenta que confirma, su rol, la fecha y una copia inmutable del pedido. No se atribuye al veterinario una firma hecha por el auxiliar.
+El pedido conserva el veterinario responsable asignado automáticamente a la clínica. Solo ese veterinario puede firmar el pedido, con su propia cuenta. Un auxiliar lo deja pendiente de firma. Se guarda la cuenta que firma, su rol, la fecha y una copia inmutable del pedido.
 
 Se puede dibujar con ratón/táctil o subir una imagen PNG/JPG de hasta 5 MB. El número de colegiado es opcional y solo identifica al responsable. Si se introduce, debe coincidir con el responsable asignado; no es una contraseña, un factor de autenticación ni un método de firma. No se admite confirmar escribiendo únicamente ese número.
 
@@ -19,7 +19,7 @@ Este proyecto registra una confirmación comercial interna y una firma electrón
 
 El estado de pago procede exclusivamente de la notificación validada del proveedor simulado. Cambiar la pantalla o marcar una casilla no acredita un pago. El importe lo calcula el backend.
 
-Los usuarios de la clínica ven sus pedidos en **Mis pedidos**, con indicadores separados y un filtro de firmas pendientes. No ven pedidos de otras clínicas. Solo el responsable y los auxiliares de la clínica pueden abrir la acción de firma. Administración no puede firmar en nombre de ellos.
+Los usuarios de la clínica ven sus pedidos en **Mis pedidos**, con indicadores separados y un filtro de firmas pendientes. No ven pedidos de otras clínicas. Solo el veterinario asignado puede abrir la acción de firma. Administración no puede firmar en nombre de ellos.
 
 La reserva de stock se realiza al confirmar el pedido. El almacén no puede iniciar preparación ni expedir hasta tener pago y confirmación interna registrados. El stock físico se descuenta una sola vez al expedir.
 

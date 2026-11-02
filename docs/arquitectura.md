@@ -105,7 +105,7 @@ LISTO_PREPARAR → EN_PREPARACION → PREPARADO → EXPEDIDO
 `EstadoPedido` define qué transiciones son posibles; `PedidoService` aplica además las reglas de negocio:
 
 - **Reserva de stock**: al enviar a firma (atómica y concurrente, con actualización condicionada en SQL y transacción).
-- **Firma interna**: responsable o auxiliar de la misma clínica, con su propia identidad y copia inmutable. El colegiado opcional identifica al responsable; no autentica ni sustituye a la imagen o dibujo.
+- **Firma**: solo el veterinario asignado al pedido, con su propia identidad y copia inmutable. El colegiado opcional identifica al responsable; no autentica ni sustituye a la imagen o dibujo.
 - **Firma y pago completados**: ambos necesarios para `LISTO_PREPARAR`, independientemente de su orden.
 - **Descuento de stock físico**: solo al expedir, una sola vez.
 

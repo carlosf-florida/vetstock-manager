@@ -179,6 +179,7 @@ public class PedidoService {
             throw new ReglaNegocioException("Solo se puede modificar un pedido en BORRADOR");
         }
         pedido.reemplazarLineas(construirLineas(datos.lineas()));
+        pedido.registrarModificacion(usuario);
         return PedidoResponse.desde(pedidoRepository.save(pedido));
     }
 

@@ -132,6 +132,24 @@ Pedido de prueba #15 (2 × guantes, 20,70 €) de `aux.sanroque`, con la API rea
 - Pruebas automáticas: `OdooJsonRpcConnectorTest.pedidoFirmadoYPagadoSeConfirma` y
   `noSeConfirmaSinFirmaNiDosVecesNiSiEstaCancelado`.
 
+### Contadores = listas (comprobado en el navegador)
+
+Tras la corrección, cada tarjeta muestra exactamente los pedidos que abre (Docker, 2 de noviembre de 2026):
+
+| Tarjeta | Número | Lista al pulsar |
+|---|---|---|
+| Inicio (Dr. García): Pendientes de firma | 4 | #13, #11, #8, #6 |
+| Inicio: Pendientes de pago | 2 | #8, #6 |
+| Inicio: En preparación | 1 | #15 |
+| Resumen admin: Listos para preparar | 2 | #18, #17 |
+
+### Datos de práctica en la base `vetstock` (Docker)
+
+Se dejaron 1 o 2 pedidos de cada caso (copia previa: `_respaldos-vetstock/antes-limpieza-pedidos-20261102.sql`):
+#1 borrador · #6 y #8 pendientes de firma sin pagar · #13 pagado sin firma · #11 pagado con firma
+de auxiliar (no válida) · #17 y #18 firmados y pagados (listos) · #15 en preparación · #7 cancelado.
+En Odoo se borraron las copias de los pedidos eliminados (S00001, S00002, S00004, S00006, S00009).
+
 ## 3. Guía de comprobación manual (para repetirla)
 
 Reinicia los datos (ver [instalacion-windows.md](instalacion-windows.md), apartado 4) y sigue el

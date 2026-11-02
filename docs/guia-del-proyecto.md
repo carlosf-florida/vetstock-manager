@@ -21,6 +21,68 @@ Aplicación de tres capas con frontend y backend separados:
 
 En desarrollo, el servidor de Vite hace de **proxy**: el navegador llama a `http://localhost:5173/api/...` y Vite lo reenvía al backend del 8080, evitando CORS.
 
+## Mapa del proyecto
+
+| Carpeta | Responsabilidad |
+|---|---|
+| `frontend/` | Interfaz web (React + Vite). Solo muestra datos y llama a la API |
+| `backend/` | API REST (Spring Boot). Todas las reglas de negocio y permisos |
+| `database/migrations/` | Scripts MySQL: `001` crea todo con datos ficticios, `002`–`008` actualizan bases existentes |
+| `docs/` | Documentación vigente (esta guía, reglas, instalación, pruebas…) |
+| `scripts/` | `arrancar_odoo.sh` (integración ERP opcional) |
+| `docker/`, `docker-compose.yml` | Arranque de todo con Docker |
+| `historico/` | Prototipo v1, solo para consulta; no se usa |
+
+## Estructura del frontend
+
+```
+frontend/src
+├── main.jsx            Punto de entrada: router, sesión y notificaciones
+├── App.jsx             Rutas y protección por sesión/rol
+├── api.js              Llamadas HTTP a /api (con la cookie de sesión)
+├── auth.jsx            Sesión: usuario actual, login y logout
+├── carrito.js          Carrito por usuario en localStorage (añadir, cantidades, stock)
+├── format.js           Formato de moneda y fechas, nombres de estados, estimación de IVA
+├── pedidoEstado.js     Quién puede firmar o pagar (solo para mostrar botones)
+├── styles.css          Estilos de toda la aplicación (colores en :root)
+├── components/         Piezas reutilizables: Layout (cabecera), Notificaciones, Tabla, Badges…
+│   └── pedido/         Partes del detalle de un pedido: líneas, firma, pago, documentos
+└── pages/              Pantallas: Inicio, Catalogo, Carrito, MisPedidos, PedidoDetalle…
+    └── admin/          Pantallas de administración
+```
+
+### Qué archivo tocar
+
+| Quiero cambiar… | Archivos |
+|---|---|
+| Colores, tipografía, espaciados | `frontend/src/styles.css` (variables en `:root`) |
+| Cabecera, menú y contador del carrito | `frontend/src/components/Layout.jsx` |
+| Inicio del cliente | `frontend/src/pages/Inicio.jsx` |
+| Portada (pantalla de acceso) | `frontend/src/pages/Login.jsx` |
+| Catálogo y botón «Añadir al carrito» | `frontend/src/pages/Catalogo.jsx` |
+| Reglas del carrito (stock, cantidades, por usuario) | `frontend/src/carrito.js` |
+| Pantalla del carrito y creación del pedido | `frontend/src/pages/Carrito.jsx` |
+| Avisos breves («se ha añadido…») | `frontend/src/components/Notificaciones.jsx` |
+| Formato de euros | `frontend/src/format.js` (`dinero`) |
+| Productos (datos) | `backend/.../service/ProductoService.java`, tabla `productos` |
+| Reglas de pedidos (stock, firma, estados) | `backend/.../service/PedidoService.java`, `enums/EstadoPedido.java` |
+
+## Recorrido de una acción: «Enviar a firma»
+
+1. **Pantalla** `pages/Carrito.jsx`: el botón llama a `api.post('/api/pedidos', …)` y después a
+   `api.patch('/api/pedidos/{id}/enviar-firma')` (`api.js` añade la cookie de sesión).
+2. **Proxy**: en desarrollo, Vite reenvía `/api` al backend del puerto 8080.
+3. **Seguridad** `config/SecurityConfig.java`: comprueba que hay sesión y el rol permitido.
+4. **Controlador** `controller/PedidoController.java`: recibe la petición y valida el cuerpo (DTO).
+5. **Servicio** `service/PedidoService.java`: comprueba que el pedido es de la clínica del usuario,
+   que está en BORRADOR, y reserva el stock con una sola sentencia SQL por línea.
+6. **Repositorio** `repository/ProductoRepository.java` → **MySQL** (tablas `productos` y `pedidos`).
+7. La respuesta vuelve como `PedidoResponse` (JSON) y la pantalla navega al detalle del pedido.
+
+El carrito NO pasa por el servidor hasta ese momento: vive en el navegador
+(`carrito.js`), separado por usuario. El servidor recalcula precios y vuelve a
+comprobar el stock al crear el pedido, así que los datos del navegador nunca deciden nada.
+
 ## Estructura del backend (arquitectura en capas)
 
 ```

@@ -17,9 +17,10 @@ En desarrollo, Vite hace de **proxy**: el navegador llama a `/api/...` en el 517
 ### Portal del cliente (veterinarios y auxiliares)
 | Ruta | Qué hace |
 |---|---|
-| `/login` | Inicio de sesión |
+| `/login` | Portada pública y acceso (sin datos privados) |
+| `/inicio` | Inicio tras el login: pedido en curso, pendientes de firma y de pago, últimos pedidos y productos que más pide la clínica |
 | `/catalogo` | Catálogo con búsqueda, categoría, precio máximo y aviso de stock bajo |
-| `/carrito` | Carrito (guardado en `localStorage`) y creación del pedido; administración elige clínica y veterinario |
+| `/carrito` | Carrito por usuario (guardado en `localStorage`), limitado al stock, y creación del pedido; administración elige clínica y veterinario |
 | `/mis-pedidos` | Pedidos de la clínica con filtros por estado, firma y pago |
 | `/pedidos/:id` | Detalle: líneas, cronología, firma (pestaña «Firmar» del veterinario asignado), pago y documentos |
 | `/pago-simulado/:referencia` | Pasarela de pago de demostración (pago correcto, fallido y reintento) |
@@ -44,9 +45,9 @@ Si un usuario sin rol de administración abre una ruta `/admin/...`, se muestra 
 src/
 ├── api.js            Cliente HTTP central (fetch con credenciales)
 ├── auth.jsx          Contexto de sesión y guards de rutas
-├── carrito.js        Carrito en localStorage
+├── carrito.js        Carrito por usuario en localStorage (stock y cantidades)
 ├── format.js         Formateo de fechas y euros
-├── components/       Tabla, badges, gráficos, layout, spinner
+├── components/       Layout (cabecera y contador), Notificaciones, Tabla, badges, gráficos, spinner
 └── pages/            Páginas (pages/admin/ para la zona de almacén)
 ```
 

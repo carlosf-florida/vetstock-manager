@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { dinero, fechaCorta, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO } from '../format.js'
@@ -15,7 +15,9 @@ export default function MisPedidos() {
   const [error, setError] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState('')
-  const [estado, setEstado] = useState('')
+  const [paramsUrl] = useSearchParams()
+  // Desde el inicio se llega con ?estado=PENDIENTE_FIRMA o ?estado=FIRMADO (pendiente de pago)
+  const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
   const [pendienteFirma, setPendienteFirma] = useState('')
 
   async function cargar() {

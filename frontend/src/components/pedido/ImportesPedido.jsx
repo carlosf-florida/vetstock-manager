@@ -4,8 +4,9 @@ function esImporteDisponible(valor) {
   return valor !== null && valor !== undefined && valor !== '' && Number.isFinite(Number(valor))
 }
 
+// Mismo formato de moneda que el resto de la aplicación (todos los pedidos son en EUR)
 function formatoImporte(importe, moneda) {
-  return `${Number(importe).toFixed(2)} ${moneda}`
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: moneda || 'EUR' }).format(Number(importe))
 }
 
 function formatoPorcentaje(porcentaje) {

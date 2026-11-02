@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api.js'
 import { dinero } from '../format.js'
 import { anadirAlCarrito } from '../carrito.js'
+import { useNotificaciones } from '../components/Notificaciones.jsx'
 import { Spinner, ErrorBox, SinDatos } from '../components/Spinner.jsx'
 import { BadgeStockBajo } from '../components/Badges.jsx'
 
@@ -14,7 +15,8 @@ export default function Catalogo() {
   const [categoria, setCategoria] = useState('')
   const [soloStock, setSoloStock] = useState(false)
   const [precioMax, setPrecioMax] = useState('')
-  const [mensaje, setMensaje] = useState(null)
+  const [cantidades, setCantidades] = useState({}) // unidades elegidas en cada tarjeta
+  const { notificar } = useNotificaciones()
 
   async function cargar() {
     setCargando(true)
@@ -23,7 +25,6 @@ export default function Catalogo() {
       const params = new URLSearchParams()
       if (busqueda.trim()) params.set('busqueda', busqueda.trim())
       if (categoria) params.set('categoria', categoria)
-      if (soloStock) params.set('soloBajoStock', 'true')
       const datos = await api.get('/api/productos' + (params.toString() ? `?${params}` : ''))
       setProductos(Array.isArray(datos) ? datos : [])
     } catch (err) {
@@ -38,7 +39,7 @@ export default function Catalogo() {
     const t = setTimeout(cargar, 250) // pequeña espera para no disparar por cada tecla
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busqueda, categoria, soloStock])
+  }, [busqueda, categoria])
 
   const categorias = useMemo(() => {
     if (!productos) return []
@@ -51,13 +52,23 @@ export default function Catalogo() {
     if (precioMax !== '' && Number.isFinite(max)) {
       salida = salida.filter((p) => Number(p.precio) <= max)
     }
+    // Antes se enviaba soloBajoStock al servidor y salían justo los de stock BAJO
+    if (soloStock) salida = salida.filter((p) => Number(p.stockDisponible) > 0)
     return salida
-  }, [productos, precioMax])
+  }, [productos, precioMax, soloStock])
 
   function agregar(p) {
-    anadirAlCarrito(p, 1)
-    setMensaje(`«${p.nombre}» añadido al carrito.`)
-    setTimeout(() => setMensaje(null), 2500)
+    const cantidad = Number(cantidades[p.id] ?? 1)
+    const resultado = anadirAlCarrito(p, cantidad)
+    if (!resultado.ok) {
+      notificar({ tipo: 'error', texto: resultado.mensaje, enlace: { texto: 'Ver carrito', a: '/carrito' } })
+      return
+    }
+    notificar({
+      texto: `${cantidad === 1 ? 'Se ha añadido 1 unidad' : `Se han añadido ${cantidad} unidades`} de «${p.nombre}» al carrito.`,
+      enlace: { texto: 'Ver carrito', a: '/carrito' },
+    })
+    setCantidades((actual) => ({ ...actual, [p.id]: 1 }))
   }
 
   return (
@@ -66,7 +77,6 @@ export default function Catalogo() {
       <p className="texto-suave">Busca productos veterinarios, filtra por categoría, precio o stock y añádelos al carrito.</p>
       <p className="texto-suave">Los precios se muestran sin IVA. Para los pedidos nuevos se aplicará el IVA del 4 % configurado para esta prueba.</p>
 
-      {mensaje && <div className="caja-ok"><span aria-hidden="true">✔️</span> {mensaje}</div>}
 
       <div className="filtros-panel">
         <label className="campo">
@@ -118,15 +128,29 @@ export default function Catalogo() {
                 </p>
                 <div className="producto-pie">
                   <span className="producto-precio">{dinero(p.precio)} <small>sin IVA</small></span>
-                  <button
-                    type="button"
-                    className="btn btn-primario"
-                    onClick={() => agregar(p)}
-                    disabled={sinStock || inactivo}
-                  >
-                    {sinStock ? 'Sin stock' : 'Añadir al carrito'}
-                  </button>
                 </div>
+                {!sinStock && !inactivo ? (
+                  <div className="producto-anadir">
+                    <label className="producto-cantidad">
+                      <span>Unidades</span>
+                      <input
+                        className="input"
+                        type="number"
+                        min="1"
+                        max={p.stockDisponible}
+                        step="1"
+                        value={cantidades[p.id] ?? 1}
+                        onChange={(e) => setCantidades((actual) => ({ ...actual, [p.id]: e.target.value }))}
+                        aria-label={`Unidades de ${p.nombre}`}
+                      />
+                    </label>
+                    <button type="button" className="btn btn-primario" onClick={() => agregar(p)}>
+                      Añadir al carrito
+                    </button>
+                  </div>
+                ) : (
+                  <p className="texto-suave producto-no-disponible">{inactivo ? 'No disponible' : 'Sin stock disponible'}</p>
+                )}
               </article>
             )
           })}

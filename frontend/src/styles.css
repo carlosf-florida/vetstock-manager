@@ -431,3 +431,171 @@ code { background: #eef2f5; padding: 0.1em 0.4em; border-radius: 4px; font-size:
 @media (min-width: 861px) {
   .menu-boton { display: none; }
 }
+
+/* ============ Foco visible (navegación con teclado) ============ */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 3px solid #f2b705;
+  outline-offset: 2px;
+}
+
+/* ============ Notificaciones (avisos breves) ============ */
+.notificaciones {
+  position: fixed;
+  top: 4.5rem;              /* debajo de la cabecera */
+  right: 1rem;
+  z-index: 50;
+  width: min(380px, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;      /* la zona vacía no bloquea clics */
+}
+.notificacion {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 0.8rem;
+  border-radius: var(--radio);
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-left: 5px solid var(--verde);
+  box-shadow: 0 6px 18px rgba(20, 60, 90, 0.18);
+}
+.notificacion-error { border-left-color: var(--peligro); }
+.notificacion-texto { margin: 0; flex: 1; font-size: 0.95rem; }
+.notificacion-acciones { display: flex; align-items: center; gap: 0.3rem; }
+.notificacion-cerrar {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 0.1rem 0.35rem;
+  cursor: pointer;
+  color: var(--texto-suave);
+  border-radius: 6px;
+}
+.notificacion-cerrar:hover { background: var(--fondo); }
+
+/* ============ Acceso al carrito con contador ============ */
+.carrito-acceso {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+.carrito-acceso:hover, .carrito-acceso.activo { background: rgba(255, 255, 255, 0.15); }
+.carrito-contador {
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #f2b705;
+  color: #1d2a33;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 860px) {
+  /* En móvil, arriba bajo la cabecera: así no tapan los botones «Añadir» de las tarjetas */
+  .notificaciones { top: 4rem; right: 0.5rem; left: 0.5rem; width: auto; }
+  .carrito-acceso-texto { display: none; }
+}
+
+@media (max-width: 420px) {
+  .marca-suave { display: none; }   /* «VetStock» solo, para que la cabecera quepa en una línea */
+  .cabecera-interior { gap: 0.5rem; padding: 0.5rem 0.7rem; }
+}
+
+/* ============ Portada (login) ============ */
+.login-contenedor {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 2rem;
+  align-items: center;
+  max-width: 900px;
+  width: 100%;
+}
+.login-presentacion { color: #fff; }
+.login-presentacion h2 { color: #fff; font-size: 1.7rem; line-height: 1.25; margin: 0.3em 0 0.8em; }
+.login-marca { font-weight: 700; font-size: 1.05rem; opacity: 0.9; margin: 0; }
+.login-pasos { padding-left: 1.2rem; margin: 0 0 1rem; display: grid; gap: 0.5rem; }
+.login-aviso { font-size: 0.85rem; opacity: 0.85; margin: 0; }
+.login-contenedor .login-tarjeta { width: 100%; }
+
+/* ============ Inicio del cliente ============ */
+.inicio-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.inicio-cabecera p { margin: 0; }
+.inicio-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.inicio-carrito { border-top: 4px solid var(--verde); }
+.inicio-carrito h2 { margin-top: 0; }
+.inicio-contador {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-decoration: none;
+  color: var(--texto);
+  border-top: 4px solid var(--azul);
+  transition: box-shadow 0.15s;
+}
+.inicio-contador:hover { box-shadow: 0 4px 14px rgba(20, 60, 90, 0.15); }
+.inicio-contador-valor { font-size: 2rem; font-weight: 700; color: var(--azul); line-height: 1.1; }
+.inicio-contador-titulo { font-weight: 600; }
+.inicio-columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.inicio-columnas h2 { margin-top: 0; }
+.lista-simple { list-style: none; padding: 0; margin: 0 0 0.8rem; }
+.lista-simple li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--borde);
+}
+.lista-simple li:last-child { border-bottom: none; }
+
+/* ============ Catálogo y carrito ============ */
+.producto-anadir { display: flex; align-items: flex-end; gap: 0.6rem; margin-top: 0.6rem; }
+.producto-cantidad { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.8rem; color: var(--texto-suave); }
+.producto-cantidad .input { width: 5rem; }
+.producto-anadir .btn { flex: 1; }
+.producto-no-disponible { margin: 0.6rem 0 0; font-weight: 600; }
+.fila-aviso td { background: #fff4f2; }
+.tabla td small { display: block; }
+.lista-avisos { margin: 0; padding-left: 1.1rem; }
+
+@media (max-width: 860px) {
+  .login-contenedor { grid-template-columns: 1fr; gap: 1.2rem; }
+  .login-presentacion h2 { font-size: 1.3rem; }
+  .inicio-cabecera .btn { width: 100%; text-align: center; }
+}

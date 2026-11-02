@@ -1,8 +1,11 @@
 // Formato y catálogos de estados (siempre color + texto + icono, nunca solo color)
 
+// Formato único de moneda en toda la aplicación: «1234,50 €» (español, euros)
+const FORMATO_MONEDA = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
+
 export function dinero(importe) {
   const n = Number(importe ?? 0)
-  return (Number.isFinite(n) ? n : 0).toFixed(2) + ' €'
+  return FORMATO_MONEDA.format(Number.isFinite(n) ? n : 0)
 }
 
 // Estimación visual para pedidos nuevos; el importe definitivo siempre lo calcula el servidor.
@@ -48,7 +51,7 @@ export function fechaCorta(valor) {
 export const ESTADOS_PEDIDO = {
   BORRADOR: { texto: 'Borrador', icono: '📝', clase: 'est-borrador' },
   PENDIENTE_FIRMA: { texto: 'Pendiente de firma', icono: '✍️', clase: 'est-pendiente-firma' },
-  FIRMADO: { texto: 'Firmado', icono: '🖋️', clase: 'est-firmado' },
+  FIRMADO: { texto: 'Firmado · pendiente de pago', icono: '🖋️', clase: 'est-firmado' },
   LISTO_PREPARAR: { texto: 'Listo para preparar', icono: '✅', clase: 'est-listo' },
   EN_PREPARACION: { texto: 'En preparación', icono: '🛠️', clase: 'est-preparacion' },
   PREPARADO: { texto: 'Preparado', icono: '📦', clase: 'est-preparado' },

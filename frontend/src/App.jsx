@@ -4,6 +4,7 @@ import { Spinner } from './components/Spinner.jsx'
 import Layout from './components/Layout.jsx'
 import Login from './pages/Login.jsx'
 import AccesoNoPermitido from './pages/AccesoNoPermitido.jsx'
+import Inicio from './pages/Inicio.jsx'
 import Catalogo from './pages/Catalogo.jsx'
 import Carrito from './pages/Carrito.jsx'
 import MisPedidos from './pages/MisPedidos.jsx'
@@ -23,7 +24,7 @@ import AdminOdoo from './pages/admin/Odoo.jsx'
 
 function RedirigirSegunRol() {
   const { usuario } = useAuth()
-  return <Navigate to={usuario?.rol === 'ADMIN' ? '/admin' : '/catalogo'} replace />
+  return <Navigate to={usuario?.rol === 'ADMIN' ? '/admin' : '/inicio'} replace />
 }
 
 // Guard: exige sesión iniciada
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/" element={<RedirigirSegunRol />} />
 
         {/* Portal del cliente (también accesible a ADMIN) */}
+        <Route path="/inicio" element={<RequiereSesion><Inicio /></RequiereSesion>} />
         <Route path="/catalogo" element={<RequiereSesion><Catalogo /></RequiereSesion>} />
         <Route path="/carrito" element={<RequiereSesion><Carrito /></RequiereSesion>} />
         <Route path="/mis-pedidos" element={<RequiereSesion><MisPedidos /></RequiereSesion>} />

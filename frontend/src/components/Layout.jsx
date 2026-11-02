@@ -1,13 +1,35 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.jsx'
 import { ROLES } from '../format.js'
+import { EVENTO_CARRITO, unidadesCarrito } from '../carrito.js'
 
 function Item({ to, children, onClick }) {
   return (
     // end en /admin: «Resumen» solo se marca en su propia ruta y no en /admin/pedidos, etc.
     <NavLink to={to} end={to === '/admin'} className={({ isActive }) => 'menu-enlace' + (isActive ? ' activo' : '')} onClick={onClick}>
       {children}
+    </NavLink>
+  )
+}
+
+// Acceso al carrito con el número de UNIDADES totales (no de productos distintos)
+function AccesoCarrito({ onClick }) {
+  const [unidades, setUnidades] = useState(() => unidadesCarrito())
+
+  useEffect(() => {
+    const refrescar = () => setUnidades(unidadesCarrito())
+    refrescar()
+    window.addEventListener(EVENTO_CARRITO, refrescar)
+    return () => window.removeEventListener(EVENTO_CARRITO, refrescar)
+  }, [])
+
+  const etiqueta = unidades === 0 ? 'Carrito vacío' : `Carrito: ${unidades} ${unidades === 1 ? 'unidad' : 'unidades'}`
+  return (
+    <NavLink to="/carrito" className={({ isActive }) => 'carrito-acceso' + (isActive ? ' activo' : '')} onClick={onClick} aria-label={etiqueta} title={etiqueta}>
+      <span aria-hidden="true">🛒</span>
+      <span className="carrito-acceso-texto">Carrito</span>
+      <span className="carrito-contador" aria-hidden="true">{unidades}</span>
     </NavLink>
   )
 }
@@ -39,8 +61,8 @@ export default function Layout() {
             {usuario && (
               <>
                 <span className="menu-seccion">Portal del cliente</span>
+                {!esAdmin && <Item to="/inicio" onClick={cerrar}>Inicio</Item>}
                 <Item to="/catalogo" onClick={cerrar}>Catálogo</Item>
-                <Item to="/carrito" onClick={cerrar}>Carrito 🛒</Item>
                 <Item to="/mis-pedidos" onClick={cerrar}>Mis pedidos</Item>
                 {esAdmin && (
                   <>
@@ -71,6 +93,7 @@ export default function Layout() {
                     {usuario.clinicaNombre ? ` · ${usuario.clinicaNombre}` : ''}
                   </small>
                 </span>
+                <AccesoCarrito onClick={cerrar} />
                 <button type="button" className="btn btn-secundario" onClick={salir}>Salir</button>
               </>
             )}

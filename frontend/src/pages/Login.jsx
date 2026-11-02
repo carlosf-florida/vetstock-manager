@@ -14,7 +14,7 @@ export default function Login() {
   const [entrando, setEntrando] = useState(false)
 
   if (!cargando && usuario) {
-    return <Navigate to={location.state?.desde || (usuario.rol === 'ADMIN' ? '/admin' : '/catalogo')} replace />
+    return <Navigate to={location.state?.desde || '/'} replace />
   }
 
   async function enviar(e) {
@@ -27,8 +27,9 @@ export default function Login() {
     setError(null)
     setEntrando(true)
     try {
-      const datos = await login(username.trim(), password)
-      navigate(location.state?.desde || (datos?.rol === 'ADMIN' ? '/admin' : '/catalogo'), { replace: true })
+      await login(username.trim(), password)
+      // '/' decide según el rol: administración → /admin, clínicas → /inicio
+      navigate(location.state?.desde || '/', { replace: true })
     } catch (err) {
       setError(err.message || 'No se ha podido iniciar sesión.')
     } finally {
@@ -38,6 +39,18 @@ export default function Login() {
 
   return (
     <div className="login-fondo">
+      <div className="login-contenedor">
+      <section className="login-presentacion" aria-labelledby="titulo-presentacion">
+        <p className="login-marca"><span aria-hidden="true">🐾</span> VetStock Manager</p>
+        <h2 id="titulo-presentacion">Pedidos de productos veterinarios para tu clínica</h2>
+        <ul className="login-pasos">
+          <li><strong>Pide</strong> desde el catálogo, con el stock disponible a la vista.</li>
+          <li><strong>Autoriza:</strong> el veterinario asignado revisa y firma el pedido.</li>
+          <li><strong>Paga</strong> el pedido firmado; la confirmación es automática.</li>
+          <li><strong>Sigue</strong> la preparación y el envío desde «Mis pedidos».</li>
+        </ul>
+        <p className="login-aviso">Proyecto académico: datos ficticios y pasarela de pago de demostración, sin cobros reales.</p>
+      </section>
       <form className="login-tarjeta" onSubmit={enviar} noValidate>
         <h1 className="login-titulo"><span aria-hidden="true">🐾</span> VetStock Manager</h1>
         <p className="login-subtitulo">Distribuidora de productos veterinarios · Acceso al portal</p>
@@ -85,6 +98,7 @@ export default function Login() {
           Si no tienes cuenta, pide acceso a la administración de la distribuidora.
         </p>
       </form>
+      </div>
     </div>
   )
 }

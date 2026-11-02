@@ -2,8 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, ApiError } from '../api.js'
 import { dinero, estimarImportesPedido } from '../format.js'
-import { leerCarrito, guardarCarrito, vaciarCarrito } from '../carrito.js'
-import { ErrorBox, SinDatos } from '../components/Spinner.jsx'
+import {
+  EVENTO_CARRITO, leerCarrito, vaciarCarrito, cambiarCantidad, quitarDelCarrito,
+  maximoPermitido, sincronizarConCatalogo, unidadesCarrito,
+} from '../carrito.js'
+import { ErrorBox, SinDatos, Spinner } from '../components/Spinner.jsx'
+import { useNotificaciones } from '../components/Notificaciones.jsx'
 import ImportesPedido from '../components/pedido/ImportesPedido.jsx'
 import { useAuth } from '../auth.jsx'
 
@@ -20,6 +24,32 @@ export default function Carrito() {
   const [veterinarios, setVeterinarios] = useState([])
   const [clinicaId, setClinicaId] = useState('')
   const [veterinarioId, setVeterinarioId] = useState('')
+  const [comprobando, setComprobando] = useState(true)
+  const [errorComprobacion, setErrorComprobacion] = useState(null)
+  const [avisos, setAvisos] = useState([])
+  const { notificar } = useNotificaciones()
+
+  // Al abrir el carrito se comparan sus líneas con el catálogo actual (stock, precio, productos retirados).
+  // Es solo una ayuda: el servidor vuelve a comprobarlo todo al crear el pedido.
+  async function comprobarCatalogo() {
+    setComprobando(true)
+    setErrorComprobacion(null)
+    try {
+      const productos = await api.get('/api/productos')
+      setAvisos(sincronizarConCatalogo(Array.isArray(productos) ? productos : []))
+    } catch (err) {
+      setErrorComprobacion('No se ha podido comprobar el stock actual: ' + err.message)
+    } finally {
+      setComprobando(false)
+    }
+  }
+
+  useEffect(() => {
+    setLineas(leerCarrito())
+    if (leerCarrito().length > 0) comprobarCatalogo()
+    else setComprobando(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario?.username])
 
   useEffect(() => {
     if (!esAdmin) return
@@ -30,24 +60,40 @@ export default function Carrito() {
 
   useEffect(() => {
     function refrescar() { setLineas(leerCarrito()) }
-    window.addEventListener('vetstock-carrito', refrescar)
-    return () => window.removeEventListener('vetstock-carrito', refrescar)
+    window.addEventListener(EVENTO_CARRITO, refrescar)
+    return () => window.removeEventListener(EVENTO_CARRITO, refrescar)
   }, [])
 
-  function cambiarCantidad(id, valor) {
+  function cambiar(linea, valor) {
     const cantidad = Number(valor)
-    const nuevas = lineas.map((l) =>
-      l.productoId === id ? { ...l, cantidad: Number.isInteger(cantidad) && cantidad > 0 ? cantidad : l.cantidad } : l,
-    )
-    setLineas(nuevas)
-    guardarCarrito(nuevas)
+    if (!Number.isInteger(cantidad) || cantidad < 1) return // se ignora mientras se escribe un valor no válido
+    if (cantidad > maximoPermitido(linea)) {
+      notificar({ tipo: 'error', texto: `De «${linea.nombre}» hay ${linea.stockDisponible} disponibles.` })
+      return
+    }
+    if (!cambiarCantidad(linea.productoId, cantidad)) {
+      notificar({ tipo: 'error', texto: 'No se ha podido guardar el cambio en este navegador.' })
+    }
   }
 
-  function quitar(id) {
-    const nuevas = lineas.filter((l) => l.productoId !== id)
-    setLineas(nuevas)
-    guardarCarrito(nuevas)
+  function quitar(linea) {
+    if (quitarDelCarrito(linea.productoId)) {
+      setAvisos((actuales) => actuales.filter((a) => a.productoId !== linea.productoId))
+      notificar({ texto: `Se ha quitado «${linea.nombre}» del carrito.` })
+    }
   }
+
+  // Mientras haya productos retirados o más unidades que stock, no se deja crear el pedido
+  const hayProblemas = lineas.some((l) => l.noDisponible || l.cantidad > maximoPermitido(l))
+  const unidades = unidadesCarrito(lineas)
+
+  // Los avisos de stock o de producto retirado desaparecen en cuanto se corrige la línea
+  const avisosVigentes = avisos.filter((a) => {
+    const linea = lineas.find((l) => l.productoId === a.productoId)
+    if (!linea) return false
+    if (a.tipo === 'stock') return linea.cantidad > maximoPermitido(linea)
+    return true
+  })
 
   const importesEstimados = estimarImportesPedido(lineas)
 
@@ -129,8 +175,11 @@ export default function Carrito() {
     return (
       <section>
         <h1>Tu carrito</h1>
-        <SinDatos mensaje="Tu carrito está vacío. Ve al catálogo para añadir productos." />
-        <p><Link className="btn btn-primario" to="/catalogo">Ir al catálogo</Link></p>
+        <SinDatos mensaje="Tu carrito está vacío. Añade productos desde el catálogo y aparecerán aquí." />
+        <p className="acciones-fila">
+          <Link className="btn btn-primario" to="/catalogo">Ir al catálogo</Link>
+          {!esAdmin && <Link className="btn btn-secundario" to="/mis-pedidos">Ver mis pedidos</Link>}
+        </p>
       </section>
     )
   }
@@ -138,8 +187,21 @@ export default function Carrito() {
   return (
     <section>
       <h1>Tu carrito</h1>
-      <p className="texto-suave">Revisa las cantidades antes de guardar el pedido como borrador o enviarlo a firma.</p>
+      <p className="texto-suave">
+        {unidades} {unidades === 1 ? 'unidad' : 'unidades'} de {lineas.length} {lineas.length === 1 ? 'producto' : 'productos'}.
+        Revisa las cantidades antes de guardar el pedido como borrador o enviarlo a firma.
+      </p>
 
+      {comprobando && <Spinner texto="Comprobando stock y precios actuales…" />}
+      <ErrorBox mensaje={errorComprobacion} onReintentar={comprobarCatalogo} />
+      {avisosVigentes.length > 0 && (
+        <div className="caja-error" role="status">
+          <span aria-hidden="true">⚠️</span>
+          <ul className="caja-error-texto lista-avisos">
+            {avisosVigentes.map((a) => <li key={`${a.productoId}-${a.tipo}`}>{a.texto}</li>)}
+          </ul>
+        </div>
+      )}
       <ErrorBox mensaje={errores.general || error} />
 
       <div className="tabla-scroll">
@@ -156,31 +218,37 @@ export default function Carrito() {
           </thead>
           <tbody>
             {lineas.map((l) => (
-              <tr key={l.productoId}>
-                <td>{l.nombre}</td>
+              <tr key={l.productoId} className={l.noDisponible || l.cantidad > maximoPermitido(l) ? 'fila-aviso' : undefined}>
+                <td>
+                  {l.nombre}
+                  {l.noDisponible
+                    ? <small className="error-campo">No disponible</small>
+                    : Number.isFinite(maximoPermitido(l)) && <small className="texto-suave">{l.stockDisponible} disponibles</small>}
+                </td>
                 <td>{l.codigo}</td>
                 <td>{dinero(l.precio)}</td>
                 <td>
                   <div className="cantidad-zona">
-                    <button type="button" className="btn btn-mini" aria-label="Quitar una unidad"
-                      onClick={() => cambiarCantidad(l.productoId, l.cantidad - 1)} disabled={enviando}>−</button>
+                    <button type="button" className="btn btn-mini" aria-label={`Quitar una unidad de ${l.nombre}`}
+                      onClick={() => cambiar(l, l.cantidad - 1)} disabled={enviando || l.cantidad <= 1}>−</button>
                     <input
                       className="input input-cantidad"
                       type="number"
                       min="1"
+                      max={Number.isFinite(maximoPermitido(l)) ? maximoPermitido(l) : undefined}
                       step="1"
                       value={l.cantidad}
-                      onChange={(e) => cambiarCantidad(l.productoId, e.target.value)}
+                      onChange={(e) => cambiar(l, e.target.value)}
                       disabled={enviando}
                       aria-label={`Cantidad de ${l.nombre}`}
                     />
-                    <button type="button" className="btn btn-mini" aria-label="Añadir una unidad"
-                      onClick={() => cambiarCantidad(l.productoId, l.cantidad + 1)} disabled={enviando}>+</button>
+                    <button type="button" className="btn btn-mini" aria-label={`Añadir una unidad de ${l.nombre}`}
+                      onClick={() => cambiar(l, l.cantidad + 1)} disabled={enviando || l.cantidad >= maximoPermitido(l)}>+</button>
                   </div>
                 </td>
                 <td>{dinero(Number(l.precio || 0) * Number(l.cantidad || 0))}</td>
                 <td>
-                  <button type="button" className="btn btn-peligro btn-mini" onClick={() => quitar(l.productoId)} disabled={enviando}>
+                  <button type="button" className="btn btn-peligro btn-mini" onClick={() => quitar(l)} disabled={enviando} aria-label={`Quitar ${l.nombre} del carrito`}>
                     Quitar
                   </button>
                 </td>
@@ -247,17 +315,28 @@ export default function Carrito() {
           {errores.observaciones && <small className="error-campo">{errores.observaciones}</small>}
         </label>
 
+        {hayProblemas && (
+          <p className="error-campo">Corrige los productos marcados (sin stock suficiente o retirados) para poder continuar.</p>
+        )}
         <div className="acciones-fila">
-          <button type="button" className="btn btn-secundario" onClick={guardarBorrador} disabled={enviando}>
-            {enviando ? 'Guardando…' : 'Guardar como borrador'}
-          </button>
-          <button type="button" className="btn btn-primario" onClick={enviarAFirma} disabled={enviando}>
+          <button type="button" className="btn btn-primario btn-grande" onClick={enviarAFirma} disabled={enviando || hayProblemas}>
             {enviando ? 'Enviando…' : 'Enviar a firma'}
           </button>
-          <button type="button" className="btn btn-peligro" onClick={() => { vaciarCarrito(); setLineas([]) }} disabled={enviando}>
+          <button type="button" className="btn btn-secundario" onClick={guardarBorrador} disabled={enviando || hayProblemas}>
+            {enviando ? 'Guardando…' : 'Guardar como borrador'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-peligro"
+            onClick={() => { if (window.confirm('¿Vaciar el carrito? Se quitarán todos los productos.')) vaciarCarrito() }}
+            disabled={enviando}
+          >
             Vaciar carrito
           </button>
         </div>
+        <p className="texto-suave">
+          «Enviar a firma» reserva el stock y deja el pedido pendiente de la firma del veterinario asignado; «Guardar como borrador» lo deja editable sin reservar stock.
+        </p>
         {enviando && <p className="texto-suave">Creando el pedido en el servidor…</p>}
       </div>
     </section>

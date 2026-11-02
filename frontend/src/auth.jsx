@@ -1,11 +1,15 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { apiFetch } from './api.js'
+import { usarCarritoDe } from './carrito.js'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null)
   const [cargando, setCargando] = useState(true)
+
+  // Cada cuenta usa su propio carrito: al entrar o salir se cambia de carrito
+  useEffect(() => { usarCarritoDe(usuario?.username) }, [usuario?.username])
 
   useEffect(() => {
     let activo = true

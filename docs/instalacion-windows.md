@@ -104,9 +104,9 @@ foreach ($m in "006_modificacion_pedidos","007_caducidad_reservas","008_vistas_p
 ```
 
 Atención: con la regla nueva, los pedidos antiguos enviados a firma y sin pagar
-caducarán (se cancelan a las 72 h de su fecha de envío o de creación). Además,
-los pedidos que se pagaron antes de firmar con la versión anterior ya no
-pueden pagarse de nuevo; solo les falta la firma.
+caducarán (se cancelan a las 72 h de su fecha de envío o de creación). Los pedidos
+que se pagaron antes de firmar con la versión anterior no caducan: cuando el
+veterinario asignado los firma, pasan directamente a «Listo para preparar».
 
 ## 6. Pruebas
 

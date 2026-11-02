@@ -267,8 +267,16 @@ public class PedidoService {
         firmaRepository.save(firma);
         pedido.setFirma(firma);
         pedido.setFechaFirma(firma.getFechaFirma());
-        // Firmado y pendiente de pago: el pago solo se puede iniciar a partir de aquí
-        pedido.setEstado(EstadoPedido.FIRMADO);
+        if (pedido.getFechaPago() != null) {
+            // Datos antiguos: pedidos pagados antes de firmar con la regla anterior.
+            // Ya tienen pago confirmado, así que con la firma quedan listos para preparar.
+            pedido.setEstado(EstadoPedido.LISTO_PREPARAR);
+            pedido.setFechaListoPreparar(LocalDateTime.now());
+            programarSincronizacion(pedido);
+        } else {
+            // Firmado y pendiente de pago: el pago solo se puede iniciar a partir de aquí
+            pedido.setEstado(EstadoPedido.FIRMADO);
+        }
         return PedidoResponse.desde(pedidoRepository.save(pedido));
     }
 

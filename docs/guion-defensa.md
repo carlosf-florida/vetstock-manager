@@ -30,7 +30,7 @@ Tecnologías: Spring Boot 4 (Java 21), MySQL, React + Vite y pruebas JUnit.
 
 ## 4. Calidad (1 min)
 
-- `mvnw.cmd test` → **52 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo.
+- `mvnw.cmd test` → **53 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo.
 - Las pruebas encontraron errores reales (el script SQL no se podía repetir, editar líneas fallaba), y están corregidos.
 
 ## 5. Límites honestos (1 min)

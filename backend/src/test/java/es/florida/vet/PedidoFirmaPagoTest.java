@@ -280,6 +280,19 @@ class PedidoFirmaPagoTest {
     }
 
     @Test
+    @DisplayName("datos antiguos: un pedido pagado antes de firmar queda listo para preparar al firmarlo")
+    void pedidoAntiguoPagadoSinFirmaQuedaListoAlFirmar() {
+        ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
+        contexto.pedido().setFechaPago(LocalDateTime.now().minusDays(2));
+        permitirFirma(contexto, contexto.responsable());
+
+        pedidoService.firmar(PEDIDO_ID, solicitudFirma(null), contexto.responsable().getUsername());
+
+        assertEquals(EstadoPedido.LISTO_PREPARAR, contexto.pedido().getEstado());
+        assertNotNull(contexto.pedido().getFechaListoPreparar());
+    }
+
+    @Test
     @DisplayName("una notificación con firma HMAC incorrecta se rechaza sin tocar el pago")
     void notificacionConFirmaIncorrectaSeRechaza() {
         PagoService pagoService = servicioPago();

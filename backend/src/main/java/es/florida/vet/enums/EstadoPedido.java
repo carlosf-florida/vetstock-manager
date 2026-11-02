@@ -1,9 +1,10 @@
 package es.florida.vet.enums;
 
 /**
- * Estado operativo del pedido. Firma y pago se exponen por separado.
- * PENDIENTE_FIRMA puede estar ya pagado y exportado a Odoo.
- * LISTO_PREPARAR exige pago confirmado y una confirmación interna registrada.
+ * Estado operativo del pedido. Orden obligatorio: firma del veterinario
+ * asignado -> pago confirmado por el proveedor -> preparación.
+ * FIRMADO significa "firmado, pendiente de pago".
+ * LISTO_PREPARAR exige firma registrada y pago confirmado.
  */
 public enum EstadoPedido {
     BORRADOR, PENDIENTE_FIRMA, FIRMADO, LISTO_PREPARAR,
@@ -12,7 +13,7 @@ public enum EstadoPedido {
     public boolean puedePasarA(EstadoPedido destino) {
         return switch (this) {
             case BORRADOR -> destino == PENDIENTE_FIRMA || destino == CANCELADO;
-            case PENDIENTE_FIRMA -> destino == FIRMADO || destino == LISTO_PREPARAR || destino == CANCELADO;
+            case PENDIENTE_FIRMA -> destino == FIRMADO || destino == CANCELADO;
             case FIRMADO -> destino == LISTO_PREPARAR || destino == CANCELADO;
             case LISTO_PREPARAR -> destino == EN_PREPARACION;
             case EN_PREPARACION -> destino == PREPARADO;

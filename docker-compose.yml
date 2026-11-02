@@ -81,7 +81,7 @@ services:
       ODOO_DB: vetstock_erp
       ODOO_USUARIO: admin
       ODOO_CLAVE: admin
-      PAGOS_TOKEN_NOTIFICACION: token-simulado-demo
+      PAGOS_SECRETO_WEBHOOK: ${PAGOS_SECRETO_WEBHOOK:-secreto-demo-no-usar-en-produccion}
     ports:
       - "8080:8080"
 

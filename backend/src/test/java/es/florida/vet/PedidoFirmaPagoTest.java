@@ -220,42 +220,133 @@ class PedidoFirmaPagoTest {
     }
 
     @Test
-    @DisplayName("un pago confirmado antes de la firma conserva PENDIENTE_FIRMA y publica una solicitud de sincronización")
-    void pagoAntesDeFirmaRegistraFechaMantienePendienteYPublicaEvento() {
-        ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
-        Pago pago = new Pago(contexto.pedido(), BigDecimal.ZERO, "SIM-100", "secreto-proveedor");
-        PagoService pagoService = new PagoService(pagoRepository, pedidoRepository, pedidoService, sesionService);
-        ReflectionTestUtils.setField(pagoService, "tokenNotificacionConfigurado", "secreto-proveedor");
-        when(pagoRepository.findByReferencia("SIM-100")).thenReturn(Optional.of(pago));
+    @DisplayName("un pago confirmado con firma HMAC válida deja el pedido firmado listo para preparar")
+    void pagoConfirmadoDePedidoFirmadoPasaAListoPreparar() {
+        ContextoPedido contexto = pedidoFirmado(PEDIDO_ID);
+        Pago pago = new Pago(contexto.pedido(), BigDecimal.ZERO, "SIM-100", "t");
+        PagoService pagoService = servicioPago();
+        when(pagoRepository.bloquearPorReferencia("SIM-100")).thenReturn(Optional.of(pago));
         when(pedidoRepository.findById(PEDIDO_ID)).thenReturn(Optional.of(contexto.pedido()));
 
-        pagoService.notificacion(new NotificacionPagoRequest("SIM-100", BigDecimal.ZERO, "EUR", "CONFIRMADO"),
-                "secreto-proveedor");
+        String cuerpo = notificacionJson("SIM-100", "0", "EUR", "CONFIRMADO");
+        pagoService.notificacion(cuerpo, pagoService.firmarCuerpo(cuerpo));
 
         ArgumentCaptor<PedidoActualizadoEvent> evento = ArgumentCaptor.forClass(PedidoActualizadoEvent.class);
         verify(eventos).publishEvent(evento.capture());
         assertEquals(PEDIDO_ID, evento.getValue().pedidoId());
         assertNotNull(contexto.pedido().getFechaPago());
-        assertEquals(EstadoPedido.PENDIENTE_FIRMA, contexto.pedido().getEstado());
-        assertTrue(contexto.pedido().isOdooSincronizacionPendiente());
+        assertNotNull(contexto.pedido().getFechaListoPreparar());
+        assertEquals(EstadoPedido.LISTO_PREPARAR, contexto.pedido().getEstado());
+        assertEquals(es.florida.vet.enums.EstadoPago.CONFIRMADO, pago.getEstado());
     }
 
     @Test
-    @DisplayName("la firma registrada después del pago deja el pedido listo para preparar y solicita sincronización")
-    void firmarDespuesDePagarPasaAListoPrepararYPublicaEvento() {
+    @DisplayName("no se puede iniciar el pago de un pedido pendiente de firma")
+    void noSePuedePagarSinFirma() {
         ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
-        contexto.pedido().setFechaPago(LocalDateTime.now().minusMinutes(1));
+        permitirAccesoFirma(contexto, contexto.responsable(), true);
+
+        assertThrows(ReglaNegocioException.class,
+                () -> servicioPago().iniciar(PEDIDO_ID, contexto.responsable().getUsername(), false));
+
+        verify(pagoRepository, never()).save(any(Pago.class));
+    }
+
+    @Test
+    @DisplayName("administración no puede iniciar ni completar el pago en nombre de la clínica")
+    void administracionNoPaga() {
+        PagoService pagoService = servicioPago();
+
+        assertThrows(AccesoDenegadoException.class, () -> pagoService.iniciar(PEDIDO_ID, "admin", true));
+        assertThrows(AccesoDenegadoException.class,
+                () -> pagoService.simuladoProcesar("SIM-1", "CONFIRMADO", "admin", true));
+        verifyNoInteractions(pagoRepository);
+    }
+
+    @Test
+    @DisplayName("la firma deja el pedido FIRMADO (pendiente de pago) sin pasarlo a preparación")
+    void firmarDejaPedidoFirmadoPendienteDePago() {
+        ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
         permitirFirma(contexto, contexto.responsable());
 
         pedidoService.firmar(PEDIDO_ID, solicitudFirma(COLEGIADO_RESPONSABLE), contexto.responsable().getUsername());
 
-        ArgumentCaptor<PedidoActualizadoEvent> evento = ArgumentCaptor.forClass(PedidoActualizadoEvent.class);
-        verify(eventos).publishEvent(evento.capture());
-        assertEquals(PEDIDO_ID, evento.getValue().pedidoId());
+        assertEquals(EstadoPedido.FIRMADO, contexto.pedido().getEstado());
         assertNotNull(contexto.pedido().getFechaFirma());
-        assertNotNull(contexto.pedido().getFechaListoPreparar());
-        assertEquals(EstadoPedido.LISTO_PREPARAR, contexto.pedido().getEstado());
-        assertTrue(contexto.pedido().isOdooSincronizacionPendiente());
+        assertNull(contexto.pedido().getFechaListoPreparar());
+        verifyNoInteractions(eventos);
+    }
+
+    @Test
+    @DisplayName("una notificación con firma HMAC incorrecta se rechaza sin tocar el pago")
+    void notificacionConFirmaIncorrectaSeRechaza() {
+        PagoService pagoService = servicioPago();
+        String cuerpo = notificacionJson("SIM-100", "10.00", "EUR", "CONFIRMADO");
+
+        assertThrows(AccesoDenegadoException.class, () -> pagoService.notificacion(cuerpo, "firma-falsa"));
+        assertThrows(AccesoDenegadoException.class, () -> pagoService.notificacion(cuerpo, null));
+        // Cambiar el importe después de firmar invalida la firma
+        String firmaOriginal = pagoService.firmarCuerpo(cuerpo);
+        String manipulado = notificacionJson("SIM-100", "0.01", "EUR", "CONFIRMADO");
+        assertThrows(AccesoDenegadoException.class, () -> pagoService.notificacion(manipulado, firmaOriginal));
+
+        verify(pagoRepository, never()).bloquearPorReferencia(any());
+    }
+
+    @Test
+    @DisplayName("importe o moneda distintos dejan el pago FALLADO y el pedido sin pagar")
+    void importeOMonedaIncorrectosMarcanFallado() {
+        ContextoPedido contexto = pedidoFirmado(PEDIDO_ID);
+        Pago pago = new Pago(contexto.pedido(), BigDecimal.ZERO, "SIM-200", "t");
+        PagoService pagoService = servicioPago();
+        when(pagoRepository.bloquearPorReferencia("SIM-200")).thenReturn(Optional.of(pago));
+
+        String cuerpo = notificacionJson("SIM-200", "0", "USD", "CONFIRMADO");
+        assertThrows(ReglaNegocioException.class, () -> pagoService.notificacion(cuerpo, pagoService.firmarCuerpo(cuerpo)));
+
+        assertEquals(es.florida.vet.enums.EstadoPago.FALLADO, pago.getEstado());
+        assertNull(contexto.pedido().getFechaPago());
+        assertEquals(EstadoPedido.FIRMADO, contexto.pedido().getEstado());
+    }
+
+    @Test
+    @DisplayName("una notificación repetida no vuelve a aplicar el pago")
+    void notificacionRepetidaEsIdempotente() {
+        ContextoPedido contexto = pedidoFirmado(PEDIDO_ID);
+        Pago pago = new Pago(contexto.pedido(), BigDecimal.ZERO, "SIM-300", "t");
+        pago.setEstado(es.florida.vet.enums.EstadoPago.CONFIRMADO);
+        PagoService pagoService = servicioPago();
+        when(pagoRepository.bloquearPorReferencia("SIM-300")).thenReturn(Optional.of(pago));
+
+        String cuerpo = notificacionJson("SIM-300", "0", "EUR", "CONFIRMADO");
+        pagoService.notificacion(cuerpo, pagoService.firmarCuerpo(cuerpo));
+
+        assertEquals(1, pago.getIntentos());
+        assertNull(contexto.pedido().getFechaPago());
+        verifyNoInteractions(eventos);
+    }
+
+    @Test
+    @DisplayName("la caducidad cancela pedidos sin pago, libera la reserva y respeta los pagos en curso")
+    void caducidadCancelaYLiberaReserva() {
+        ContextoPedido vencido = pedidoPendiente(401L);
+        ContextoPedido conPagoEnCurso = pedidoPendiente(402L);
+        Producto producto = new Producto();
+        asignarId(producto, 7L);
+        producto.setNombre("Guantes");
+        producto.setPrecio(new BigDecimal("12.50"));
+        vencido.pedido().agregarLinea(producto, 3);
+        when(pedidoRepository.findByEstadoInAndFechaPagoIsNullAndFechaEnvioFirmaBefore(any(), any()))
+                .thenReturn(java.util.List.of(vencido.pedido(), conPagoEnCurso.pedido()));
+
+        int cancelados = pedidoService.caducarReservasVencidas(LocalDateTime.now().minusHours(72),
+                p -> p.getId().equals(402L));
+
+        assertEquals(1, cancelados);
+        assertEquals(EstadoPedido.CANCELADO, vencido.pedido().getEstado());
+        assertTrue(vencido.pedido().getMotivoCancelacion().startsWith("Reserva caducada"));
+        verify(productoRepository).liberarReserva(7L, 3);
+        assertEquals(EstadoPedido.PENDIENTE_FIRMA, conPagoEnCurso.pedido().getEstado());
     }
 
     @Test
@@ -334,14 +425,13 @@ class PedidoFirmaPagoTest {
     @Test
     @DisplayName("iniciar el pago dos veces devuelve el mismo pago pendiente y no crea otro cobro")
     void iniciarPagoDosVecesReutilizaElPendiente() {
-        ContextoPedido contexto = pedidoPendiente(PEDIDO_ID);
-        contexto.pedido().setEstado(EstadoPedido.FIRMADO);
+        ContextoPedido contexto = pedidoFirmado(PEDIDO_ID);
         Pago pendiente = new Pago(contexto.pedido(), contexto.pedido().getTotal(), "SIM-ABC", "token");
-        PagoService pagoService = new PagoService(pagoRepository, pedidoRepository, pedidoService, sesionService);
-        when(pedidoRepository.findById(PEDIDO_ID)).thenReturn(Optional.of(contexto.pedido()));
+        PagoService pagoService = servicioPago();
+        permitirAccesoFirma(contexto, contexto.responsable(), true);
         when(pagoRepository.findByPedidoIdOrderByFechaInicioDesc(PEDIDO_ID)).thenReturn(java.util.List.of(pendiente));
 
-        PagoIniciadoResponse respuesta = pagoService.iniciar(PEDIDO_ID, "admin", true);
+        PagoIniciadoResponse respuesta = pagoService.iniciar(PEDIDO_ID, contexto.responsable().getUsername(), false);
 
         assertEquals("SIM-ABC", respuesta.referencia());
         verify(pagoRepository, never()).save(any(Pago.class));
@@ -358,6 +448,24 @@ class PedidoFirmaPagoTest {
         asignarId(pedido, pedidoId);
         pedido.setEstado(EstadoPedido.PENDIENTE_FIRMA);
         return new ContextoPedido(pedido, clinica, veterinario, responsable);
+    }
+
+    private ContextoPedido pedidoFirmado(Long pedidoId) {
+        ContextoPedido contexto = pedidoPendiente(pedidoId);
+        contexto.pedido().setEstado(EstadoPedido.FIRMADO);
+        contexto.pedido().setFechaFirma(LocalDateTime.now().minusMinutes(5));
+        return contexto;
+    }
+
+    private PagoService servicioPago() {
+        PagoService pagoService = new PagoService(pagoRepository, pedidoRepository, pedidoService, sesionService);
+        ReflectionTestUtils.setField(pagoService, "secretoWebhook", "secreto-de-pruebas");
+        return pagoService;
+    }
+
+    private String notificacionJson(String referencia, String importe, String moneda, String resultado) {
+        return "{\"referencia\":\"" + referencia + "\",\"importe\":" + importe
+                + ",\"moneda\":\"" + moneda + "\",\"resultado\":\"" + resultado + "\"}";
     }
 
     private Usuario usuario(Long id, String username, String nombreCompleto, Rol rol) {

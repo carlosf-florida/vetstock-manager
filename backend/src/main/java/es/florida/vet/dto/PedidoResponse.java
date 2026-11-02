@@ -20,7 +20,8 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                              boolean odooSincronizacionPendiente, String odooUltimoError,
                              BigDecimal baseImponible, BigDecimal ivaPorcentaje,
                              BigDecimal importeIva, String moneda,
-                             String modificadoPorNombre, LocalDateTime fechaModificacion) {
+                             String modificadoPorNombre, LocalDateTime fechaModificacion,
+                             String motivoCancelacion) {
     public static PedidoResponse desde(Pedido p) {
         var firma = p.getFirma();
         return new PedidoResponse(p.getId(), p.getClinica().getId(), p.getClinica().getNombre(),
@@ -39,6 +40,6 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                 p.getOdooId(), p.isOdooSincronizacionPendiente(), p.getOdooUltimoError(),
                 p.getBaseImponible(), p.getIvaPorcentaje(), p.getImporteIva(), p.getMoneda(),
                 p.getModificadoPor() == null ? null : p.getModificadoPor().getNombreCompleto(),
-                p.getFechaModificacion());
+                p.getFechaModificacion(), p.getMotivoCancelacion());
     }
 }

@@ -46,7 +46,10 @@ export function puedeFirmarPedido(pedido, usuario) {
     && usuario.username === pedido.veterinarioUsername
 }
 
-export function puedePagarPedido(pedido) {
-  if (!pedido || !['PENDIENTE_FIRMA', 'FIRMADO'].includes(pedido.estado)) return false
+// Orden obligatorio: primero firma el veterinario asignado y después paga la clínica.
+// Administración no paga en nombre del cliente (el backend también lo impide).
+export function puedePagarPedido(pedido, usuario) {
+  if (!pedido || pedido.estado !== 'FIRMADO' || !pedido.fechaFirma) return false
+  if (usuario?.rol === 'ADMIN') return false
   return !pedido.fechaPago && estadoPagoPedido(pedido) !== 'PAGADO'
 }

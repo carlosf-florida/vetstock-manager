@@ -7,6 +7,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -62,6 +63,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> integridad(DataIntegrityViolationException ex) {
         return construir(HttpStatus.BAD_REQUEST, "No se pudo guardar: hay datos repetidos o no válidos");
+    }
+
+    // Dos usuarios cambiaron el mismo registro a la vez (@Version): el segundo debe recargar
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> concurrencia(ObjectOptimisticLockingFailureException ex) {
+        return construir(HttpStatus.CONFLICT, "Otra persona ha modificado estos datos a la vez. Recarga e inténtalo de nuevo.");
     }
 
     private ResponseEntity<ErrorResponse> construir(HttpStatus estado, String mensaje) {

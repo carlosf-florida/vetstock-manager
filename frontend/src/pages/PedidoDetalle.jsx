@@ -69,7 +69,7 @@ export default function PedidoDetalle() {
   const estado = pedido?.estado
   const puedeFirmar = puedeFirmarPedido(pedido, usuario)
   const puedeEditarLineas = estado === 'BORRADOR'
-  const puedePagar = puedePagarPedido(pedido)
+  const puedePagar = puedePagarPedido(pedido, usuario)
 
   useEffect(() => {
     if (pestaña === 'firma' && pedido && !puedeFirmar) setPestaña('resumen')

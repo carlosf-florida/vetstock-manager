@@ -28,8 +28,8 @@ import java.util.List;
  * SIMPLIFICACIÓN ACADÉMICA: se desactiva CSRF para simplificar el frontend
  * React (en producción se activaría o se usaría un token).
  *
- * Rutas públicas de pago: /api/pagos/simulado/** (página simulada del banco)
- * y /api/pagos/notificacion (webhook del proveedor, autenticado por token
+ * Ruta pública de pago: /api/pagos/notificacion (webhook del proveedor,
+ * autenticado con la firma HMAC del cuerpo
  * dentro del servicio, no por sesión).
  */
 @Configuration
@@ -49,8 +49,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Login abierto a todos
                 .requestMatchers("/api/auth/login").permitAll()
-                // Endpoints del "proveedor" de pagos (SIMULADO): autenticación por token
-                .requestMatchers("/api/pagos/simulado/**", "/api/pagos/notificacion").permitAll()
+                // Webhook del proveedor de pagos: sin sesión, autenticado con firma HMAC en el servicio
+                .requestMatchers(HttpMethod.POST, "/api/pagos/notificacion").permitAll()
                 // Escritura de productos, stock, clínicas y cuentas: solo el almacén
                 .requestMatchers(HttpMethod.POST, "/api/productos").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/productos/**").hasRole("ADMIN")

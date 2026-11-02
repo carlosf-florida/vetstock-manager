@@ -104,6 +104,9 @@ public class Pedido {
     @Column(name = "fecha_cancelacion")
     private LocalDateTime fechaCancelacion;
 
+    @Column(name = "motivo_cancelacion", length = 255)
+    private String motivoCancelacion;   // cancelado por un usuario o reserva caducada
+
     public Pedido() {
     }
 
@@ -192,6 +195,8 @@ public class Pedido {
     public void setFechaExpedicion(LocalDateTime fecha) { this.fechaExpedicion = fecha; }
     public LocalDateTime getFechaCancelacion() { return fechaCancelacion; }
     public void setFechaCancelacion(LocalDateTime fecha) { this.fechaCancelacion = fecha; }
+    public String getMotivoCancelacion() { return motivoCancelacion; }
+    public void setMotivoCancelacion(String motivo) { this.motivoCancelacion = motivo; }
 
     private Integer odooId;                     // id del sale.order en Odoo (ERP)
     private LocalDateTime odooEnviado;

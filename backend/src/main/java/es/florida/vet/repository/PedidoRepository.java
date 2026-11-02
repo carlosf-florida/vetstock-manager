@@ -16,4 +16,8 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     List<Pedido> findByClinicaIdAndEstadoOrderByFechaCreacionDesc(Long clinicaId, es.florida.vet.enums.EstadoPedido estado);
 
     long countByEstado(es.florida.vet.enums.EstadoPedido estado);
+
+    /** Pedidos con reserva y sin pago enviados a firma antes de la fecha límite (caducidad). */
+    List<Pedido> findByEstadoInAndFechaPagoIsNullAndFechaEnvioFirmaBefore(
+            java.util.Collection<es.florida.vet.enums.EstadoPedido> estados, java.time.LocalDateTime limite);
 }

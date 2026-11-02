@@ -43,10 +43,11 @@ import java.util.Set;
  *
  *  - Los precios los calcula SIEMPRE el servidor (BigDecimal), nunca el frontend.
  *  - El stock se reserva de forma ATÓMICA al enviar a firma.
- *  - Firma propia del responsable o auxiliar de la misma clínica, con identidad real.
+ *  - Solo firma el veterinario asignado al pedido, con su propia cuenta.
  *  - Al firmar se guarda una copia inmutable del contenido autorizado.
- *  - LISTO_PREPARAR exige firma interna y pago confirmado, en cualquier orden.
- *  - El pago y la firma posterior solicitan actualizar Odoo después del commit.
+ *  - Orden obligatorio: firma -> pago confirmado -> LISTO_PREPARAR.
+ *  - Las reservas sin pago caducan (ver ReservaCaducidadTask).
+ *  - El pago confirmado solicita actualizar Odoo después del commit.
  *  - El stock físico se descuenta UNA SOLA VEZ, al expedir.
  */
 @Service
@@ -227,7 +228,7 @@ public class PedidoService {
     }
 
     // ------------------------------------------------------------------
-    // Firma propia: responsable o auxiliar de su clínica, con copia inmutable
+    // Firma del veterinario asignado, con copia inmutable
     // ------------------------------------------------------------------
 
     @Transactional
@@ -262,13 +263,8 @@ public class PedidoService {
         firmaRepository.save(firma);
         pedido.setFirma(firma);
         pedido.setFechaFirma(firma.getFechaFirma());
-        if (pedido.getFechaPago() != null) {
-            pedido.setEstado(EstadoPedido.LISTO_PREPARAR);
-            pedido.setFechaListoPreparar(LocalDateTime.now());
-            programarSincronizacion(pedido);
-        } else {
-            pedido.setEstado(EstadoPedido.FIRMADO);
-        }
+        // Firmado y pendiente de pago: el pago solo se puede iniciar a partir de aquí
+        pedido.setEstado(EstadoPedido.FIRMADO);
         return PedidoResponse.desde(pedidoRepository.save(pedido));
     }
 
@@ -369,7 +365,32 @@ public class PedidoService {
         if (pedido.getFechaPago() != null) {
             throw new ReglaNegocioException("Un pedido pagado no se puede cancelar desde la aplicación");
         }
+        Usuario usuario = sesionService.usuarioActual(username);
+        cancelarYLiberar(pedido, "Cancelado por " + usuario.getNombreCompleto());
+        return PedidoResponse.desde(pedidoRepository.save(pedido));
+    }
 
+    /**
+     * Política de caducidad acordada: un pedido enviado a firma que no tiene
+     * pago confirmado pasado el plazo se cancela y libera su reserva.
+     * Si hay un pago iniciado hace poco (el cliente puede estar en la pasarela)
+     * se espera a la siguiente pasada. Devuelve cuántos pedidos ha cancelado.
+     */
+    @Transactional
+    public int caducarReservasVencidas(LocalDateTime limite, java.util.function.Predicate<Pedido> tienePagoEnCurso) {
+        int cancelados = 0;
+        List<Pedido> candidatos = pedidoRepository.findByEstadoInAndFechaPagoIsNullAndFechaEnvioFirmaBefore(
+                List.of(EstadoPedido.PENDIENTE_FIRMA, EstadoPedido.FIRMADO), limite);
+        for (Pedido pedido : candidatos) {
+            if (tienePagoEnCurso.test(pedido)) continue;
+            cancelarYLiberar(pedido, "Reserva caducada: sin pago confirmado en el plazo establecido");
+            pedidoRepository.save(pedido);
+            cancelados++;
+        }
+        return cancelados;
+    }
+
+    private void cancelarYLiberar(Pedido pedido, String motivo) {
         if (pedido.getEstado().tieneReserva()) {
             for (LineaPedido linea : pedido.getLineas()) {
                 productoRepository.liberarReserva(linea.getProducto().getId(), linea.getCantidad());
@@ -377,7 +398,7 @@ public class PedidoService {
         }
         pedido.setEstado(EstadoPedido.CANCELADO);
         pedido.setFechaCancelacion(LocalDateTime.now());
-        return PedidoResponse.desde(pedidoRepository.save(pedido));
+        pedido.setMotivoCancelacion(motivo);
     }
 
     // ------------------------------------------------------------------
@@ -388,14 +409,12 @@ public class PedidoService {
     public void marcarPagado(Long pedidoId) {
         Pedido pedido = buscarPedido(pedidoId);
         if (pedido.getFechaPago() != null) return;
-        if (pedido.getEstado() != EstadoPedido.FIRMADO && pedido.getEstado() != EstadoPedido.PENDIENTE_FIRMA) {
-            throw new ReglaNegocioException("El pedido no puede recibir un pago en este estado");
+        if (pedido.getEstado() != EstadoPedido.FIRMADO || pedido.getFechaFirma() == null) {
+            throw new ReglaNegocioException("Solo se puede registrar el pago de un pedido firmado");
         }
         pedido.setFechaPago(LocalDateTime.now());
-        if (pedido.getFechaFirma() != null) {
-            pedido.setEstado(EstadoPedido.LISTO_PREPARAR);
-            pedido.setFechaListoPreparar(LocalDateTime.now());
-        }
+        pedido.setEstado(EstadoPedido.LISTO_PREPARAR);
+        pedido.setFechaListoPreparar(LocalDateTime.now());
         programarSincronizacion(pedido);
         pedidoRepository.save(pedido);
     }

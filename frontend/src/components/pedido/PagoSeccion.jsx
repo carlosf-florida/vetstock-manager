@@ -8,8 +8,8 @@ import { infoEstadoPago } from '../../pedidoEstado.js'
 import ImportesPedido from './ImportesPedido.jsx'
 
 /**
- * Estado del pago y entrada a la pasarela simulada. Puede iniciarse con la
- * firma pendiente o firmada, siempre que el pedido aún no tenga fecha de pago.
+ * Estado del pago y entrada a la pasarela simulada. Solo se puede iniciar
+ * cuando el pedido está FIRMADO y aún no tiene fecha de pago.
  */
 export default function PagoSeccion({ pedido, puedePagar }) {
   const navigate = useNavigate()
@@ -106,9 +106,13 @@ export default function PagoSeccion({ pedido, puedePagar }) {
       {pagoEnCurso && puedePagar && (
         <p className="texto-suave">Ya hay un intento iniciado. Puedes retomarlo con la misma referencia, sin crear otro pago.</p>
       )}
-      {pedido.estado === 'PENDIENTE_FIRMA' && !pedido.fechaPago && (
-        <p className="texto-suave">Puedes pagar antes de la firma. El pedido seguirá pendiente de firma hasta que una persona autorizada firme.</p>
+      {pedido.estado === 'PENDIENTE_FIRMA' && (
+        <p className="texto-suave">El pago se habilita cuando el veterinario asignado revise y firme el pedido.</p>
       )}
+      <p className="texto-suave">
+        Pasarela de <strong>demostración</strong>: no se realiza ningún cobro real. El pedido solo se marca como pagado
+        cuando el backend recibe y verifica la notificación firmada del proveedor.
+      </p>
       {pago?.estado === 'FALLADO' && (
         <p className="texto-suave">El último intento de pago falló. Puedes reintentarlo: se generará una referencia nueva.</p>
       )}

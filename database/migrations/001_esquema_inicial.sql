@@ -143,6 +143,7 @@ CREATE TABLE pedidos (
     fecha_preparacion     DATETIME,
     fecha_expedicion      DATETIME,
     fecha_cancelacion     DATETIME,
+    motivo_cancelacion    VARCHAR(255),      -- usuario que cancela o reserva caducada
     odoo_id               INT NULL,   -- id del sale.order en Odoo (ERP)
     odoo_enviado          DATETIME,   -- cuándo se exportó a Odoo
     odoo_sincronizacion_pendiente BOOLEAN NOT NULL DEFAULT FALSE,
@@ -301,7 +302,8 @@ INSERT INTO usuarios (id, username, password, nombre_completo, rol, activo) VALU
 (2, 'dr.garcia',   '$2a$10$ZNhlQIoHER6wvzRGTW80Ge/kBbPylv5svPoHT251ftpJa2cFJ3jri', 'Dr. Antonio García',       'VETERINARIO', TRUE),
 (3, 'dra.lopez',   '$2a$10$ZNhlQIoHER6wvzRGTW80Ge/kBbPylv5svPoHT251ftpJa2cFJ3jri', 'Dra. María López',         'VETERINARIO', TRUE),
 (4, 'aux.sanroque','$2a$10$2x9Ivu8U9YGXvn8OWxSYP.UhKTOz6Q1MoTkx1b3OOXcIBCiWxKJTu', 'Sonia Ruiz (Auxiliar)',    'AUXILIAR',    TRUE),
-(5, 'dr.martin',   '$2a$10$ZNhlQIoHER6wvzRGTW80Ge/kBbPylv5svPoHT251ftpJa2cFJ3jri', 'Dr. Pablo Martín',         'VETERINARIO', TRUE);
+(5, 'dr.martin',   '$2a$10$ZNhlQIoHER6wvzRGTW80Ge/kBbPylv5svPoHT251ftpJa2cFJ3jri', 'Dr. Pablo Martín',         'VETERINARIO', TRUE),
+(6, 'aux.mediterraneo','$2a$10$2x9Ivu8U9YGXvn8OWxSYP.UhKTOz6Q1MoTkx1b3OOXcIBCiWxKJTu', 'Iván Torres (Auxiliar)', 'AUXILIAR', TRUE);
 
 INSERT INTO clinicas (id, nombre, direccion, telefono, activa) VALUES
 (1, 'Clínica Veterinaria San Roque',   'Calle Larios 10, Málaga',          '952111222', TRUE),
@@ -317,7 +319,8 @@ UPDATE clinicas SET veterinario_responsable_id = 1 WHERE id = 1;
 UPDATE clinicas SET veterinario_responsable_id = 3 WHERE id = 3;
 
 INSERT INTO auxiliares (id, usuario_id, clinica_id) VALUES
-(1, 4, 1);
+(1, 4, 1),
+(2, 6, 3);
 
 INSERT INTO productos (id, codigo, nombre, descripcion, categoria, precio, stock_actual, stock_reservado, stock_minimo, activo) VALUES
 (1,  'MED-001', 'Amoxicilina 500 mg',          'Antibiótico, caja de 20 comprimidos',    'MEDICAMENTO',      14.50, 120, 0, 20, TRUE),
@@ -336,18 +339,19 @@ INSERT INTO productos (id, codigo, nombre, descripcion, categoria, precio, stock
 INSERT INTO destinos (id, nombre) VALUES
 (1, 'Valencia'), (2, 'Alicante'), (3, 'Regional');
 
--- Pedidos de ejemplo: uno en cada estado relevante
-INSERT INTO pedidos (id, clinica_id, veterinario_id, creado_por_id, estado, observaciones, fecha_creacion, iva_porcentaje) VALUES
-(1, 1, 1, 2, 'BORRADOR', 'Pedido semanal', '2026-10-20 09:30:00', 0.00),
-(2, 1, 2, 4, 'PENDIENTE_FIRMA', 'Urgente, preparado por la auxiliar', '2026-10-21 10:00:00', 0.00),
-(3, 3, 3, 5, 'FIRMADO', 'Pendiente de pago', '2026-10-22 08:15:00', 0.00);
+-- Pedidos de ejemplo (datos ficticios). Los enviados a firma toman la fecha de carga
+-- de la base de datos: si pasan 72 h sin pago, la caducidad los cancela (ver docs).
+INSERT INTO pedidos (id, clinica_id, veterinario_id, creado_por_id, estado, observaciones, fecha_creacion, fecha_envio_firma, iva_porcentaje) VALUES
+(1, 1, 1, 2, 'BORRADOR', 'Pedido semanal', NOW(), NULL, 4.00),
+(2, 1, 2, 4, 'PENDIENTE_FIRMA', 'Urgente, preparado por la auxiliar', NOW(), NOW(), 4.00),
+(3, 3, 3, 5, 'PENDIENTE_FIRMA', 'Pendiente de que el Dr. Martín revise y firme', NOW(), NOW(), 4.00);
 
 INSERT INTO lineas_pedido (pedido_id, producto_id, cantidad, precio_unitario) VALUES
 (1, 1, 10, 14.50), (1, 5, 5, 9.95),
 (2, 2,  6, 22.90), (2, 9, 4,  7.25),
 (3, 4, 20, 31.00), (3, 6, 10, 12.30);
 
--- Reservas coherentes con los pedidos PENDIENTE_FIRMA (pedido 2) y FIRMADO (pedido 3)
+-- Reservas coherentes con los pedidos PENDIENTE_FIRMA (pedidos 2 y 3)
 UPDATE productos SET stock_reservado = 6 WHERE id = 2;
 UPDATE productos SET stock_reservado = 4 WHERE id = 9;
 UPDATE productos SET stock_reservado = 20 WHERE id = 4;

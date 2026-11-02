@@ -15,7 +15,6 @@ import {
   infoEstadoFirma,
   infoEstadoPago,
   nombreRolFirmante,
-  puedePagarPedido,
 } from '../../pedidoEstado.js'
 
 export default function AdminPedidoDetalle() {
@@ -194,8 +193,8 @@ export default function AdminPedidoDetalle() {
       <div className="tarjeta">
         <h2>Pago</h2>
         <p><span className={`etiqueta ${pago.clase}`}>{pago.texto}</span></p>
-        <PagoSeccion pedido={pedido} puedePagar={puedePagarPedido(pedido)} />
-        <p className="texto-suave">El pago puede confirmarse aunque la firma siga pendiente. Solo con fecha de pago y fecha de firma el pedido pasa a listo para preparar.</p>
+        <PagoSeccion pedido={pedido} puedePagar={false} />
+        <p className="texto-suave">El pago lo realiza la clínica después de la firma del veterinario y lo confirma la notificación del proveedor. Administración no puede marcarlo como pagado.</p>
       </div>
 
       <div className="tarjeta">

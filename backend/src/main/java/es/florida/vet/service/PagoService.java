@@ -1,5 +1,7 @@
 package es.florida.vet.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import es.florida.vet.dto.NotificacionPagoRequest;
 import es.florida.vet.dto.PagoIniciadoResponse;
 import es.florida.vet.dto.PagoResponse;
@@ -16,23 +18,30 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Pagos con un ADAPTADOR SIMULADO (entorno de pruebas).
+ * Pagos con un ADAPTADOR DE DEMOSTRACIÓN (entorno de pruebas).
  *
- * IMPORTANTE: este proveedor NO es una integración bancaria real.
- * En producción se sustituiría por Redsys u otro proveedor con
- * credenciales contratadas; el flujo sería el mismo:
+ * IMPORTANTE: este proveedor NO es una integración bancaria real y no mueve
+ * dinero. Imita el funcionamiento de pasarelas como Redsys:
  *
- *   1) iniciar()      -> crea el intento de pago con referencia única
- *   2) el proveedor   -> llama a notificacion() (webhook autenticado)
- *   3) notificacion() -> valida referencia, importe y moneda, y es
- *      IDEMPOTENTE: las notificaciones repetidas no duplican efectos
- *   4) CONFIRMADO registra el pago y solicita Odoo; LISTO_PREPARAR exige además firma
+ *   1) iniciar()      -> solo para pedidos FIRMADOS; crea el intento de pago
+ *                        con referencia única y el importe calculado en el servidor
+ *   2) el proveedor   -> llama a notificacion() (webhook) con el cuerpo firmado
+ *                        con HMAC-SHA256 y una clave secreta compartida
+ *   3) notificacion() -> verifica la firma, bloquea el pago, valida pedido,
+ *                        importe y moneda, y es IDEMPOTENTE
+ *   4) CONFIRMADO     -> el pedido pasa a LISTO_PREPARAR
  *
  * El backend NUNCA se fía de la pantalla de éxito del navegador y no
  * almacena datos sensibles de pago (números de tarjeta, etc.).
@@ -40,13 +49,17 @@ import java.util.UUID;
 @Service
 public class PagoService {
 
+    /** Cabecera HTTP donde el proveedor envía la firma HMAC (Base64) del cuerpo. */
+    public static final String CABECERA_FIRMA = "X-Firma-Notificacion";
+
     private final PagoRepository pagoRepository;
     private final PedidoRepository pedidoRepository;
     private final PedidoService pedidoService;
     private final SesionService sesionService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${vetstock.pagos.token-notificacion}")
-    private String tokenNotificacionConfigurado;
+    @Value("${vetstock.pagos.secreto-webhook}")
+    private String secretoWebhook;
 
     @Value("${vetstock.pagos.simulado-activo:true}")
     private boolean simuladoActivo = true;
@@ -61,18 +74,22 @@ public class PagoService {
         this.sesionService = sesionService;
     }
 
-    /** Paga un pedido confirmado, firmado o pendiente de firma. Reintento tras fallo con referencia nueva. */
+    /** Inicia el pago de un pedido firmado. Tras un fallo se reintenta con una referencia nueva. */
     @Transactional
     public PagoIniciadoResponse iniciar(Long pedidoId, String username, boolean esAdmin) {
+        if (esAdmin) {
+            // Administración puede ayudar con el pedido, pero el pago lo hace la clínica
+            throw new AccesoDenegadoException("El pago lo realiza la clínica; administración no puede pagar en su nombre");
+        }
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("El pedido no existe"));
-        comprobarAccesoAClinica(pedido, username, esAdmin);
+        comprobarAccesoAClinica(pedido, username, false);
 
         if (pedido.getFechaPago() != null) {
             throw new ReglaNegocioException("El pedido ya está pagado");
         }
-        if (pedido.getEstado() != EstadoPedido.FIRMADO && pedido.getEstado() != EstadoPedido.PENDIENTE_FIRMA) {
-            throw new ReglaNegocioException("Confirma primero el pedido; puedes firmarlo ahora o más tarde");
+        if (pedido.getEstado() != EstadoPedido.FIRMADO || pedido.getFechaFirma() == null) {
+            throw new ReglaNegocioException("El veterinario asignado debe firmar el pedido antes de pagarlo");
         }
         // Si ya hay un pago en curso se devuelve el mismo: así no se crean dos cobros
         Pago pendiente = pagoRepository.findByPedidoIdOrderByFechaInicioDesc(pedidoId).stream()
@@ -86,8 +103,7 @@ public class PagoService {
         // El importe SIEMPRE lo calcula el servidor a partir de las líneas
         BigDecimal importe = pedido.getTotal();
         String referencia = "SIM-" + UUID.randomUUID();
-        String token = UUID.randomUUID().toString();
-        Pago pago = new Pago(pedido, importe, referencia, token);
+        Pago pago = new Pago(pedido, importe, referencia, UUID.randomUUID().toString());
         pagoRepository.save(pago);
 
         // URL de la pasarela SIMULADA que maneja el frontend
@@ -96,43 +112,45 @@ public class PagoService {
     }
 
     /**
-     * Procesa la SIMULACIÓN de la página del banco: llama internamente a la
-     * notificación como haría el proveedor real con su webhook.
+     * Página de la pasarela SIMULADA: el usuario elige el resultado y el
+     * "proveedor" envía su notificación firmada al webhook, igual que haría uno real.
      */
-    @Transactional
-    public PagoResponse simuladoProcesar(String referencia, String resultado) {
+    @Transactional(noRollbackFor = ReglaNegocioException.class)
+    public PagoResponse simuladoProcesar(String referencia, String resultado, String username, boolean esAdmin) {
         if (!simuladoActivo) {
             throw new AccesoDenegadoException("La pasarela de pago simulada está desactivada");
         }
+        if (esAdmin) {
+            throw new AccesoDenegadoException("Solo la clínica puede completar su pago");
+        }
         Pago pago = pagoRepository.findByReferencia(referencia)
                 .orElseThrow(() -> new RecursoNoEncontradoException("El pago no existe"));
-        NotificacionPagoRequest notificacion = new NotificacionPagoRequest(
-                referencia, pago.getImporte(), pago.getMoneda(), resultado);
-        // El "proveedor simulado" llama a la notificación con SU token configurado,
-        // igual que haría un proveedor real con su secreto del webhook
-        return notificacion(notificacion, tokenNotificacionConfigurado);
+        comprobarAccesoAClinica(pago.getPedido(), username, false);
+        String cuerpo = aJson(new NotificacionPagoRequest(referencia, pago.getImporte(), pago.getMoneda(), resultado));
+        return notificacion(cuerpo, firmarCuerpo(cuerpo));
     }
 
     /**
-     * Endpoint que en producción llamaría el proveedor (webhook).
-     * Autenticación por token, validación de importe/moneda e idempotencia.
+     * Webhook del proveedor. Autenticado con HMAC-SHA256 del cuerpo exacto
+     * recibido; valida importe y moneda y es idempotente.
+     * noRollbackFor: si la notificación no cuadra, el pago queda FALLADO aunque se responda con error.
      */
-    @Transactional
-    public PagoResponse notificacion(NotificacionPagoRequest datos, String tokenRecibido) {
-        if (tokenRecibido == null || !tokenRecibido.equals(tokenNotificacionConfigurado)) {
+    @Transactional(noRollbackFor = ReglaNegocioException.class)
+    public PagoResponse notificacion(String cuerpo, String firmaRecibida) {
+        if (cuerpo == null || !firmaValida(cuerpo, firmaRecibida)) {
             throw new AccesoDenegadoException("Notificación de pago no autorizada");
         }
-        Pago pago = pagoRepository.findByReferencia(datos.referencia())
+        NotificacionPagoRequest datos = leerNotificacion(cuerpo);
+        Pago pago = pagoRepository.bloquearPorReferencia(datos.referencia())
                 .orElseThrow(() -> new RecursoNoEncontradoException("La referencia de pago no existe"));
 
         pago.incrementarIntentos();
 
         // IDEMPOTENCIA: si ya estaba resuelto, no se repite ningún efecto
         if (pago.getEstado() != EstadoPago.PENDIENTE) {
-            return PagoResponse.desde(pago);
+            return PagoResponse.desde(pagoRepository.save(pago));
         }
 
-        // Validación del pedido, importe y moneda
         Pedido pedido = pago.getPedido();
         if (pedido.getEstado() == EstadoPedido.CANCELADO) {
             marcarResultado(pago, EstadoPago.FALLADO);
@@ -146,17 +164,33 @@ public class PagoService {
             throw new ReglaNegocioException("La notificación no coincide con el importe o la moneda del pedido");
         }
 
-        if ("CONFIRMADO".equals(datos.resultado())) {
-            marcarResultado(pago, EstadoPago.CONFIRMADO);
-            // Registrar pago siempre. La preparación exige además una firma;
-            // la exportación a Odoo se solicita tras el commit del pago.
-            pedidoService.marcarPagado(pedido.getId());
-        } else if ("FALLADO".equals(datos.resultado())) {
-            marcarResultado(pago, EstadoPago.FALLADO);
-        } else {
-            throw new ReglaNegocioException("El resultado de la notificación no es válido");
+        switch (datos.resultado()) {
+            case "CONFIRMADO" -> {
+                // Se comprueba aquí y no dentro de marcarPagado para no dejar la transacción marcada para rollback
+                if (pedido.getEstado() != EstadoPedido.FIRMADO || pedido.getFechaFirma() == null) {
+                    marcarResultado(pago, EstadoPago.FALLADO);
+                    throw new ReglaNegocioException("El pedido no está firmado; el pago no se puede aplicar");
+                }
+                marcarResultado(pago, EstadoPago.CONFIRMADO);
+                pedidoService.marcarPagado(pedido.getId());
+            }
+            case "FALLADO" -> marcarResultado(pago, EstadoPago.FALLADO);
+            default -> throw new ReglaNegocioException("El resultado de la notificación no es válido");
         }
         return PagoResponse.desde(pago);
+    }
+
+    /** Los pagos que llevan demasiado tiempo PENDIENTE se dan por abandonados (la sesión de pago caduca). */
+    @Transactional
+    public int caducarPagosAbandonados(LocalDateTime limite) {
+        List<Pago> abandonados = pagoRepository.findByEstadoAndFechaInicioBefore(EstadoPago.PENDIENTE, limite);
+        abandonados.forEach(p -> marcarResultado(p, EstadoPago.FALLADO));
+        return abandonados.size();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean tienePagoEnCurso(Long pedidoId, LocalDateTime desde) {
+        return pagoRepository.existsByPedidoIdAndEstadoAndFechaInicioAfter(pedidoId, EstadoPago.PENDIENTE, desde);
     }
 
     @Transactional(readOnly = true)
@@ -175,6 +209,50 @@ public class PagoService {
             throw new AccesoDenegadoException("Indica un pedido para consultar su pago");
         }
         return pagos.stream().map(PagoResponse::desde).toList();
+    }
+
+    // ------------------------------------------------------------------
+    // Firma HMAC del webhook
+    // ------------------------------------------------------------------
+
+    /** Firma que calcularía el proveedor: Base64(HMAC-SHA256(secreto, cuerpo)). */
+    public String firmarCuerpo(String cuerpo) {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(secretoWebhook.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            return Base64.getEncoder().encodeToString(mac.doFinal(cuerpo.getBytes(StandardCharsets.UTF_8)));
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("No se pudo calcular la firma HMAC", e);
+        }
+    }
+
+    private boolean firmaValida(String cuerpo, String firmaRecibida) {
+        if (firmaRecibida == null || firmaRecibida.isBlank()) return false;
+        byte[] esperada = firmarCuerpo(cuerpo).getBytes(StandardCharsets.UTF_8);
+        // Comparación en tiempo constante para no dar pistas sobre la firma correcta
+        return MessageDigest.isEqual(esperada, firmaRecibida.trim().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private NotificacionPagoRequest leerNotificacion(String cuerpo) {
+        NotificacionPagoRequest datos;
+        try {
+            datos = objectMapper.readValue(cuerpo, NotificacionPagoRequest.class);
+        } catch (JsonProcessingException e) {
+            throw new ReglaNegocioException("La notificación de pago no tiene un formato válido");
+        }
+        if (datos.referencia() == null || datos.importe() == null
+                || datos.moneda() == null || datos.resultado() == null) {
+            throw new ReglaNegocioException("La notificación de pago está incompleta");
+        }
+        return datos;
+    }
+
+    private String aJson(NotificacionPagoRequest datos) {
+        try {
+            return objectMapper.writeValueAsString(datos);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("No se pudo generar la notificación", e);
+        }
     }
 
     private void marcarResultado(Pago pago, EstadoPago estado) {

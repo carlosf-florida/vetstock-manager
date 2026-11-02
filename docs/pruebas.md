@@ -71,6 +71,30 @@ resultado pedido en vez del devuelto por el servidor, el reintento reutilizaba
 una referencia fallida, existía un botón «Firmar más tarde y pagar» contrario a
 la regla y la firma no mostraba el contenido que se autoriza.
 
+## 2b. Inicio, carrito y notificaciones (comprobado en el navegador)
+
+Realizado el 2 de noviembre de 2026 con el frontend de desarrollo y una base de datos
+separada recién cargada. Antes de los cambios se reprodujeron dos errores: el carrito
+de `aux.sanroque` aparecía al entrar `dr.martin` en el mismo navegador, y se
+podían añadir 3 unidades de un producto con 2 disponibles.
+
+| Comprobación | Resultado |
+|---|---|
+| Login de cliente → `/inicio`; login de admin → `/admin` | Correcto |
+| Inicio con datos reales de la clínica (pendientes, últimos pedidos, productos más pedidos) | Correcto |
+| Añadir 1 unidad: aviso con producto y cantidad, «Ver carrito», contador +1 | Correcto |
+| Añadir 3 unidades escritas en el campo | Correcto (contador +3) |
+| Superar el stock disponible | Aviso de error; el contador no cambia |
+| Cantidad 0 | Aviso de error; el contador no cambia |
+| 5 pulsaciones seguidas | Como máximo 3 avisos a la vez |
+| Fallo al guardar en el navegador (simulado) | Aviso de error con `role="alert"`; el contador no cambia |
+| Fallo de la API al comprobar el stock del carrito (simulado) | Mensaje con «Reintentar» |
+| El stock baja en el servidor con el carrito abierto | Aviso, fila marcada y botones de envío bloqueados hasta corregir |
+| +/−, quitar producto, subtotales, IVA y total | Correctos |
+| Separación de cuentas y persistencia del carrito | Correcto (cada usuario ve solo el suyo) |
+| Filtro «Solo con stock disponible» | Corregido (antes mostraba solo los de stock bajo) |
+| Móvil 375 px: sin desplazamiento horizontal; cabecera en una línea; avisos sin tapar los botones | Correcto |
+
 ## 3. Guía de comprobación manual (para repetirla)
 
 Reinicia los datos (ver [instalacion-windows.md](instalacion-windows.md), apartado 4) y sigue el

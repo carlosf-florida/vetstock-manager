@@ -37,6 +37,13 @@ docker compose up -d --build        # MySQL + backend + frontend (+ Odoo opciona
 
 Abrir <http://localhost:5173>. Sin Docker: MySQL local + `backend\mvnw.cmd spring-boot:run` + `npm run dev` en `frontend` (ver la guía).
 
+## Configuración
+
+Todo funciona con valores de demostración sin configurar nada. Para cambiarlos
+(clave de MySQL, clave del webhook de pagos, horas de caducidad de reservas…)
+copia [`.env.example`](.env.example) como `.env`; las variables están explicadas
+en ese archivo y en la [guía de instalación](docs/instalacion-windows.md).
+
 ## Cuentas de demostración (ficticias)
 
 | Usuario | Contraseña | Rol | Clínica |
@@ -49,6 +56,19 @@ Abrir <http://localhost:5173>. Sin Docker: MySQL local + `backend\mvnw.cmd sprin
 | `aux.mediterraneo` | `aux123` | Auxiliar | Hospital Veterinario Mediterráneo |
 
 Solo sirven para la demo local; en cualquier otro entorno deben cambiarse.
+
+## Estado real
+
+**Funciona y está probado** (pruebas automáticas y comprobación en el navegador):
+inicio de sesión y permisos por clínica, inicio del cliente, catálogo, carrito por
+usuario limitado al stock, firma del veterinario asignado, pago de demostración con
+confirmación automática, preparación, bultos, palets, expedición, documentos PDF,
+caducidad de reservas e informes.
+
+**Pendiente o limitado** (detalle en [docs/pendientes.md](docs/pendientes.md)):
+la pasarela es simulada (sin Redsys/Bizum reales), la firma no tiene validez legal,
+no hay edición ni baja de usuarios, Power BI tiene las vistas preparadas pero no
+un informe conectado, y la firma con el dedo no se ha probado en un móvil real.
 
 ## Pruebas
 
@@ -83,13 +103,18 @@ cd backend
 ## Estructura
 
 ```
-backend/    API REST Spring Boot (paquete es.florida.vet)
-frontend/   React + Vite
+backend/    API REST Spring Boot (paquete es.florida.vet):
+            controller/ → service/ (reglas) → repository/ → MySQL
+frontend/   React + Vite: pages/ (pantallas), components/ (piezas comunes),
+            carrito.js (carrito por usuario), styles.css (diseño)
 database/   migrations/001 (esquema + datos) … 008 (vistas Power BI)
 docs/       documentación del proyecto
 scripts/    arrancar_odoo.sh (Odoo opcional)
 historico/  prototipo v1 (solo consulta, no se usa)
 docker/     imagen de Odoo (integración ERP opcional)
 ```
+
+Para saber qué archivo tocar en cada caso (inicio, carrito, productos, pedidos),
+consulta la [guía del proyecto](docs/guia-del-proyecto.md).
 
 La integración con **Odoo 18** es opcional (adaptador `ODOO_MODO=SIMULADO` por defecto); ver [docs/guia-del-proyecto.md](docs/guia-del-proyecto.md).

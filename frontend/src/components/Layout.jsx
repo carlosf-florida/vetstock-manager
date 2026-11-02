@@ -1,0 +1,98 @@
+import { useState } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useAuth } from '../auth.jsx'
+import { ROLES } from '../format.js'
+
+function Item({ to, children, onClick }) {
+  return (
+    <NavLink to={to} className={({ isActive }) => 'menu-enlace' + (isActive ? ' activo' : '')} onClick={onClick}>
+      {children}
+    </NavLink>
+  )
+}
+
+export default function Layout() {
+  const { usuario, logout } = useAuth()
+  const navigate = useNavigate()
+  const [abierto, setAbierto] = useState(false)
+
+  function cerrar() { setAbierto(false) }
+
+  async function salir() {
+    await logout()
+    cerrar()
+    navigate('/login')
+  }
+
+  const esAdmin = usuario?.rol === 'ADMIN'
+
+  return (
+    <div className="layout">
+      <header className="cabecera">
+        <div className="cabecera-interior">
+          <NavLink to="/" className="marca" onClick={cerrar}>
+            <span aria-hidden="true">🐾</span> VetStock <span className="marca-suave">Manager</span>
+          </NavLink>
+
+          <nav className={'menu' + (abierto ? ' abierto' : '')} aria-label="Navegación principal">
+            {usuario && (
+              <>
+                <span className="menu-seccion">Portal del cliente</span>
+                <Item to="/catalogo" onClick={cerrar}>Catálogo</Item>
+                <Item to="/carrito" onClick={cerrar}>Carrito 🛒</Item>
+                <Item to="/mis-pedidos" onClick={cerrar}>Mis pedidos</Item>
+                {esAdmin && (
+                  <>
+                    <span className="menu-seccion">Administración</span>
+                    <Item to="/admin" onClick={cerrar}>Resumen</Item>
+                    <Item to="/admin/productos" onClick={cerrar}>Productos</Item>
+                    <Item to="/admin/stock" onClick={cerrar}>Stock</Item>
+                    <Item to="/admin/clinicas" onClick={cerrar}>Clínicas</Item>
+                    <Item to="/admin/pedidos" onClick={cerrar}>Pedidos</Item>
+                    <Item to="/admin/bultos" onClick={cerrar}>Bultos</Item>
+                    <Item to="/admin/palets" onClick={cerrar}>Palets</Item>
+                    <Item to="/admin/destinos" onClick={cerrar}>Destinos</Item>
+                    <Item to="/admin/informes" onClick={cerrar}>Informes</Item>
+                    <Item to="/admin/odoo" onClick={cerrar}>Odoo</Item>
+                  </>
+                )}
+              </>
+            )}
+          </nav>
+
+          <div className="cabecera-derecha">
+            {usuario && (
+              <>
+                <span className="usuario-info">
+                  <strong>{usuario.nombreCompleto || usuario.username}</strong>
+                  <small>
+                    {ROLES[usuario.rol] || usuario.rol}
+                    {usuario.clinicaNombre ? ` · ${usuario.clinicaNombre}` : ''}
+                  </small>
+                </span>
+                <button type="button" className="btn btn-secundario" onClick={salir}>Salir</button>
+              </>
+            )}
+            <button
+              type="button"
+              className="menu-boton"
+              aria-label="Abrir o cerrar el menú"
+              aria-expanded={abierto}
+              onClick={() => setAbierto((v) => !v)}
+            >
+              ☰
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="contenido">
+        <Outlet />
+      </main>
+
+      <footer className="pie">
+        VetStock Manager · Proyecto académico de 2º DAM · Pasarela de pago simulada, sin cobros reales
+      </footer>
+    </div>
+  )
+}

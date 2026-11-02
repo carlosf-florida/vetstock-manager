@@ -11,6 +11,7 @@ import java.util.List;
  * - VETERINARIO: va a su clínica; si no envía veterinarioId, firmante = él mismo.
  * - AUXILIAR: va a su clínica y DEBE indicar veterinarioId (de su clínica).
  */
-public record PedidoRequest(Long veterinarioId, Long clinicaId, String observaciones,
+public record PedidoRequest(Long veterinarioId, Long clinicaId,
+                            @jakarta.validation.constraints.Size(max = 255, message = "Las observaciones no pueden superar 255 caracteres") String observaciones,
                             @NotEmpty @Valid List<LineaPedidoRequest> lineas) {
 }

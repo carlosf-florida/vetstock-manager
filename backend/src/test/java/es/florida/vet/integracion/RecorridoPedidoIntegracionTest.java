@@ -157,6 +157,15 @@ class RecorridoPedidoIntegracionTest extends IntegracionBase {
         patchJson(admin, "/api/pedidos/" + id + "/firmar", firmaDibujo()).andExpect(status().isForbidden());
         patchJson(drGarcia(), "/api/pedidos/" + id + "/firmar", firmaDibujo()).andExpect(status().isOk());
         postJson(admin, "/api/pagos/" + id + "/iniciar", "{}").andExpect(status().isForbidden());
+
+        // Validaciones de entrada: cantidades enteras positivas y observaciones de 255 caracteres como máximo
+        postJson(admin, "/api/pedidos", "{\"clinicaId\":1,\"veterinarioId\":1,\"lineas\":[{\"productoId\":5,\"cantidad\":0}]}")
+                .andExpect(status().isBadRequest());
+        postJson(admin, "/api/pedidos", "{\"clinicaId\":1,\"veterinarioId\":1,\"observaciones\":\"" + "x".repeat(256)
+                + "\",\"lineas\":[{\"productoId\":5,\"cantidad\":1}]}").andExpect(status().isBadRequest());
+        // Un veterinario de otra clínica no puede ser el firmante
+        postJson(admin, "/api/pedidos", "{\"clinicaId\":1,\"veterinarioId\":3,\"lineas\":[{\"productoId\":5,\"cantidad\":1}]}")
+                .andExpect(status().isBadRequest());
     }
 
     @Test

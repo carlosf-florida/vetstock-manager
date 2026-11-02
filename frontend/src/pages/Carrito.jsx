@@ -5,6 +5,7 @@ import { dinero, estimarImportesPedido } from '../format.js'
 import { leerCarrito, guardarCarrito, vaciarCarrito } from '../carrito.js'
 import { ErrorBox, SinDatos } from '../components/Spinner.jsx'
 import ImportesPedido from '../components/pedido/ImportesPedido.jsx'
+import { useAuth } from '../auth.jsx'
 
 export default function Carrito() {
   const navigate = useNavigate()
@@ -13,6 +14,19 @@ export default function Carrito() {
   const [errores, setErrores] = useState({})
   const [error, setError] = useState(null)
   const [enviando, setEnviando] = useState(false)
+  const { usuario } = useAuth()
+  const esAdmin = usuario?.rol === 'ADMIN'
+  const [clinicas, setClinicas] = useState([])
+  const [veterinarios, setVeterinarios] = useState([])
+  const [clinicaId, setClinicaId] = useState('')
+  const [veterinarioId, setVeterinarioId] = useState('')
+
+  useEffect(() => {
+    if (!esAdmin) return
+    Promise.all([api.get('/api/clinicas'), api.get('/api/veterinarios')])
+      .then(([c, v]) => { setClinicas(Array.isArray(c) ? c : []); setVeterinarios(Array.isArray(v) ? v : []) })
+      .catch((err) => setError('No se pudieron cargar clínicas y veterinarios: ' + err.message))
+  }, [esAdmin])
 
   useEffect(() => {
     function refrescar() { setLineas(leerCarrito()) }
@@ -46,7 +60,9 @@ export default function Carrito() {
         break
       }
     }
-    if (observaciones.length > 2000) errs.observaciones = 'Las observaciones no pueden superar 2000 caracteres.'
+    if (observaciones.length > 255) errs.observaciones = 'Las observaciones no pueden superar 255 caracteres.'
+    if (esAdmin && !clinicaId) errs.clinicaId = 'Elige la clínica para la que creas el pedido.'
+    if (esAdmin && !veterinarioId) errs.veterinarioId = 'Elige el veterinario que deberá firmarlo.'
     setErrores(errs)
     return Object.keys(errs).length === 0
   }
@@ -56,7 +72,21 @@ export default function Carrito() {
       observaciones: observaciones.trim() || null,
       lineas: lineas.map((l) => ({ productoId: l.productoId, cantidad: l.cantidad })),
     }
+    if (esAdmin) {
+      cuerpo.clinicaId = Number(clinicaId)
+      cuerpo.veterinarioId = Number(veterinarioId)
+    }
     return api.post('/api/pedidos', cuerpo)
+  }
+
+  // Administración ve el pedido creado en su propio panel
+  const rutaPedido = (id) => (esAdmin ? `/admin/pedidos/${id}` : `/pedidos/${id}`)
+
+  function elegirClinica(id) {
+    setClinicaId(id)
+    // Por defecto se propone el veterinario responsable de la clínica
+    const clinica = clinicas.find((c) => String(c.id) === String(id))
+    setVeterinarioId(clinica?.veterinarioResponsableId ? String(clinica.veterinarioResponsableId) : '')
   }
 
   async function guardarBorrador() {
@@ -66,7 +96,7 @@ export default function Carrito() {
     try {
       const pedido = await crearPedido()
       vaciarCarrito()
-      navigate(`/pedidos/${pedido.id}?creado=borrador`)
+      navigate(`${rutaPedido(pedido.id)}?creado=borrador`)
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) setError('Tu sesión ha caducado. Vuelve a iniciar sesión.')
       else setError(err.message)
@@ -83,11 +113,11 @@ export default function Carrito() {
       try {
         await api.patch(`/api/pedidos/${pedido.id}/enviar-firma`)
         vaciarCarrito()
-        navigate(`/pedidos/${pedido.id}?creado=firma`)
+        navigate(`${rutaPedido(pedido.id)}?creado=firma`)
       } catch (errEnvio) {
         // El pedido quedó como BORRADOR; lo dejamos accesible y avisamos.
         vaciarCarrito()
-        navigate(`/pedidos/${pedido.id}?creado=borrador&errorEnvio=${encodeURIComponent(errEnvio.message)}`)
+        navigate(`${rutaPedido(pedido.id)}?creado=borrador&errorEnvio=${encodeURIComponent(errEnvio.message)}`)
       }
     } catch (err) {
       setError(err.message)
@@ -170,16 +200,46 @@ export default function Carrito() {
       <div className="tarjeta formulario-pedido">
         <h2>Datos del pedido</h2>
 
-        <div className="aviso aviso-info">
-          <strong>Responsable automático por clínica:</strong>{' '}
-          el pedido toma el veterinario responsable asignado a tu clínica. Cuando esté pendiente de firma, solo ese veterinario puede firmarlo con su cuenta.
-        </div>
+        {esAdmin ? (
+          <>
+            <div className="aviso aviso-info">
+              <strong>Pedido en nombre de una clínica:</strong>{' '}
+              quedará registrado que lo ha creado administración. Solo el veterinario elegido podrá firmarlo y la clínica será quien pague.
+            </div>
+            <div className="campo-doble">
+              <label className="campo">
+                <span>Clínica *</span>
+                <select className="input" value={clinicaId} onChange={(e) => elegirClinica(e.target.value)}>
+                  <option value="">— Elige una clínica —</option>
+                  {clinicas.filter((c) => c.activa !== false).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+                {errores.clinicaId && <small className="error-campo">{errores.clinicaId}</small>}
+              </label>
+              <label className="campo">
+                <span>Veterinario firmante *</span>
+                <select className="input" value={veterinarioId} onChange={(e) => setVeterinarioId(e.target.value)} disabled={!clinicaId}>
+                  <option value="">— Elige un veterinario —</option>
+                  {veterinarios.filter((v) => String(v.clinicaId) === String(clinicaId)).map((v) => (
+                    <option key={v.id} value={v.id}>{v.nombreCompleto || v.username}</option>
+                  ))}
+                </select>
+                {errores.veterinarioId && <small className="error-campo">{errores.veterinarioId}</small>}
+              </label>
+            </div>
+          </>
+        ) : (
+          <div className="aviso aviso-info">
+            <strong>Responsable automático por clínica:</strong>{' '}
+            el pedido toma el veterinario responsable asignado a tu clínica. Cuando esté pendiente de firma, solo ese veterinario puede firmarlo con su cuenta.
+          </div>
+        )}
 
         <label className="campo">
           <span>Observaciones</span>
           <textarea
             className="input"
             rows="3"
+            maxLength={255}
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
             placeholder="Indicaciones para la preparación o entrega (opcional)"

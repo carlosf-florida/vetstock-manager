@@ -56,6 +56,11 @@ class PermisosIntegracionTest extends IntegracionBase {
         JsonNode filtrada = json(getJson(otra, "/api/pedidos?clinicaId=1").andExpect(status().isOk()));
         assertTrue(filtrada.isEmpty());
 
+        // Solo ve los veterinarios de su propia clínica (Hospital Veterinario Mediterráneo, id 3)
+        JsonNode veterinarios = json(getJson(otra, "/api/veterinarios").andExpect(status().isOk()));
+        assertFalse(veterinarios.isEmpty());
+        veterinarios.forEach(v -> assertTrue(v.get("clinicaId").asLong() == 3L, "ve un veterinario de otra clínica"));
+
         // Las rutas de administración están cerradas para los clientes
         getJson(otra, "/api/informes/pendientes").andExpect(status().isForbidden());
         getJson(otra, "/api/clinicas").andExpect(status().isForbidden());

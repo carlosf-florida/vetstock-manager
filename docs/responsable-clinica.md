@@ -12,7 +12,7 @@ Solo el veterinario asignado puede firmar. Un auxiliar crea el pedido y lo deja 
 
 Se puede dibujar la firma, subir PNG/JPG o elegir **Firmar más tarde y pagar**. Un pedido pagado sin firma permanece `PENDIENTE_FIRMA` y se envía automáticamente a Odoo como **Por firmar**. Al firmarlo después desde **Mis pedidos**, se actualiza el mismo pedido de Odoo. El almacén solo puede prepararlo cuando firma y pago estén completados.
 
-Detalle del flujo y actualización: [firma-pago-odoo.md](firma-pago-odoo.md).
+Detalle del flujo y actualización: [firma-y-pagos.md](firma-y-pagos.md).
 
 ## Sincronización de contactos
 

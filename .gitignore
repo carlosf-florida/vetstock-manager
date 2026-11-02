@@ -60,3 +60,6 @@ build/
 out/
 # Visual Studio Code
 # Operating systems
+
+# La plantilla de variables SI se sube (sin secretos reales)
+!.env.example

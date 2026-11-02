@@ -4,14 +4,16 @@ Todo lo relativo a la base de datos de VetStock Manager vive en esta carpeta.
 
 ## Contenido
 
-- `migrations/001_esquema_inicial.sql` — esquema completo + datos de prueba. Un solo script idempotente (borra y recrea la base `vetstock`).
+- `migrations/001_esquema_inicial.sql` — esquema actual completo + datos ficticios. Borra y recrea las tablas de `vetstock`: se puede repetir para reiniciar la demo (desactiva las claves foráneas solo durante el borrado).
 - `migrations/002_veterinario_responsable.sql` — añade el veterinario responsable asignado a cada clínica sin borrar datos existentes.
 - `migrations/003_reparar_textos_utf8.sql` — repara textos de prueba mal codificados y guarda sus valores anteriores.
 - `migrations/004_firma_pago_independientes.sql` — añade colegiado opcional a la firma y seguimiento de sincronización del pedido, sin borrar datos. Se puede repetir.
 - `migrations/005_iva_pedidos.sql` — conserva 0% en pedidos existentes y configura 4% para los nuevos. Añade `pedidos.iva_porcentaje`, sin recobrar pagos ni modificar firmas históricas.
 - `migrations/006_modificacion_pedidos.sql` — guarda quién cambió por última vez las líneas de un pedido y cuándo. Se puede repetir.
+- `migrations/007_caducidad_reservas.sql` — añade `pedidos.motivo_cancelacion` para la caducidad de reservas (72 h sin pago). Se puede repetir.
+- `migrations/008_vistas_powerbi.sql` — vistas de solo lectura para Power BI (ver `docs/power-bi.md`). Se puede repetir.
 
-**Instalaciones existentes:** aplicar las migraciones 004 y 005 que falten, no volver a ejecutar el esquema inicial, que borra tablas. Firma y pago se consultan por separado; pagar antes de firmar mantiene `PENDIENTE_FIRMA` y puede exportarse a Odoo, pero no prepararse ni expedirse. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
+**Instalaciones existentes:** aplicar en orden las migraciones que falten (002–008) y no volver a ejecutar el esquema inicial si hay datos que conservar. Desde esta versión **solo se puede pagar un pedido firmado** (ver `docs/modelo-y-reglas.md`). Instrucciones para Windows: `docs/instalacion-windows.md`. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
 
 ## Cómo cargarla
 

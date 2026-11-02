@@ -8,7 +8,7 @@ API REST de VetStock Manager: aquí vive TODA la lógica de negocio (importes, s
 ./mvnw spring-boot:run        # puerto 8080
 ```
 
-Requiere MySQL cargado (ver [`../database/README.md`](../database/README.md)). Credenciales configurables con `DB_URL`, `DB_USER`, `DB_PASSWORD` y `PAGOS_TOKEN_NOTIFICACION`.
+Requiere MySQL cargado (ver [`../database/README.md`](../database/README.md)). Configuración por variables de entorno (ver `../.env.example`): `DB_URL`, `DB_USER`, `DB_PASSWORD`, `PAGOS_SECRETO_WEBHOOK`, `RESERVAS_HORAS_CADUCIDAD`...
 
 ## Documentación de la API
 
@@ -35,6 +35,6 @@ src/main/java/es/florida/vet
 - **Máquina de estados** del pedido en `enums/EstadoPedido.java` (`puedePasarA`); los servicios no pueden saltarse transiciones.
 - **Reserva de stock atómica** al enviar a firma y **descuento único** al expedir (SQL condicionado en transacción).
 - **Firma** solo del veterinario asignado, con copia inmutable JSON del pedido.
-- **Pagos con patrón adaptador**: `service/PagoService.java` habla con un proveedor SIMULADO; la notificación es un webhook autenticado por token, idempotente. Sustituir por Redsys = reescribir solo ese adaptador.
+- **Pagos con patrón adaptador**: `service/PagoService.java` habla con un proveedor SIMULADO; la notificación es un webhook autenticado con HMAC-SHA256, idempotente y con bloqueo del pago (ver `docs/firma-y-pagos.md`). Sustituir por Redsys = reescribir solo ese adaptador.
 - **Odoo con patrón adaptador**: `odoo/OdooConnector` con dos implementaciones (`SIMULADO` en memoria y `REAL` por JSON-RPC contra un servidor Odoo 18, seleccionables con `vetstock.odoo.modo`). Sincroniza catálogo y clínicas y exporta pedidos expedidos como `sale.order`, dejando traza en `odoo_log`.
 - **Seguridad en dos capas**: roles por URL (SecurityConfig) + pertenencia a la clínica (servicios). BCrypt para contraseñas. CSRF desactivado (simplificación académica declarada).

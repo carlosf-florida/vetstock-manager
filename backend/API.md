@@ -2,7 +2,7 @@
 
 Autenticación por **sesión HTTP** (cookie `JSESSIONID`). Todas las rutas `/api/**` requieren sesión salvo las públicas. El backend comprueba rol y pertenencia a la clínica.
 
-Roles: `ADMIN` (almacén), `VETERINARIO` (responsable que puede confirmar), `AUXILIAR` (puede crear, pagar y confirmar pedidos de su clínica con su propia firma). La confirmación interna no es una firma certificada ni una prescripción veterinaria validada.
+Roles: `ADMIN` (administración: gestiona, ayuda a crear pedidos, no firma ni paga), `VETERINARIO` (firma solo los pedidos que tiene asignados), `AUXILIAR` (crea pedidos de su clínica, los deja pendientes de firma y puede pagarlos una vez firmados). La firma es simple, sin validez legal certificada.
 
 HTTP: `200` OK · `201` creado · `400` regla de negocio/datos inválidos · `401` sin sesión · `403` sin permiso · `404` inexistente. Un fallo de integración Odoo puede devolver HTTP 200 con `exito: false`; la interfaz debe comprobar ambos.
 
@@ -36,18 +36,18 @@ HTTP: `200` OK · `201` creado · `400` regla de negocio/datos inválidos · `40
 |---|---|---|
 | `GET /api/pedidos?estado=&clinicaId=` | sesión | ADMIN todos; clientes solo su clínica |
 | `GET /api/pedidos/{id}` | sesión | Acceso a clínica comprobado |
-| `POST /api/pedidos` | ADMIN, VETERINARIO, AUXILIAR | `{observaciones,lineas:[{productoId,cantidad}]}`; responsable automático para clientes. ADMIN añade `clinicaId` y `veterinarioId`. Precio calculado por backend; 201 BORRADOR |
-| `PUT /api/pedidos/{id}/lineas` | creador o ADMIN | Solo BORRADOR |
+| `POST /api/pedidos` | ADMIN, VETERINARIO, AUXILIAR | `{observaciones (≤255),lineas:[{productoId,cantidad≥1}]}`; responsable automático para clientes. ADMIN añade `clinicaId` y `veterinarioId`. Precio calculado por backend; 201 BORRADOR |
+| `PUT /api/pedidos/{id}/lineas` | creador o ADMIN | Solo BORRADOR; guarda `modificadoPorNombre` y `fechaModificacion` |
 | `PATCH /api/pedidos/{id}/enviar-firma` | ADMIN o su clínica | Confirma el pedido, reserva stock, pasa a PENDIENTE_FIRMA |
-| `PATCH /api/pedidos/{id}/firmar` | responsable o auxiliar de la misma clínica | `{tipoFirma:"DIBUJO"/"IMAGEN",imagenBase64,nombreArchivo?,confirmacion:true,numeroColegiado?}`. Guarda identidad REAL del firmante, rol, fecha y copia inmutable; rechaza firma repetida |
+| `PATCH /api/pedidos/{id}/firmar` | solo el VETERINARIO asignado al pedido (resto: 403) | `{tipoFirma:"DIBUJO"/"IMAGEN",imagenBase64,nombreArchivo?,confirmacion:true,numeroColegiado?}`. Solo en PENDIENTE_FIRMA → FIRMADO. Guarda firmante, fecha y copia inmutable; rechaza firma repetida |
 | `GET /api/pedidos/{id}/firma` | ADMIN o su clínica | Responsable y firmante separados; colegiado identificativo opcional |
 | `GET /api/pedidos/{id}/firma/imagen` | ADMIN o su clínica | Imagen PNG/JPG |
-| `PATCH /api/pedidos/{id}/cancelar` | ADMIN o su clínica | Libera reserva. Cliente no puede cancelar un pedido ya pagado; debe contactar con administración |
+| `PATCH /api/pedidos/{id}/cancelar` | ADMIN o su clínica | Libera la reserva y guarda `motivoCancelacion`. Un pedido pagado no se cancela (nadie) |
 | `GET /api/pagos?pedidoId={id}` | ADMIN o su clínica | Intentos de pago, del más reciente al más antiguo; un intento pendiente puede continuarse con su referencia |
 
-Firma con ratón o imagen PNG/JPG de hasta 5 MB. `numeroColegiado` es opcional, debe coincidir si se informa y **no sustituye a la firma ni autentica**. No se atribuye al veterinario una firma del auxiliar.
+Firma con ratón o imagen PNG/JPG de hasta 5 MB. `numeroColegiado` es opcional, debe coincidir si se informa y **no sustituye a la firma ni autentica**. 
 
-`PedidoResponse` añade `estadoFirma` (PENDIENTE/FIRMADO), `estadoPago` (PENDIENTE/PAGADO), `firmanteNombre`, `firmanteRol`, `veterinarioUsername`, `numeroColegiadoResponsable`, `odooId`, `odooSincronizacionPendiente` y `odooUltimoError`.
+`PedidoResponse` incluye `creadoPorNombre`, `modificadoPorNombre`, `fechaModificacion`, `motivoCancelacion`, `estadoFirma` (PENDIENTE/FIRMADO), `estadoPago` (PENDIENTE/PAGADO), `firmanteNombre`, `firmanteRol`, `veterinarioUsername`, `numeroColegiadoResponsable`, `odooId`, `odooSincronizacionPendiente` y `odooUltimoError`.
 
 También devuelve `baseImponible`, `ivaPorcentaje`, `importeIva` y `moneda` (EUR). `total` es **base más IVA**, calculado por el backend. Los precios unitarios e importes de líneas son netos. Pedidos nuevos: IVA del 4% configurado para el prototipo, con redondeo por línea HALF_UP. Históricos anteriores a la migración 005: conservan 0% y el importe original. No se aceptan tasas ni importes calculados por el navegador. Ver `docs/iva-pedidos.md`.
 
@@ -56,19 +56,19 @@ También devuelve `baseImponible`, `ivaPorcentaje`, `importeIva` y `moneda` (EUR
 ## Estados operativos, firma y pago
 
 ```text
-BORRADOR → PENDIENTE_FIRMA
-  Firma primero: PENDIENTE_FIRMA → FIRMADO → pago → LISTO_PREPARAR
-  Pago primero:  PENDIENTE_FIRMA (pagado) → firma → LISTO_PREPARAR
-LISTO_PREPARAR → EN_PREPARACION → PREPARADO → EXPEDIDO
+BORRADOR → PENDIENTE_FIRMA → (firma) FIRMADO → (pago confirmado) LISTO_PREPARAR
+LISTO_PREPARAR → EN_PREPARACION → PREPARADO (≥1 bulto) → EXPEDIDO (bultos en palet)
+BORRADOR / PENDIENTE_FIRMA / FIRMADO sin pago → CANCELADO (manual o caducidad de 72 h)
 ```
 
-Pagar sin firmar no habilita preparación. Se mantienen reserva y estado PENDIENTE_FIRMA. Firma y pago completados habilitan preparación; el stock físico solo se descuenta al expedir. CANCELADO es final.
+No se puede pagar sin firma. Solo firma y pago confirmados habilitan la preparación; el stock físico solo se descuenta al expedir. CANCELADO es final.
 
-## Pagos SIMULADOS
+## Pagos (adaptador de DEMOSTRACIÓN)
 
-- `POST /api/pagos/{pedidoId}/iniciar`: ADMIN o su clínica; PENDIENTE_FIRMA o FIRMADO y aún sin pago confirmado. 201 `{referencia,importe,moneda,proveedor:"SIMULADO",urlSimulada}`. `importe` incluye IVA; `urlSimulada` usa `/pago-simulado/{referencia}`. Si ya existe un intento pendiente, retomarlo en esa ruta sin crear otro. Reintento tras fallo con referencia nueva.
-- `POST /api/pagos/simulado/{referencia}` `{resultado:"CONFIRMADO"/"FALLADO"}`: público, simula el proveedor; no integración bancaria real.
-- `POST /api/pagos/notificacion`: público pero autenticado por `X-Notificacion-Token`; valida importe/moneda e idempotencia. CONFIRMADO registra pago; habilita preparación únicamente si existe firma y solicita exportación Odoo tras commit.
+- `POST /api/pagos/{pedidoId}/iniciar`: solo usuarios de la clínica del pedido (ADMIN → 403); el pedido debe estar FIRMADO y sin pago confirmado (si no, 400). 201 `{referencia,importe,moneda,proveedor:"SIMULADO",urlSimulada}`. `importe` incluye IVA; `urlSimulada` usa `/pago-simulado/{referencia}`. Si ya existe un intento pendiente, retomarlo en esa ruta sin crear otro. Reintento tras fallo con referencia nueva.
+- `POST /api/pagos/simulado/{referencia}` `{resultado:"CONFIRMADO"/"FALLADO"}`: con sesión de la clínica del pedido. Simula la página del banco y envía al webhook una notificación firmada; devuelve el estado REAL del pago. Se desactiva con `PAGOS_SIMULADO_ACTIVO=false`. No es una integración bancaria.
+- `POST /api/pagos/notificacion` (webhook): sin sesión, autenticado con la cabecera `X-Firma-Notificacion` = Base64(HMAC-SHA256(`PAGOS_SECRETO_WEBHOOK`, cuerpo exacto)). Cuerpo `{referencia,importe,moneda,resultado}`. Firma ausente o mala → 403. Importe distinto del total o moneda distinta de EUR → intento FALLADO y 400. Ya resuelto → 200 sin efectos (idempotente). CONFIRMADO → pedido LISTO_PREPARAR y exportación a Odoo tras el commit.
+- Los intentos PENDIENTES de más de 60 min pasan a FALLADO automáticamente.
 - `GET /api/pagos?estado=`: ADMIN; con `pedidoId` también la propia clínica.
 
 ## Odoo / ERP
@@ -88,9 +88,9 @@ El pago confirmado, la firma posterior y las transiciones de logística solicita
 
 ## Logística, documentos, informes y dashboard
 
-- ADMIN: `PATCH /api/pedidos/{id}/iniciar-preparacion`, `/preparar`, `/expedir`; exigen pago y firma.
+- ADMIN: `PATCH /api/pedidos/{id}/iniciar-preparacion`, `/preparar` (exige ≥1 bulto), `/expedir` (exige todos los bultos en un palet); todas exigen firma y pago.
 - ADMIN: `GET /api/bultos?pedidoId=&paletId=`, `POST /api/bultos` `{identificador,pedidoId}`, `PATCH /api/bultos/{id}/asignar-palet` `{paletId}`.
-- ADMIN: `GET /api/palets`, `POST /api/palets` `{identificador,destinoId}`, `GET /api/palets/{id}`.
+- ADMIN: `GET /api/palets`, `POST /api/palets` `{identificador,destinoId}`, `GET /api/palets/{id}` (con sus bultos), `PATCH /api/palets/{id}/expedir`. Un palet expedido no admite bultos.
 - ADMIN: `GET /api/destinos`, `POST /api/destinos` `{nombre}`.
 - ADMIN: `POST /api/pedidos/{id}/documentos`, multipart PDF ≤10 MB con `archivo` y `tipo` PEDIDO/FACTURA/ALBARAN.
 - ADMIN o su clínica: `GET /api/pedidos/{id}/documentos`, `GET /api/documentos/{id}/descargar`.

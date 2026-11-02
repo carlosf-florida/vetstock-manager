@@ -52,13 +52,13 @@ Petición típica: `Controller` (HTTP) → `Service` (reglas de negocio, transac
 
 ### El adaptador de pagos (detallado)
 
-El enunciado exige que el pago sea una integración real. En este prototipo:
+El pago usa un adaptador de DEMOSTRACIÓN (no cobra). En este prototipo:
 
 1. El backend crea el intento de pago con **referencia única** y **importe calculado por el servidor**.
 2. La "pantalla del banco" está simulada en el propio frontend (`/pago-simulado/:referencia`).
-3. El resultado llega por `POST /api/pagos/notificacion` (el webhook que en producción llamaría el proveedor), autenticado con un **token** en la cabecera.
+3. El resultado llega por `POST /api/pagos/notificacion` (el webhook que en producción llamaría el proveedor), autenticado con una **firma HMAC-SHA256** del cuerpo (cabecera `X-Firma-Notificacion`) y procesado con bloqueo del pago.
 4. La notificación **valida importe y moneda** y es **idempotente**: si llega dos veces, la segunda no tiene efecto.
-5. Una notificación `CONFIRMADO` registra el pago y solicita exportar a Odoo después del commit. Solo avanza a `LISTO_PREPARAR` si existe también una firma interna. El backend nunca se fía de la pantalla del navegador.
+5. Solo se puede iniciar el pago de un pedido FIRMADO. Una notificación `CONFIRMADO` lo pasa a `LISTO_PREPARAR` y solicita exportar a Odoo después del commit. El backend nunca se fía de la pantalla del navegador.
 
 **No es una integración bancaria real**: no hay credenciales de Redsys ni tarjeta. Es el esqueleto correcto para conectar un proveedor de pago real más adelante, y el código lo documenta así.
 
@@ -96,10 +96,9 @@ altera el estado comercial, impuestos ni registra cobros reales.
 ### La máquina de estados (detallada)
 
 ```
-BORRADOR → PENDIENTE_FIRMA
-  firma primero → FIRMADO → pago → LISTO_PREPARAR
-  pago primero  → PENDIENTE_FIRMA (pagado) → firma → LISTO_PREPARAR
-LISTO_PREPARAR → EN_PREPARACION → PREPARADO → EXPEDIDO
+BORRADOR → PENDIENTE_FIRMA → FIRMADO (firma del veterinario asignado) → LISTO_PREPARAR (pago confirmado)
+LISTO_PREPARAR → EN_PREPARACION → PREPARADO (≥1 bulto) → EXPEDIDO (bultos en palet)
+sin pago: BORRADOR / PENDIENTE_FIRMA / FIRMADO → CANCELADO (manual o caducidad 72 h)
 ```
 
 `EstadoPedido` define qué transiciones son posibles; `PedidoService` aplica además las reglas de negocio:
@@ -115,7 +114,7 @@ LISTO_PREPARAR → EN_PREPARACION → PREPARADO → EXPEDIDO
 - Los permisos se aplican en dos sitios: por **URL y rol** (`SecurityConfig`) y por **pertenencia a la clínica** en cada servicio. Un veterinario de otra clínica recibe 403 aunque conozca el identificador del pedido.
 - Los documentos se descargan solo con sesión autorizada: no hay enlaces públicos.
 - Simplificación académica: CSRF desactivado para simplificar el frontend (en producción se activaría).
-- Sin secretos incrustados: la base de datos y el token de pagos se configuran por variables de entorno con valores de prueba por defecto.
+- Sin secretos incrustados: la base de datos y la clave del webhook de pagos se configuran por variables de entorno con valores de prueba por defecto.
 
 ## Informes
 

@@ -29,6 +29,7 @@ final class BaseDatosPruebas {
     static final String CLAVE = System.getenv().getOrDefault("TEST_DB_PASSWORD", "root");
 
     private static final Path SCRIPT = Path.of("..", "database", "migrations", "001_esquema_inicial.sql");
+    private static final Path VISTAS = Path.of("..", "database", "migrations", "008_vistas_powerbi.sql");
 
     private BaseDatosPruebas() {
     }
@@ -47,10 +48,16 @@ final class BaseDatosPruebas {
             String sql = Files.readString(SCRIPT, StandardCharsets.UTF_8)
                     .replace("CREATE DATABASE IF NOT EXISTS vetstock", "CREATE DATABASE IF NOT EXISTS vetstock_test")
                     .replace("USE vetstock;", "USE vetstock_test;");
-            ScriptUtils.executeSqlScript(conexion,
-                    new EncodedResource(new ByteArrayResource(sql.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8));
+            ejecutar(conexion, sql);
+            // Vistas para Power BI: si alguna columna deja de existir, las pruebas fallan aquí
+            ejecutar(conexion, Files.readString(VISTAS, StandardCharsets.UTF_8));
         } catch (SQLException | IOException e) {
             throw new IllegalStateException("No se pudo preparar la base de datos de pruebas", e);
         }
+    }
+
+    private static void ejecutar(Connection conexion, String sql) {
+        ScriptUtils.executeSqlScript(conexion,
+                new EncodedResource(new ByteArrayResource(sql.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8));
     }
 }

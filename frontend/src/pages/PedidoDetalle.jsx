@@ -98,9 +98,10 @@ export default function PedidoDetalle() {
     accion(() => api.patch(`/api/pedidos/${id}/cancelar`), 'Pedido cancelado.')
   }
   const alFirmar = async () => {
-    setPestaña(puedePagar ? 'pago' : 'resumen')
+    // Tras la firma el pedido queda FIRMADO (pendiente de pago): se continúa en la pestaña de pago
+    setPestaña('pago')
     setAccionError(null)
-    setAccionOk(puedePagar ? 'Pedido firmado correctamente. Continúa con el pago.' : 'Pedido firmado correctamente.')
+    setAccionOk('Pedido firmado correctamente. Continúa con el pago.')
     await cargar()
     setTimeout(() => setAccionOk(null), 4000)
   }
@@ -168,7 +169,6 @@ export default function PedidoDetalle() {
         <FirmaSeccion
           pedido={pedido}
           onFirmado={alFirmar}
-          onFirmarMasTarde={() => setPestaña('pago')}
         />
       )}
 
@@ -216,8 +216,9 @@ function AccionesPedido({ estado, puedeFirmar, puedePagar, procesando, enviarFir
   if (estado === 'PENDIENTE_FIRMA') {
     return (
       <div className="acciones-fila">
-        {puedeFirmar && <button type="button" className="btn btn-primario" onClick={irAFirmar} disabled={procesando}>{puedePagar ? 'Firmar y pagar' : 'Firmar pedido'}</button>}
-        {puedePagar && <button type="button" className="btn btn-secundario" onClick={irAPagar} disabled={procesando}>Pagar sin firma ahora</button>}
+        {puedeFirmar
+          ? <button type="button" className="btn btn-primario" onClick={irAFirmar} disabled={procesando}>Revisar y firmar</button>
+          : <p className="texto-suave">Pendiente de que el veterinario asignado lo revise y firme con su cuenta. Después se podrá pagar.</p>}
         <button type="button" className="btn btn-peligro" onClick={cancelar} disabled={procesando}>Cancelar pedido</button>
       </div>
     )

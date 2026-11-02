@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { dinero } from '../format.js'
@@ -7,7 +7,10 @@ import ImportesPedido from '../components/pedido/ImportesPedido.jsx'
 
 /**
  * Pasarela de pago SIMULADA. Llama a POST /api/pagos/simulado/{referencia}
- * con resultado CONFIRMADO o FALLADO para poder probar ambos casos.
+ * con resultado CONFIRMADO o FALLADO para poder probar ambos casos. El
+ * backend envía entonces al webhook una notificación firmada (HMAC), igual
+ * que haría un proveedor real. Se muestra SIEMPRE el estado que devuelve el
+ * servidor, nunca el que se ha pedido.
  */
 export default function PasarelaPago() {
   const { referencia } = useParams()
@@ -19,9 +22,12 @@ export default function PasarelaPago() {
 
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState(null)
-  const [resultado, setResultado] = useState(null) // 'CONFIRMADO' | 'FALLADO'
+  const [resultado, setResultado] = useState(null) // estado devuelto por el servidor: CONFIRMADO | FALLADO
 
-  function volverACargo() {
+  // Al cambiar de referencia (reintento) se vuelve a mostrar el formulario
+  useEffect(() => { setResultado(null); setError(null) }, [referencia])
+
+  function volverAlPedido() {
     navigate(pedidoId ? `/pedidos/${pedidoId}` : volver)
   }
 
@@ -29,8 +35,25 @@ export default function PasarelaPago() {
     setProcesando(true)
     setError(null)
     try {
-      await api.post(`/api/pagos/simulado/${encodeURIComponent(referencia)}`, { resultado: resultadoDeseado })
-      setResultado(resultadoDeseado)
+      const pago = await api.post(`/api/pagos/simulado/${encodeURIComponent(referencia)}`, { resultado: resultadoDeseado })
+      setResultado(pago?.estado || null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setProcesando(false)
+    }
+  }
+
+  /** Un intento FALLADO no se reutiliza: se pide al backend un pago nuevo con otra referencia. */
+  async function reintentar() {
+    setProcesando(true)
+    setError(null)
+    try {
+      const nuevo = await api.post(`/api/pagos/${pedidoId}/iniciar`)
+      navigate(`/pago-simulado/${encodeURIComponent(nuevo.referencia)}`, {
+        replace: true,
+        state: { ...datos, importe: nuevo.importe, moneda: nuevo.moneda },
+      })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -55,37 +78,39 @@ export default function PasarelaPago() {
 
         <ImportesPedido importes={datos.importes || { total: datos.importe, moneda: datos.moneda }} />
 
-        <ErrorBox mensaje={error} onReintentar={() => pagar('CONFIRMADO')} />
+        <ErrorBox mensaje={error} />
 
-        {resultado ? (
-          <div className={resultado === 'CONFIRMADO' ? 'caja-ok' : 'caja-error'}>
-            <span aria-hidden="true">{resultado === 'CONFIRMADO' ? '✔️' : '⚠️'}</span>
+        {resultado === 'CONFIRMADO' && (
+          <div className="caja-ok">
+            <span aria-hidden="true">✔️</span>
             <div className="caja-error-texto">
-              {resultado === 'CONFIRMADO'
-                ? 'El pago se ha CONFIRMADO en la pasarela simulada. Si falta la firma, el pedido seguirá pendiente de firma; solo con pago y firma pasará a «Listo para preparar».'
-                : 'El pago ha FALLADO (simulado). Puedes reintentarlo desde el detalle del pedido.'}
+              Pago CONFIRMADO por la notificación del proveedor (simulado). El pedido ya está firmado y pagado:
+              pasa a «Listo para preparar».
             </div>
           </div>
-        ) : (
+        )}
+        {resultado === 'FALLADO' && (
+          <div className="caja-error">
+            <span aria-hidden="true">⚠️</span>
+            <div className="caja-error-texto">
+              El pago ha FALLADO (simulado). No se ha cobrado nada. Puedes reintentarlo: se creará un intento nuevo con otra referencia.
+            </div>
+          </div>
+        )}
+        {!resultado && (
           <>
             <div className="tarjeta-credito" aria-hidden="true">
               <div className="tarjeta-chip">▮▮▮</div>
               <div className="tarjeta-numero">•••• •••• •••• 0000</div>
               <div className="tarjeta-pie">
-                <span>TITULAR DE PRUEBAS</span>
+                <span>TARJETA DE DEMOSTRACIÓN</span>
                 <span>00/00</span>
               </div>
             </div>
-
-            <div className="tarjeta formulario-pasarela">
-              <label className="campo"><span>Titular (ficticio)</span><input className="input" value="PRUEBAS VETSTOCK" readOnly /></label>
-              <label className="campo"><span>Número de tarjeta (ficticio)</span><input className="input" value="0000 0000 0000 0000" readOnly /></label>
-              <div className="campo-doble">
-                <label className="campo"><span>Caducidad</span><input className="input" value="00/00" readOnly /></label>
-                <label className="campo"><span>CVC</span><input className="input" value="000" readOnly /></label>
-              </div>
-              <p className="texto-suave">Estos campos son decorativos: no se envían a ningún sitio y no representan una tarjeta real.</p>
-            </div>
+            <p className="texto-suave">
+              Esta pasarela no pide ni guarda datos de tarjeta. Elige el resultado que quieres simular:
+              el backend lo recibirá como una notificación firmada del proveedor.
+            </p>
           </>
         )}
 
@@ -93,32 +118,25 @@ export default function PasarelaPago() {
           {!resultado && (
             <>
               <button type="button" className="btn btn-primario" onClick={() => pagar('CONFIRMADO')} disabled={procesando}>
-                {procesando ? 'Procesando…' : 'Pagar'}
+                {procesando ? 'Procesando…' : 'Simular pago correcto'}
               </button>
               <button type="button" className="btn btn-peligro" onClick={() => pagar('FALLADO')} disabled={procesando}>
-                Fallar el pago
+                Simular pago fallido
               </button>
+              <Link className="btn btn-secundario" to={pedidoId ? `/pedidos/${pedidoId}` : volver}>
+                Cancelar
+              </Link>
             </>
           )}
-          {resultado === 'CONFIRMADO' && (
-            <button type="button" className="btn btn-primario" onClick={() => volverACargo()} disabled={procesando}>
-              Volver al pedido
+          {resultado === 'FALLADO' && pedidoId && (
+            <button type="button" className="btn btn-secundario" onClick={reintentar} disabled={procesando}>
+              {procesando ? 'Creando nuevo intento…' : 'Reintentar el pago'}
             </button>
           )}
-          {resultado === 'FALLADO' && (
-            <>
-              <button type="button" className="btn btn-secundario" onClick={() => setResultado(null)} disabled={procesando}>
-                Reintentar en la pasarela
-              </button>
-              <button type="button" className="btn btn-primario" onClick={volverACargo} disabled={procesando}>
-                Volver al pedido
-              </button>
-            </>
-          )}
-          {!resultado && (
-            <Link className="btn btn-secundario" to={pedidoId ? `/pedidos/${pedidoId}` : volver} onClick={() => {}}>
-              Cancelar
-            </Link>
+          {resultado && (
+            <button type="button" className="btn btn-primario" onClick={volverAlPedido} disabled={procesando}>
+              Volver al pedido
+            </button>
           )}
         </div>
         {procesando && <p className="texto-suave">Contactando con la pasarela simulada…</p>}

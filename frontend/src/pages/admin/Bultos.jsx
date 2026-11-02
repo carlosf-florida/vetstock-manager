@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api.js'
+import { NOMBRE_ESTADO_PEDIDO } from '../../format.js'
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox, Spinner } from '../../components/Spinner.jsx'
 
@@ -103,10 +104,12 @@ export default function AdminBultos() {
               <span>Pedido *</span>
               <select className="input" value={form.pedidoId} onChange={(e) => setForm({ ...form, pedidoId: e.target.value })}>
                 <option value="">— Elige un pedido —</option>
-                {pedidos.map((p) => (
-                  <option key={p.id} value={p.id}>#{p.id} · {p.clinicaNombre || ''} · {p.estado}</option>
+                {/* Solo pedidos firmados y pagados que están en preparación admiten bultos */}
+                {pedidos.filter((p) => ['LISTO_PREPARAR', 'EN_PREPARACION', 'PREPARADO'].includes(p.estado)).map((p) => (
+                  <option key={p.id} value={p.id}>#{p.id} · {p.clinicaNombre || ''} · {NOMBRE_ESTADO_PEDIDO(p.estado)}</option>
                 ))}
               </select>
+              <small className="texto-suave">Solo aparecen pedidos firmados y pagados, listos o en preparación.</small>
               {errores.pedidoId && <small className="error-campo">{errores.pedidoId}</small>}
             </label>
           </div>

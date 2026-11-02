@@ -12,6 +12,8 @@ const NOMBRES = {
   fechaInicioPreparacion: 'Inicio de preparación',
   fechaEnPreparacion: 'Inicio de preparación',
   fechaPreparado: 'Preparado',
+  fechaPreparacion: 'Preparado',
+  fechaModificacion: 'Última modificación de las líneas',
   fechaExpedicion: 'Expedición',
   fechaExpedido: 'Expedición',
   fechaCancelacion: 'Cancelación',

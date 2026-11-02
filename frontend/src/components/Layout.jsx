@@ -5,7 +5,8 @@ import { ROLES } from '../format.js'
 
 function Item({ to, children, onClick }) {
   return (
-    <NavLink to={to} className={({ isActive }) => 'menu-enlace' + (isActive ? ' activo' : '')} onClick={onClick}>
+    // end en /admin: «Resumen» solo se marca en su propia ruta y no en /admin/pedidos, etc.
+    <NavLink to={to} end={to === '/admin'} className={({ isActive }) => 'menu-enlace' + (isActive ? ' activo' : '')} onClick={onClick}>
       {children}
     </NavLink>
   )

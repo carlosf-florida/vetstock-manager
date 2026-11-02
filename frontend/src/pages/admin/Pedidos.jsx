@@ -5,6 +5,11 @@ import { dinero, fechaCorta, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO, totalPedido }
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox } from '../../components/Spinner.jsx'
 import { BadgeEstadoPedido } from '../../components/Badges.jsx'
+import { infoEstadoFirma, infoEstadoPago } from '../../pedidoEstado.js'
+
+function Etiqueta({ info }) {
+  return <span className={`etiqueta ${info.clase}`}>{info.texto}</span>
+}
 
 export default function AdminPedidos() {
   const [paramsUrl] = useSearchParams()
@@ -15,6 +20,8 @@ export default function AdminPedidos() {
   const [busqueda, setBusqueda] = useState('')
   const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
   const [clinicaId, setClinicaId] = useState('')
+  const [desde, setDesde] = useState('')
+  const [hasta, setHasta] = useState('')
 
   async function cargar() {
     setCargando(true)
@@ -38,6 +45,12 @@ export default function AdminPedidos() {
     api.get('/api/clinicas').then((c) => setClinicas(Array.isArray(c) ? c : [])).catch(() => {})
   }, [])
 
+  // Filtro por fecha de creación: las fechas llegan en ISO y se compara el día (AAAA-MM-DD)
+  const filasFiltradas = (pedidos || []).filter((p) => {
+    const dia = (p.fechaCreacion || '').slice(0, 10)
+    return (!desde || dia >= desde) && (!hasta || dia <= hasta)
+  })
+
   const opcionesEstado = [
     { value: '', label: 'Todos los estados' },
     ...Object.keys(ESTADOS_PEDIDO).map((e) => ({ value: e, label: NOMBRE_ESTADO_PEDIDO(e) })),
@@ -46,7 +59,23 @@ export default function AdminPedidos() {
   return (
     <section>
       <h1>Pedidos (administración)</h1>
-      <p className="texto-suave">Busca pedidos por estado y clínica y entra a gestionarlos.</p>
+      <p className="texto-suave">Busca pedidos por número, clínica, fecha y estado; consulta su firma y su pago y entra a gestionarlos.</p>
+
+      <div className="filtros-panel">
+        <label className="campo">
+          <span>Creado desde</span>
+          <input type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} />
+        </label>
+        <label className="campo">
+          <span>Hasta</span>
+          <input type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} />
+        </label>
+        {(desde || hasta) && (
+          <button type="button" className="btn btn-secundario btn-mini" onClick={() => { setDesde(''); setHasta('') }}>
+            Quitar fechas
+          </button>
+        )}
+      </div>
 
       <ErrorBox mensaje={error} onReintentar={cargar} />
 
@@ -59,10 +88,12 @@ export default function AdminPedidos() {
             { key: 'creadoPorNombre', label: 'Creado por', soloEscritorio: true },
             { key: 'fechaCreacion', label: 'Fecha', render: (p) => fechaCorta(p.fechaCreacion) },
             { key: 'estado', label: 'Estado', render: (p) => <BadgeEstadoPedido estado={p.estado} /> },
+            { key: 'firma', label: 'Firma', soloEscritorio: true, render: (p) => <Etiqueta info={infoEstadoFirma(p)} /> },
+            { key: 'pago', label: 'Pago', soloEscritorio: true, render: (p) => <Etiqueta info={infoEstadoPago(p)} /> },
             { key: 'total', label: 'Total', render: (p) => (totalPedido(p) != null ? dinero(totalPedido(p)) : '—') },
             { key: 'gestion', label: '', render: (p) => <Link className="btn btn-mini btn-secundario" to={`/admin/pedidos/${p.id}`}>Gestionar</Link> },
           ]}
-          filas={pedidos || []}
+          filas={filasFiltradas}
           claveFila={(p) => p.id}
           busquedaCampos={['clinicaNombre', 'veterinarioNombre', 'creadoPorNombre', 'observaciones', (p) => p.id]}
           busquedaValor={busqueda}

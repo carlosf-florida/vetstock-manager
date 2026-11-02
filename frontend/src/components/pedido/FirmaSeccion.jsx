@@ -1,14 +1,17 @@
 import { useRef, useState } from 'react'
 import { api } from '../../api.js'
 import { ErrorBox } from '../Spinner.jsx'
+import LineasPedido from './LineasPedido.jsx'
+import ImportesPedido from './ImportesPedido.jsx'
 
 const TAM_MAX_IMAGEN = 5 * 1024 * 1024 // 5 MB
 
 /**
- * Firma simple por dibujo o imagen PNG/JPG. La autorización del firmante se
- * valida en el servidor; el número de colegiado solo identifica al responsable.
+ * Firma simple por dibujo o imagen PNG/JPG. Antes de firmar se muestra el
+ * contenido exacto que se autoriza. La autorización del firmante se valida en
+ * el servidor; el número de colegiado solo identifica al responsable.
  */
-export default function FirmaSeccion({ pedido, onFirmado, onFirmarMasTarde }) {
+export default function FirmaSeccion({ pedido, onFirmado }) {
   const canvasRef = useRef(null)
   const dibujando = useRef(false)
   const [metodo, setMetodo] = useState('DIBUJO')
@@ -147,6 +150,15 @@ export default function FirmaSeccion({ pedido, onFirmado, onFirmarMasTarde }) {
         La firma registrada aquí no tiene validez legal certificada: es un prototipo académico de firma electrónica simple.
       </div>
 
+      <h4>1. Revisa lo que vas a autorizar</h4>
+      <p className="texto-suave">
+        Tras firmar, los productos y cantidades quedan bloqueados y se guarda una copia exacta de este contenido.
+      </p>
+      <LineasPedido pedido={pedido} editable={false} />
+      <ImportesPedido pedido={pedido} />
+
+      <h4>2. Firma</h4>
+
       <label className="campo">
         <span>Nº de colegiado del responsable (opcional)</span>
         <input
@@ -208,17 +220,14 @@ export default function FirmaSeccion({ pedido, onFirmado, onFirmarMasTarde }) {
 
       <label className="campo campo-checkbox">
         <input type="checkbox" checked={confirmado} onChange={(e) => setConfirmado(e.target.checked)} />
-        <span>Confirmo este pedido con mi propia firma e identidad *</span>
+        <span>He revisado productos, cantidades e importes y autorizo este pedido con mi propia firma e identidad *</span>
       </label>
 
       <ErrorBox mensaje={error} />
 
       <div className="acciones-fila">
         <button type="button" className="btn btn-primario btn-grande" onClick={firmar} disabled={firmando}>
-          {firmando ? 'Firmando…' : 'Firmar el pedido'}
-        </button>
-        <button type="button" className="btn btn-secundario" onClick={onFirmarMasTarde} disabled={firmando}>
-          Firmar más tarde y pagar
+          {firmando ? 'Firmando…' : 'Firmar y continuar al pago'}
         </button>
       </div>
       {firmando && <p className="texto-suave">Enviando la firma al servidor…</p>}

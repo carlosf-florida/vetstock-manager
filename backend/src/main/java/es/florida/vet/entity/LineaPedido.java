@@ -53,6 +53,12 @@ public class LineaPedido {
     public Long getId() { return id; }
     public Pedido getPedido() { return pedido; }
     public void setPedido(Pedido pedido) { this.pedido = pedido; }
+
+    /** Cambia cantidad y precio de una línea de borrador (el precio lo pone siempre el servidor). */
+    public void actualizar(int cantidad, BigDecimal precioUnitario) {
+        this.cantidad = cantidad;
+        this.precioUnitario = precioUnitario;
+    }
     public Producto getProducto() { return producto; }
     public int getCantidad() { return cantidad; }
     public BigDecimal getPrecioUnitario() { return precioUnitario; }

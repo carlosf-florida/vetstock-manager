@@ -23,6 +23,9 @@ USE vetstock;
 -- ------------------------------------------------------------
 -- Borrado de tablas (orden inverso a las claves ajenas)
 -- ------------------------------------------------------------
+-- La relación circular clinicas <-> veterinarios impide borrar en orden: se
+-- desactivan las claves foráneas solo durante el borrado para poder recargar.
+SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS documentos;
 DROP TABLE IF EXISTS odoo_log;
 DROP TABLE IF EXISTS bultos;
@@ -38,6 +41,7 @@ DROP TABLE IF EXISTS auxiliares;
 DROP TABLE IF EXISTS veterinarios;
 DROP TABLE IF EXISTS clinicas;
 DROP TABLE IF EXISTS usuarios;
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- ------------------------------------------------------------
 -- Usuarios y clínicas

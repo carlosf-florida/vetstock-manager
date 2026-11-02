@@ -85,6 +85,8 @@ class PedidoFirmaPagoTest {
     @Mock
     private PagoRepository pagoRepository;
     @Mock
+    private es.florida.vet.repository.BultoRepository bultoRepository;
+    @Mock
     private SesionService sesionService;
     @Mock
     private ApplicationEventPublisher eventos;
@@ -94,7 +96,7 @@ class PedidoFirmaPagoTest {
     @BeforeEach
     void prepararServicio() {
         pedidoService = new PedidoService(pedidoRepository, productoRepository, veterinarioRepository,
-                auxiliarRepository, movimientoRepository, firmaRepository, sesionService, eventos);
+                auxiliarRepository, movimientoRepository, firmaRepository, bultoRepository, sesionService, eventos);
         lenient().when(pedidoRepository.save(any(Pedido.class)))
                 .thenAnswer(invocacion -> invocacion.getArgument(0));
         lenient().when(firmaRepository.save(any(Firma.class)))

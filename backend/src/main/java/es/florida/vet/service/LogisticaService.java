@@ -78,6 +78,12 @@ public class LogisticaService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("El bulto no existe"));
         Palet palet = paletRepository.findById(paletId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("El palet no existe"));
+        if (palet.getFechaExpedicion() != null) {
+            throw new ReglaNegocioException("El palet ya está expedido; no admite más bultos");
+        }
+        if (bulto.getPedido().getEstado() == EstadoPedido.EXPEDIDO) {
+            throw new ReglaNegocioException("El pedido de este bulto ya está expedido");
+        }
         bulto.asignarPalet(palet);
         return BultoResponse.desde(bultoRepository.save(bulto));
     }

@@ -21,6 +21,7 @@ import es.florida.vet.enums.TipoMovimiento;
 import es.florida.vet.exception.AccesoDenegadoException;
 import es.florida.vet.exception.RecursoNoEncontradoException;
 import es.florida.vet.exception.ReglaNegocioException;
+import es.florida.vet.repository.BultoRepository;
 import es.florida.vet.repository.AuxiliarRepository;
 import es.florida.vet.repository.FirmaRepository;
 import es.florida.vet.repository.MovimientoStockRepository;
@@ -61,6 +62,7 @@ public class PedidoService {
     private final AuxiliarRepository auxiliarRepository;
     private final MovimientoStockRepository movimientoRepository;
     private final FirmaRepository firmaRepository;
+    private final BultoRepository bultoRepository;
     private final SesionService sesionService;
     private final ApplicationEventPublisher eventos;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -71,6 +73,7 @@ public class PedidoService {
                          AuxiliarRepository auxiliarRepository,
                          MovimientoStockRepository movimientoRepository,
                          FirmaRepository firmaRepository,
+                         BultoRepository bultoRepository,
                          SesionService sesionService,
                          ApplicationEventPublisher eventos) {
         this.pedidoRepository = pedidoRepository;
@@ -79,6 +82,7 @@ public class PedidoService {
         this.auxiliarRepository = auxiliarRepository;
         this.movimientoRepository = movimientoRepository;
         this.firmaRepository = firmaRepository;
+        this.bultoRepository = bultoRepository;
         this.sesionService = sesionService;
         this.eventos = eventos;
     }
@@ -429,13 +433,21 @@ public class PedidoService {
         comprobarTransicion(pedido, destino);
         Usuario usuario = sesionService.usuarioActual(username);
         if (pedido.getFechaPago() == null || pedido.getFechaFirma() == null) {
-            throw new ReglaNegocioException("No se puede preparar o expedir sin pago y confirmación interna registrados");
+            throw new ReglaNegocioException("No se puede preparar ni expedir un pedido sin firma del veterinario y pago confirmado");
         }
 
         switch (destino) {
             case EN_PREPARACION -> pedido.setFechaInicioPreparacion(LocalDateTime.now());
-            case PREPARADO -> pedido.setFechaPreparacion(LocalDateTime.now());
+            case PREPARADO -> {
+                if (bultoRepository.findByPedidoId(id).isEmpty()) {
+                    throw new ReglaNegocioException("Registra al menos un bulto antes de marcar el pedido como preparado");
+                }
+                pedido.setFechaPreparacion(LocalDateTime.now());
+            }
             case EXPEDIDO -> {
+                if (bultoRepository.findByPedidoId(id).stream().anyMatch(b -> b.getPalet() == null)) {
+                    throw new ReglaNegocioException("Todos los bultos deben estar asignados a un palet con destino antes de expedir");
+                }
                 pedido.setFechaExpedicion(LocalDateTime.now());
                 // Descuento de stock físico UNA SOLA VEZ (atomicidad en BD + transición de estado)
                 for (LineaPedido linea : pedido.getLineas()) {

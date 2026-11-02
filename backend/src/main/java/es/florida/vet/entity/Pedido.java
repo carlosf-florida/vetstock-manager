@@ -123,11 +123,26 @@ public class Pedido {
         lineas.add(linea);
     }
 
+    /**
+     * Deja el pedido con exactamente las líneas indicadas. Las líneas de un
+     * producto que ya estaba se ACTUALIZAN en lugar de borrarse y crearse de
+     * nuevo: Hibernate hace los INSERT antes que los DELETE y chocaría con la
+     * clave única (pedido, producto).
+     */
     public void reemplazarLineas(List<LineaPedido> nuevas) {
-        lineas.clear();
-        lineas.addAll(nuevas);
-        for (LineaPedido linea : lineas) {
-            linea.setPedido(this);
+        java.util.Set<Long> productosNuevos = new java.util.HashSet<>();
+        nuevas.forEach(n -> productosNuevos.add(n.getProducto().getId()));
+        lineas.removeIf(l -> !productosNuevos.contains(l.getProducto().getId()));
+        for (LineaPedido nueva : nuevas) {
+            LineaPedido existente = lineas.stream()
+                    .filter(l -> l.getProducto().getId().equals(nueva.getProducto().getId()))
+                    .findFirst().orElse(null);
+            if (existente != null) {
+                existente.actualizar(nueva.getCantidad(), nueva.getPrecioUnitario());
+            } else {
+                nueva.setPedido(this);
+                lineas.add(nueva);
+            }
         }
     }
 

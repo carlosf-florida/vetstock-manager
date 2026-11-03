@@ -46,5 +46,6 @@ public class Bulto {
     public Pedido getPedido() { return pedido; }
     public Palet getPalet() { return palet; }
     public void asignarPalet(Palet palet) { this.palet = palet; }
+    public void quitarPalet() { this.palet = null; }
     public LocalDateTime getFechaAlta() { return fechaAlta; }
 }

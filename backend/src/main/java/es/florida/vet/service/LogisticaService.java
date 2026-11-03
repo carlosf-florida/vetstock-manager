@@ -190,6 +190,30 @@ public class LogisticaService {
         return BultoResponse.desde(bultoRepository.save(bulto));
     }
 
+    /**
+     * Saca un bulto de su palet (por ejemplo, para poder eliminar un sobrante o corregir un error).
+     * No se permite si el palet o el pedido ya están expedidos, ni en un pedido cancelado.
+     */
+    @Transactional
+    public BultoResponse quitarDePalet(Long bultoId) {
+        Bulto bulto = bultoRepository.findById(bultoId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("El bulto no existe"));
+        Palet palet = bulto.getPalet();
+        if (palet == null) {
+            throw new ReglaNegocioException("El bulto " + bulto.getIdentificador() + " no está en ningún palet");
+        }
+        if (palet.getFechaExpedicion() != null) {
+            throw new ReglaNegocioException("El palet " + palet.getIdentificador() + " ya está expedido: no se pueden sacar bultos");
+        }
+        EstadoPedido estado = bulto.getPedido().getEstado();
+        if (estado == EstadoPedido.EXPEDIDO || estado == EstadoPedido.CANCELADO) {
+            throw new ReglaNegocioException("El pedido de este bulto está expedido o cancelado");
+        }
+        palet.getBultos().remove(bulto);
+        bulto.quitarPalet();
+        return BultoResponse.desde(bultoRepository.save(bulto));
+    }
+
     // ----- Palets -----
 
     @Transactional(readOnly = true)

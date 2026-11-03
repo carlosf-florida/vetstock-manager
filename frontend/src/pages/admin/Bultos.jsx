@@ -73,6 +73,22 @@ export default function AdminBultos() {
     }
   }
 
+  // Sacar del palet (no se permite si el palet o el pedido están expedidos; lo decide el servidor)
+  async function sacarDePalet(bulto) {
+    if (!window.confirm(`¿Sacar el bulto ${bulto.identificador} del palet ${bulto.paletIdentificador}?`)) return
+    setAsignando(bulto.id)
+    setError(null)
+    try {
+      await api.patch(`/api/bultos/${bulto.id}/quitar-palet`)
+      avisar(`Bulto ${bulto.identificador} fuera del palet.`)
+      cargar()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAsignando(null)
+    }
+  }
+
   async function asignarPalet(bulto, paletId) {
     if (!paletId) return
     setAsignando(bulto.id)
@@ -139,7 +155,10 @@ export default function AdminBultos() {
             { key: 'pedidoId', label: 'Pedido', render: (b) => (b.pedidoId ? <Link to={`/admin/pedidos/${b.pedidoId}`}>#{b.pedidoId}</Link> : '—') },
             { key: 'salidaPedido', label: 'Salida del pedido', render: (b) => b.salidaPedido || <span className="texto-suave">Sin asignar</span> },
             { key: 'palet', label: 'Palet asignado', render: (b) => b.paletId
-              ? <>{b.paletIdentificador || `#${b.paletId}`}{b.paletSalida ? ` · ${b.paletSalida}` : ''}</>
+              ? <>
+                  {b.paletIdentificador || `#${b.paletId}`}{b.paletSalida ? ` · ${b.paletSalida}` : ''}{' '}
+                  <button type="button" className="btn btn-mini btn-secundario" onClick={() => sacarDePalet(b)} disabled={asignando === b.id}>Sacar</button>
+                </>
               : <span className="etiqueta est-pago-pendiente"><span aria-hidden="true">⏳</span> Sin palet</span> },
             {
               key: 'asignar',

@@ -141,6 +141,8 @@ class LogisticaSalidasIntegracionTest extends IntegracionBase {
 
         patchJson(admin, "/api/pedidos/" + id + "/expedir", null).andExpect(status().isOk());
         patchJson(admin, "/api/pedidos/" + id + "/salida", "{\"destinoId\":3}").andExpect(status().isBadRequest());
+        // Expedido: el bulto ya no se puede sacar del palet
+        patchJson(admin, "/api/bultos/" + bultoId + "/quitar-palet", null).andExpect(status().isBadRequest());
     }
 
     /** Cambia el peso por unidad de un producto conservando el resto (como el formulario: sin stockInicial). */
@@ -185,13 +187,20 @@ class LogisticaSalidasIntegracionTest extends IntegracionBase {
     }
 
     @Test
-    @DisplayName("sobran bultos tras cambiar un peso: no se prepara ni se borra nada solo; admin elimina el sobrante")
+    @DisplayName("sobran bultos en un palet tras cambiar un peso: se saca del palet y admin elimina el sobrante")
     void bultosSobrantes() throws Exception {
         MockHttpSession admin = admin();
         // 3 sacos × 12,5 kg = 37,5 kg → 2 bultos; se registran los 2 a mano
         long id = pedidoEnPreparacion(auxSanRoque(), drGarcia(), 11, 3);
         bulto(id, "LS-X1-" + id);
         bulto(id, "LS-X2-" + id);
+        // Los dos van a un palet de su salida (como los pedidos #17 y #18 de la demo)
+        patchJson(admin, "/api/pedidos/" + id + "/salida", "{\"destinoId\":3}").andExpect(status().isOk());
+        long palet = json(postJson(admin, "/api/palets", "{\"identificador\":\"LS-SOB-" + id + "\",\"destinoId\":3}")).get("id").asLong();
+        for (JsonNode b : json(getJson(admin, "/api/bultos?pedidoId=" + id))) {
+            patchJson(admin, "/api/bultos/" + b.get("id").asLong() + "/asignar-palet", "{\"paletId\":" + palet + "}")
+                    .andExpect(status().isOk());
+        }
         pesoProducto(11, "8.000");   // ahora 24 kg → 1 bulto
         try {
             String mensaje = json(patchJson(admin, "/api/pedidos/" + id + "/preparar", null)
@@ -200,6 +209,12 @@ class LogisticaSalidasIntegracionTest extends IntegracionBase {
             assertEquals(2, json(getJson(admin, "/api/bultos?pedidoId=" + id)).size());
 
             long sobrante = json(getJson(admin, "/api/bultos?pedidoId=" + id)).get(0).get("id").asLong();
+            deleteJson(admin, "/api/bultos/" + sobrante).andExpect(status().isBadRequest()); // está en un palet
+            patchJson(auxSanRoque(), "/api/bultos/" + sobrante + "/quitar-palet", null).andExpect(status().isForbidden());
+            patchJson(admin, "/api/bultos/" + sobrante + "/quitar-palet", null).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.paletId").doesNotExist());
+            patchJson(admin, "/api/bultos/" + sobrante + "/quitar-palet", null).andExpect(status().isBadRequest()); // ya no está
+            assertEquals(1, json(getJson(admin, "/api/palets/" + palet)).get("bultos").size());
             deleteJson(admin, "/api/bultos/" + sobrante).andExpect(status().isNoContent());
             long ultimo = json(getJson(admin, "/api/bultos?pedidoId=" + id)).get(0).get("id").asLong();
             deleteJson(admin, "/api/bultos/" + ultimo).andExpect(status().isBadRequest()); // ya no sobra

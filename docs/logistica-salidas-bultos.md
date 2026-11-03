@@ -68,7 +68,7 @@ partir del peso (ver «Bultos calculados por peso»).
 - **Detalle del pedido**: tarjeta «Salida de expedición» (salida, quién y cuándo
   la asignó, salida habitual de la clínica, aviso si falta) y sección «Peso y bultos»
   (peso total, bultos calculados, aviso si faltan pesos, registros con su palet, avisos si
-  faltan o sobran y «Eliminar sobrante»). «Registrar bulto de este pedido» solo aparece si
+  faltan o sobran, «Sacar del palet» y «Eliminar sobrante»). «Registrar bulto de este pedido» solo aparece si
   faltan registros.
 - **Bultos** y **Palets**: muestran la salida del pedido y la del palet.
 
@@ -114,7 +114,8 @@ Son dos cosas distintas y no se dejan contradictorias:
 |---|---|
 | Registro manual (Admin → Bultos) | Permitido solo hasta el número calculado |
 | **Marcar como preparado** | Exige peso completo. Crea solos los registros que falten con identificador `VSM-{pedido}-B{n}` (p. ej. `VSM-21-B1`). Repetir no crea duplicados |
-| Hay MÁS registros que los calculados | No se prepara ni se expide, y **no se borra nada solo**. Admin puede eliminar un sobrante si no está en un palet y el pedido no está expedido (`DELETE /api/bultos/{id}`) |
+| Hay MÁS registros que los calculados | No se prepara ni se expide, y **no se borra nada solo**. Admin puede eliminar un sobrante si no está en un palet y el pedido no está expedido (`DELETE /api/bultos/{id}`). Si está en un palet, primero «Sacar del palet» |
+| Sacar del palet | Ficha del pedido o Admin → Bultos (`PATCH /api/bultos/{id}/quitar-palet`). No si el palet o el pedido están expedidos, ni en un pedido cancelado |
 | Expedir | Exige peso completo, registros = calculados y todos en un palet |
 
 El cálculo dice **cuántos** bultos exige la regla; no reparte el peso entre ellos ni dice qué

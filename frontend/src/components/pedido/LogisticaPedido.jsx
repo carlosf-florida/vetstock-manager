@@ -60,6 +60,17 @@ export default function LogisticaPedido({ pedido, onCambio }) {
     }
   }
 
+  async function sacarDePalet(b) {
+    if (!window.confirm(`¿Sacar el bulto ${b.identificador} del palet ${b.paletIdentificador}?`)) return
+    try {
+      await api.patch(`/api/bultos/${b.id}/quitar-palet`)
+      notificar({ texto: `Bulto ${b.identificador} fuera del palet.` })
+      cargar()
+    } catch (err) {
+      notificar({ tipo: 'error', texto: err.message })
+    }
+  }
+
   // Comparación entre registros y bultos calculados (el cálculo es del servidor)
   const calculados = pedido.bultosCalculados ?? null
   const registrados = bultos?.length ?? 0
@@ -143,7 +154,7 @@ export default function LogisticaPedido({ pedido, onCambio }) {
                 Hay {registrados} registros y por peso corresponden {calculados}. No se borra ninguno automáticamente.{' '}
                 {eliminables >= sobran
                   ? `Elimina ${sobran === 1 ? 'el sobrante' : `${sobran} sobrantes`} entre los que no están en un palet.`
-                  : `Solo ${eliminables === 1 ? 'hay 1 bulto' : `hay ${eliminables} bultos`} fuera de un palet; el resto ya están en uno y la aplicación no permite sacarlos. Hasta resolverlo, el pedido no se puede expedir.`}
+                  : `${eliminables === 0 ? 'Todos están en un palet' : eliminables === 1 ? 'Solo hay 1 bulto fuera de un palet' : `Solo hay ${eliminables} bultos fuera de un palet`}: saca del palet ${sobran === 1 ? 'el que sobre' : 'los que sobren'} («Sacar del palet») y después elimínalos. Hasta resolverlo, el pedido no se puede expedir.`}
               </span>
             </p>
           )}
@@ -159,6 +170,9 @@ export default function LogisticaPedido({ pedido, onCambio }) {
                       <td>{b.paletSalida || '—'}</td>
                       <td>{fecha(b.fechaAlta)}</td>
                       <td>
+                        {b.paletId && !['EXPEDIDO', 'CANCELADO'].includes(pedido.estado) && (
+                          <button type="button" className="btn btn-mini btn-secundario" onClick={() => sacarDePalet(b)}>Sacar del palet</button>
+                        )}
                         {sobran > 0 && !b.paletId && !['EXPEDIDO', 'CANCELADO'].includes(pedido.estado) && (
                           <button type="button" className="btn btn-mini btn-secundario" onClick={() => eliminarBulto(b)}>Eliminar sobrante</button>
                         )}

@@ -52,6 +52,12 @@ public class LogisticaController {
         logisticaService.eliminarBulto(id);
     }
 
+    /** Saca el bulto de su palet (no si el palet o el pedido están expedidos). */
+    @PatchMapping("/bultos/{id}/quitar-palet")
+    public BultoResponse quitarDePalet(@PathVariable Long id) {
+        return logisticaService.quitarDePalet(id);
+    }
+
     @PatchMapping("/bultos/{id}/asignar-palet")
     public BultoResponse asignarPalet(@PathVariable Long id, @RequestBody Map<String, Long> cuerpo) {
         Long paletId = cuerpo.get("paletId");

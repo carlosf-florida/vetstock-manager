@@ -64,7 +64,8 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 | Sin errores de coma flotante (24,999 + 0,001; 8,333 × 3) | `PesoPedidoTest.sinErroresDeComaFlotante` |
 | Producto sin peso: incompleto, sin bultos, no cuenta como 0 | `PesoPedidoTest.productoSinPeso` y `LogisticaSalidasIntegracionTest.bultosPorPeso` |
 | Al preparar se crean los bultos que faltan; repetir no duplica; no se registra por encima de lo calculado | `…salidaHabitualYRecuentoDeBultos` y `…bultosPorPeso` |
-| Sobran registros: no se prepara ni se borra solo; admin elimina el sobrante sin palet | `…bultosSobrantes` |
+| Sobran registros en un palet: no se prepara ni se borra solo; se saca del palet (no la clínica) y se elimina | `…bultosSobrantes` |
+| No se saca del palet un bulto de un pedido expedido | `…cambioDeSalidaConReglas` |
 | Editar un producto sin enviar stockInicial (como el formulario) | `…bultosPorPeso` (ayudante `pesoProducto`) |
 
 ### Errores reales que encontraron estas pruebas (ya corregidos)
@@ -204,7 +205,8 @@ Tras aplicar `011` y los pesos ficticios de la demo (copia previa:
 | Odoo (S00013) | Bultos 2, Peso total 38,1 kg, Salida 14 - Regional, solo lectura (lista y formulario) |
 | Reexportar 2 veces | 1 solo pedido VSM-21 en Odoo y 2 registros de bultos |
 | Quitar el peso de la vacuna desde Admin → Productos | El pedido #11 muestra «Cálculo incompleto: falta el peso de Vacuna antirrábica. Peso conocido: 18,5 kg»; registrar bulto → 400. Peso restaurado (0,020 kg) desde la misma pantalla |
-| Pedidos de prueba anteriores | #17: 3 registros y le corresponde 1; #18: 2 y 1. Todos sus bultos están en palets: no se pueden eliminar ni expedir hasta decidir qué hacer (ver pendientes). No se ha cambiado nada |
+| Pedidos de prueba anteriores | #17: 3 registros y le corresponde 1; #18: 2 y 1, todos en palets. La ficha avisa y ofrece «Sacar del palet» en cada bulto. No se ha cambiado nada (ver pendientes) |
+| Sacar del palet (#21) | VSM-21-B1 al palet PALET-REG-01 y sacarlo → 200 (vuelve a quedar sin palet); repetir → 400; BULTO-19-01 (pedido expedido) → 400 |
 
 Errores encontrados y corregidos en esta prueba: editar un producto desde la pantalla fallaba
 siempre («no debe ser nulo») porque el formulario no envía `stockInicial` (error antiguo, del

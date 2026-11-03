@@ -98,7 +98,7 @@ El pago confirmado, la firma posterior y las transiciones de logística solicita
 ## Logística, documentos, informes y dashboard
 
 - ADMIN: `PATCH /api/pedidos/{id}/iniciar-preparacion`, `/preparar` (exige peso completo, asigna la salida habitual si el pedido no tiene y crea los bultos calculados que falten como `VSM-{id}-B{n}`; 400 sin salida posible, si falta algún peso o si sobran registros), `/expedir` (exige registros = calculados y todos en un palet); todas exigen firma y pago.
-- ADMIN: `GET /api/bultos?pedidoId=&paletId=`, `POST /api/bultos` `{identificador,pedidoId}` (400 si falta algún peso o ya están todos los calculados; no en EXPEDIDO), `DELETE /api/bultos/{id}` (204; solo un sobrante sin palet de un pedido no expedido), `PATCH /api/bultos/{id}/asignar-palet` `{paletId}`.
+- ADMIN: `GET /api/bultos?pedidoId=&paletId=`, `POST /api/bultos` `{identificador,pedidoId}` (400 si falta algún peso o ya están todos los calculados; no en EXPEDIDO), `DELETE /api/bultos/{id}` (204; solo un sobrante sin palet de un pedido no expedido), `PATCH /api/bultos/{id}/quitar-palet` (saca el bulto de su palet; 400 si no está en ninguno o si el palet o el pedido están expedidos, o el pedido cancelado), `PATCH /api/bultos/{id}/asignar-palet` `{paletId}`.
 - ADMIN: `PATCH /api/pedidos/{id}/salida` `{destinoId}`: salida manual; 400 si está EXPEDIDO/CANCELADO o si tiene bultos en un palet de otra salida.
 - ADMIN: `PATCH /api/bultos/{id}/asignar-palet` exige que el palet tenga la misma salida que el pedido.
 - ADMIN: `GET /api/palets`, `POST /api/palets` `{identificador,destinoId}`, `GET /api/palets/{id}` (con sus bultos), `PATCH /api/palets/{id}/expedir`. Un palet expedido no admite bultos.

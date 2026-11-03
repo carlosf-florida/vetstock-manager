@@ -5,6 +5,7 @@ import { fecha } from '../../format.js'
 import { Spinner, ErrorBox } from '../../components/Spinner.jsx'
 import { BadgeEstadoPedido, BadgeEstadoPago } from '../../components/Badges.jsx'
 import LineasPedido from '../../components/pedido/LineasPedido.jsx'
+import LogisticaPedido from '../../components/pedido/LogisticaPedido.jsx'
 import ImportesPedido from '../../components/pedido/ImportesPedido.jsx'
 import CronologiaFechas from '../../components/pedido/CronologiaFechas.jsx'
 import DocumentosSeccion from '../../components/pedido/DocumentosSeccion.jsx'
@@ -156,6 +157,8 @@ export default function AdminPedidoDetalle() {
           expedir={expedir}
         />
       </div>
+
+      <LogisticaPedido pedido={pedido} onCambio={cargar} />
 
       <div className="tarjeta">
         <h2>Líneas del pedido</h2>

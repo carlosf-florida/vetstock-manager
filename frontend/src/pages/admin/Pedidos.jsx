@@ -24,6 +24,9 @@ export default function AdminPedidos() {
   // Desde las tarjetas del resumen: ?situacion=FIRMA | PAGO | LISTO (misma regla que el contador)
   const [situacion, setSituacion] = useState(paramsUrl.get('situacion') || '')
   const [clinicaId, setClinicaId] = useState('')
+  const [salidas, setSalidas] = useState([])
+  // Filtro por salida: id de la salida, 'SIN' = sin asignar, '' = todas
+  const [salidaFiltro, setSalidaFiltro] = useState(paramsUrl.get('salida') || '')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
 
@@ -47,6 +50,7 @@ export default function AdminPedidos() {
   useEffect(() => { cargar() }, [estado, clinicaId])
   useEffect(() => {
     api.get('/api/clinicas').then((c) => setClinicas(Array.isArray(c) ? c : [])).catch(() => {})
+    api.get('/api/destinos').then((d) => setSalidas(Array.isArray(d) ? d : [])).catch(() => {})
   }, [])
 
   // Filtro por fecha de creación: las fechas llegan en ISO y se compara el día (AAAA-MM-DD)
@@ -135,6 +139,9 @@ export default function AdminPedidos() {
                 </>
               ),
             },
+            { key: 'salida', label: 'Salida', render: (p) => p.salida || <span className="texto-suave">Sin asignar</span> },
+            // Número real de bultos (paquetes) registrados, no unidades ni líneas
+            { key: 'bultos', label: 'Bultos', render: (p) => p.bultos ?? 0 },
             { key: 'total', label: 'Total', render: (p) => (totalPedido(p) != null ? dinero(totalPedido(p)) : '—') },
             { key: 'gestion', label: '', render: (p) => <Link className="btn btn-mini btn-secundario" to={`/admin/pedidos/${p.id}`}>Gestionar</Link> },
           ]}
@@ -146,6 +153,17 @@ export default function AdminPedidos() {
           placeholderBusqueda="Buscar por clínica, veterinario, nº…"
           filtros={[
             { etiqueta: 'Estado', valor: estado, setValor: setEstado, opciones: opcionesEstado, cumple: (p, v) => p.estado === v },
+            {
+              etiqueta: 'Salida',
+              valor: salidaFiltro,
+              setValor: setSalidaFiltro,
+              opciones: [
+                { value: '', label: 'Todas las salidas' },
+                { value: 'SIN', label: 'Sin asignar' },
+                ...salidas.map((d) => ({ value: String(d.id), label: d.etiqueta })),
+              ],
+              cumple: (p, v) => (v === 'SIN' ? !p.salidaId : String(p.salidaId) === v),
+            },
             {
               etiqueta: 'Clínica',
               valor: clinicaId,

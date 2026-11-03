@@ -74,7 +74,7 @@ export default function Layout() {
                     <Item to="/admin/pedidos" onClick={cerrar}>Pedidos</Item>
                     <Item to="/admin/bultos" onClick={cerrar}>Bultos</Item>
                     <Item to="/admin/palets" onClick={cerrar}>Palets</Item>
-                    <Item to="/admin/destinos" onClick={cerrar}>Destinos</Item>
+                    <Item to="/admin/destinos" onClick={cerrar}>Salidas</Item>
                     <Item to="/admin/informes" onClick={cerrar}>Informes</Item>
                     <Item to="/admin/odoo" onClick={cerrar}>Odoo</Item>
                   </>

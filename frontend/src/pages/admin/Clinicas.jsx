@@ -149,6 +149,7 @@ export default function AdminClinicas() {
   const [clinicas, setClinicas] = useState(null)
   const [veterinarios, setVeterinarios] = useState(null)
   const [auxiliares, setAuxiliares] = useState(null)
+  const [salidas, setSalidas] = useState([])
   const [error, setError] = useState(null)
   const [cargando, setCargando] = useState(true)
 
@@ -156,11 +157,13 @@ export default function AdminClinicas() {
     setCargando(true)
     setError(null)
     try {
-      const [c, v, a] = await Promise.all([
+      const [c, v, a, s] = await Promise.all([
         api.get('/api/clinicas'),
         api.get('/api/veterinarios'),
         api.get('/api/auxiliares'),
+        api.get('/api/destinos'),
       ])
+      setSalidas(Array.isArray(s) ? s : [])
       setClinicas(Array.isArray(c) ? c : [])
       setVeterinarios(Array.isArray(v) ? v : [])
       setAuxiliares(Array.isArray(a) ? a : [])
@@ -186,10 +189,24 @@ export default function AdminClinicas() {
     }
   }
 
+  // Salida habitual: solo afecta a los pedidos que se preparen a partir de ahora
+  async function cambiarSalida(clinicaId, e) {
+    const destinoId = e.target.value ? Number(e.target.value) : null
+    try {
+      await api.put(`/api/clinicas/${clinicaId}/salida-habitual`, { destinoId })
+      await cargarTodo()
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   return (
     <section>
       <h1>Clínicas y cuentas de acceso</h1>
-      <p className="texto-suave">Gestiona las clínicas cliente y sus veterinarios y auxiliares.</p>
+      <p className="texto-suave">
+        Gestiona las clínicas cliente, sus veterinarios y auxiliares y la salida de expedición habitual.
+        Cambiar la salida habitual no modifica los pedidos ya preparados o expedidos.
+      </p>
 
       <ErrorBox mensaje={error} onReintentar={cargarTodo} />
       {cargando && <Spinner texto="Cargando clínicas y cuentas…" />}
@@ -217,6 +234,13 @@ export default function AdminClinicas() {
                       {(veterinarios || []).filter((v) => v.clinicaId === c.id).map((v) => (
                         <option key={v.id} value={v.id}>{v.nombreCompleto || v.username}</option>
                       ))}
+                    </select>
+                  ) },
+                  { key: 'salida', label: 'Salida habitual', render: (c) => (
+                    <select className="input" value={c.destinoHabitualId || ''} onChange={(e) => cambiarSalida(c.id, e)}
+                      aria-label={`Salida habitual de ${c.nombre}`}>
+                      <option value="">— Sin salida —</option>
+                      {salidas.map((d) => <option key={d.id} value={d.id}>{d.etiqueta}</option>)}
                     </select>
                   ) },
                   { key: 'activa', label: 'Estado', render: (c) => c.activa === false

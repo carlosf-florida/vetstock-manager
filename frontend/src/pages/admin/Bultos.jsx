@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../../api.js'
 import { NOMBRE_ESTADO_PEDIDO } from '../../format.js'
 import Tabla from '../../components/Tabla.jsx'
@@ -12,7 +13,10 @@ export default function AdminBultos() {
   const [error, setError] = useState(null)
   const [ok, setOk] = useState(null)
 
-  const [form, setForm] = useState({ identificador: '', pedidoId: '' })
+  // Desde el detalle de un pedido se llega con ?pedidoId=… y el pedido ya viene elegido
+  const [paramsUrl] = useSearchParams()
+  const pedidoDesdeUrl = paramsUrl.get('pedidoId') || ''
+  const [form, setForm] = useState({ identificador: '', pedidoId: pedidoDesdeUrl })
   const [errores, setErrores] = useState({})
   const [guardando, setGuardando] = useState(false)
   const [asignando, setAsignando] = useState(null) // id del bulto en curso
@@ -58,8 +62,9 @@ export default function AdminBultos() {
         identificador: form.identificador.trim(),
         pedidoId: Number(form.pedidoId),
       })
-      setForm({ identificador: '', pedidoId: '' })
-      avisar('Bulto registrado.')
+      // Se mantiene el pedido elegido para poder registrar varios bultos seguidos
+      setForm({ identificador: '', pedidoId: form.pedidoId })
+      avisar(`Bulto registrado en el pedido #${form.pedidoId}.`)
       cargar()
     } catch (err) {
       setError(err.message)
@@ -119,6 +124,11 @@ export default function AdminBultos() {
         </form>
       </div>
 
+      {pedidoDesdeUrl && (
+        <p><Link to={`/admin/pedidos/${pedidoDesdeUrl}`}>← Volver al pedido #{pedidoDesdeUrl}</Link></p>
+      )}
+      <p className="texto-suave">Un bulto solo puede ir en un palet de la misma salida que su pedido.</p>
+
       <h2>Bultos registrados</h2>
       {cargando ? (
         <Spinner texto="Cargando bultos…" />
@@ -126,9 +136,10 @@ export default function AdminBultos() {
         <Tabla
           columns={[
             { key: 'identificador', label: 'Identificador' },
-            { key: 'pedidoId', label: 'Pedido', render: (b) => (b.pedidoId ? <>#{b.pedidoId}</> : '—') },
+            { key: 'pedidoId', label: 'Pedido', render: (b) => (b.pedidoId ? <Link to={`/admin/pedidos/${b.pedidoId}`}>#{b.pedidoId}</Link> : '—') },
+            { key: 'salidaPedido', label: 'Salida del pedido', render: (b) => b.salidaPedido || <span className="texto-suave">Sin asignar</span> },
             { key: 'palet', label: 'Palet asignado', render: (b) => b.paletId
-              ? <>#{b.paletId}{b.paletIdentificador ? ` · ${b.paletIdentificador}` : ''}</>
+              ? <>{b.paletIdentificador || `#${b.paletId}`}{b.paletSalida ? ` · ${b.paletSalida}` : ''}</>
               : <span className="etiqueta est-pago-pendiente"><span aria-hidden="true">⏳</span> Sin palet</span> },
             {
               key: 'asignar',
@@ -142,7 +153,7 @@ export default function AdminBultos() {
                   aria-label={`Asignar el bulto ${b.identificador} a un palet`}
                 >
                   <option value="">— Elige palet —</option>
-                  {palets.map((p) => <option key={p.id} value={p.id}>{p.identificador} ({p.destinoNombre || 'sin destino'})</option>)}
+                  {palets.map((p) => <option key={p.id} value={p.id}>{p.identificador} ({p.destinoEtiqueta || p.destinoNombre || 'sin salida'})</option>)}
                 </select>
               ),
             },

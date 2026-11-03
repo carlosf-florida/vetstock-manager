@@ -95,10 +95,10 @@ export default function AdminPalets() {
               {errores.identificador && <small className="error-campo">{errores.identificador}</small>}
             </label>
             <label className="campo">
-              <span>Destino *</span>
+              <span>Salida *</span>
               <select className="input" value={form.destinoId} onChange={(e) => setForm({ ...form, destinoId: e.target.value })}>
-                <option value="">— Elige un destino —</option>
-                {destinos.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
+                <option value="">— Elige una salida —</option>
+                {destinos.map((d) => <option key={d.id} value={d.id}>{d.etiqueta || d.nombre}</option>)}
               </select>
               {errores.destinoId && <small className="error-campo">{errores.destinoId}</small>}
             </label>
@@ -107,7 +107,7 @@ export default function AdminPalets() {
             {guardando ? 'Creando…' : 'Crear palet'}
           </button>
         </form>
-        <p className="texto-suave">¿Falta un destino? Créalo en la sección <strong>Destinos</strong>.</p>
+        <p className="texto-suave">¿Falta una salida? Créala en la sección <strong>Salidas</strong>. En un palet solo caben bultos de pedidos con su misma salida.</p>
       </div>
 
       <h2>Palets</h2>
@@ -119,13 +119,13 @@ export default function AdminPalets() {
         <div className="tabla-scroll">
           <table className="tabla">
             <thead>
-              <tr><th>Identificador</th><th>Destino</th><th>Bultos</th><th>Fecha expedición</th><th></th></tr>
+              <tr><th>Identificador</th><th>Salida</th><th>Bultos</th><th>Fecha expedición</th><th></th></tr>
             </thead>
             <tbody>
               {palets.map((p) => (
                 <tr key={p.id}>
                   <td>{p.identificador}</td>
-                  <td>{p.destinoNombre || `Destino #${p.destinoId}`}</td>
+                  <td>{p.destinoEtiqueta || p.destinoNombre || `Salida #${p.destinoId}`}</td>
                   <td>{p.bultos?.length ?? 0}</td>
                   <td>{p.fechaExpedicion || '—'}</td>
                   <td>

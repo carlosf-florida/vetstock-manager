@@ -97,10 +97,14 @@ El pago confirmado, la firma posterior y las transiciones de logística solicita
 
 ## Logística, documentos, informes y dashboard
 
-- ADMIN: `PATCH /api/pedidos/{id}/iniciar-preparacion`, `/preparar` (exige ≥1 bulto), `/expedir` (exige todos los bultos en un palet); todas exigen firma y pago.
+- ADMIN: `PATCH /api/pedidos/{id}/iniciar-preparacion`, `/preparar` (exige ≥1 bulto y asigna la salida habitual si el pedido no tiene; sin salida posible → 400), `/expedir` (exige todos los bultos en un palet); todas exigen firma y pago.
 - ADMIN: `GET /api/bultos?pedidoId=&paletId=`, `POST /api/bultos` `{identificador,pedidoId}`, `PATCH /api/bultos/{id}/asignar-palet` `{paletId}`.
+- ADMIN: `PATCH /api/pedidos/{id}/salida` `{destinoId}`: salida manual; 400 si está EXPEDIDO/CANCELADO o si tiene bultos en un palet de otra salida.
+- ADMIN: `PATCH /api/bultos/{id}/asignar-palet` exige que el palet tenga la misma salida que el pedido.
 - ADMIN: `GET /api/palets`, `POST /api/palets` `{identificador,destinoId}`, `GET /api/palets/{id}` (con sus bultos), `PATCH /api/palets/{id}/expedir`. Un palet expedido no admite bultos.
-- ADMIN: `GET /api/destinos`, `POST /api/destinos` `{nombre}`.
+- ADMIN: `GET /api/destinos`, `POST /api/destinos` y `PUT /api/destinos/{id}` `{codigo?,nombre}` (código único). Respuesta: `{id,codigo,nombre,etiqueta}`.
+- ADMIN: `PUT /api/clinicas/{id}/salida-habitual` `{destinoId|null}`; no cambia pedidos ya preparados.
+- Pedidos: `salidaId`, `salida`, `salidaManual`, `salidaAsignadaPor`, `fechaAsignacionSalida`, `salidaHabitualClinica` y `bultos` solo llegan con datos a ADMIN; a la clínica le llegan vacíos.
 - ADMIN: `POST /api/pedidos/{id}/documentos`, multipart PDF ≤10 MB con `archivo` y `tipo` PEDIDO/FACTURA/ALBARAN.
 - ADMIN o su clínica: `GET /api/pedidos/{id}/documentos`, `GET /api/documentos/{id}/descargar`.
 - ADMIN: `GET /api/informes/productos-top?limite=10`, `/pedidos-por-mes`, `/stock-bajo`, `/pendientes`, `/tiempos`, `/destinos`.

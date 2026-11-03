@@ -19,8 +19,8 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 
 ### Última ejecución registrada
 
-- Fecha: 2 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
-- Resultado: **62 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
+- Fecha: 3 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
+- Resultado: **67 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
 - La prueba de concurrencia se repitió 3 veces seguidas con el mismo resultado.
 
 ### Correspondencia con las pruebas pedidas
@@ -53,6 +53,12 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 | Firma de otra persona o de un contenido anterior → no habilita preparación | `…firmaNoValida` y `PedidoFirmaPagoTest.firmaNoValidaSiNoEsDelAsignadoOCambiaElContenido` |
 | Rechazo solo del veterinario asignado; pagado → devolución pendiente | `…rechazoDelVeterinario` |
 | Permisos de la clasificación | `…permisosDeLaClasificacion` |
+| Salida habitual al preparar, recuento de bultos, sin duplicados, la clínica no ve la logística | `LogisticaSalidasIntegracionTest.salidaHabitualYRecuentoDeBultos` |
+| Salida manual respetada al preparar | `…salidaManualSeRespeta` |
+| Clínica sin salida habitual → no se prepara hasta elegir una | `…clinicaSinSalida` |
+| Cambio de salida: no si expedido ni con bultos en palet de otra salida | `…cambioDeSalidaConReglas` |
+| Palet de otra salida rechazado | `RecorridoPedidoIntegracionTest.recorridoCompleto` y `…cambioDeSalidaConReglas` |
+| Permisos de salidas y bultos | `…permisos` |
 
 ### Errores reales que encontraron estas pruebas (ya corregidos)
 
@@ -150,6 +156,34 @@ Se dejaron 1 o 2 pedidos de cada caso (copia previa: `_respaldos-vetstock/antes-
 de auxiliar (no válida) · #17 y #18 firmados y pagados (listos) · #15 en preparación · #7 cancelado.
 En Odoo se borraron las copias de los pedidos eliminados (S00001, S00002, S00004, S00006, S00009).
 
+## 2d. Salidas de expedición y bultos (en vivo, 3 de noviembre de 2026)
+
+Docker con Odoo real, sobre la base `vetstock` tras aplicar `010` (copia previa:
+`_respaldos-vetstock/antes-migracion-010-20261103.sql`). Capturas en
+[capturas/logistica](capturas/logistica/).
+
+| # | Prueba | Cómo | Resultado |
+|---|---|---|---|
+| 1 | Código 14 en Regional y salida habitual de San Roque | Navegador: Salidas → Editar; Clínicas → selector | Correcto, guardado en la base |
+| 2 | Preparar un pedido firmado y pagado | API: #17 → preparar | Salida «14 - Regional», automática, con usuario y fecha |
+| 3 | Salida manual se respeta | API: #18 → Valencia → preparar | Sigue Valencia (manual) |
+| 4 | Clínica sin salida | Se quitó un momento la salida habitual de San Roque; #19 | Preparar → 400 con mensaje; aviso y selector en el detalle; tras elegir salida se preparó |
+| 5 | Dos bultos | #17 con BULTO-17-01 y 02; repetir 02 → 400 | «Bultos: 2» en lista y detalle |
+| 6 | Pantalla de bultos | Navegador: Admin → Bultos | Aparecen con pedido, salida y palet |
+| 7 | Odoo | JSON-RPC y lectura de la página (el panel no pintaba Odoo) | Formulario S00008: Bultos y Salida en solo lectura; lista VetStock con columnas Bultos y Salida |
+| 8 | Reexportar | `POST /api/odoo/pedidos/17/exportar` dos veces | Sigue habiendo 1 pedido VSM-17 (mismo ID 8) y 1 línea |
+| 9 | Tercer bulto | BULTO-17-03 | 3 en VetStock y 3 en Odoo |
+| 10 | Palet incompatible | Bulto de #17 (Regional) a palet de Valencia | 400; al palet Regional sí; cambiar salida con bulto en palet → 400 |
+| 11 | Odoo parado | `docker stop vetstock-odoo`, bulto en #18 | Bulto guardado; «pendiente de sincronizar» con el error en el detalle; tras arrancar Odoo, «Actualizar en Odoo» → 2 bultos en Odoo, sin pendiente |
+| 12 | Sin firma o sin pago | #11 (firma de auxiliar) y #8 (sin firmar ni pagar) | Bloqueados (400), también registrar bultos |
+| 13 | Cambiar salida habitual | San Roque → Alicante y vuelta a Regional | #17, #18 y #19 no cambian |
+| 14 | Permisos | dr.garcia y aux.sanroque | 403 en salidas, bultos, palets y salida del pedido; el pedido les llega sin salida ni bultos |
+| — | Expedir | #19: sin palet → 400; con palet → EXPEDIDO; cambiar salida → 400 | Odoo: EXPEDIDO, 1 bulto, 14 - Regional |
+
+Datos que quedan de estas pruebas: #17 y #18 PREPARADO, #19 EXPEDIDO (stock físico
+descontado una vez), 6 bultos (BULTO-17-01/02/03, BULTO-18-01/02, BULTO-19-01) y 2
+palets (PALET-VAL-01, PALET-REG-01).
+
 ## 3. Guía de comprobación manual (para repetirla)
 
 Reinicia los datos (ver [instalacion-windows.md](instalacion-windows.md), apartado 4) y sigue el
@@ -158,13 +192,12 @@ Reinicia los datos (ver [instalacion-windows.md](instalacion-windows.md), aparta
 - Móvil: abre la aplicación con el modo responsive del navegador (375 px) y firma con el dedo o simulando táctil.
 - Entra como `aux.mediterraneo` e intenta abrir `/pedidos/2` → acceso denegado.
 - Sube un PDF como admin en un pedido (pestaña Documentos) y descárgalo como `aux.sanroque`.
-- Admin → Bultos → registra un bulto del pedido → Palets → crea un palet con destino Valencia → asigna el bulto → en el pedido, «Marcar como preparado» y «Expedir» → el stock físico baja en Admin → Stock.
+- Admin → Bultos → registra un bulto del pedido → en el pedido, «Marcar como preparado» (toma la salida de la clínica) → Palets → crea un palet con esa misma salida → asigna el bulto → «Expedir» → el stock físico baja en Admin → Stock.
 
 ## 4. No comprobado (pendiente)
 
 - Firma con el dedo en un **móvil o tableta real** (solo con ratón y modo responsive).
 - Importación del proyecto en **IntelliJ** (no se puede comprobar desde aquí).
 - Arranque completo con `docker compose up` usando la nueva versión **sobre el volumen de datos antiguo** (requiere aplicar antes las migraciones 006–008; ver la guía).
-- Integración real con Odoo en esta revisión (sus pruebas unitarias sí pasan).
 - Lectores de pantalla y accesibilidad más allá de etiquetas y estados en texto.
 - Pruebas de carga.

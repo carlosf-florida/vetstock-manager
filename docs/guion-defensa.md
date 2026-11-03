@@ -19,7 +19,7 @@ Tecnologías: Spring Boot 4 (Java 21), MySQL, React + Vite y pruebas JUnit.
 2. **`dr.garcia`** (otra ventana): el pedido → *Revisar y firmar* → ve el contenido → dibuja la firma → confirma. Ahora está **Firmado** y bloqueado.
 3. *Pagar* → pasarela de **demostración** → *Simular pago fallido* → *Reintentar* (referencia nueva) → *Simular pago correcto* → **Listo para preparar**.
    Explicar: «El pedido no se marca como pagado por volver a la página de éxito, sino cuando el backend recibe una notificación **firmada con HMAC** y comprueba el importe y la moneda.»
-4. **`admin`**: Pedidos (filtros y columnas de firma y pago) → *Iniciar preparación* → intentar *Marcar como preparado* sin bultos (regla) → Bultos → Palets (destino Valencia) → asignar → *Preparado* → *Expedir* → en Stock se ve que el físico baja una sola vez.
+4. **`admin`**: Pedidos (filtros y columnas de firma y pago) → *Iniciar preparación* → intentar *Marcar como preparado* sin bultos (regla) → Bultos (registrar desde la ficha del pedido) → *Preparado* (toma la salida habitual «14 - Regional» y se ve en las columnas Salida y Bultos) → Palets (salida 14 - Regional) → asignar → *Expedir* → en Stock se ve que el físico baja una sola vez.
 
 ## 2b. Firma y pago separados (1 min)
 

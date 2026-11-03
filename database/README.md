@@ -13,8 +13,9 @@ Todo lo relativo a la base de datos de VetStock Manager vive en esta carpeta.
 - `migrations/007_caducidad_reservas.sql` — añade `pedidos.motivo_cancelacion` para la caducidad de reservas (72 h sin pago). Se puede repetir.
 - `migrations/008_vistas_powerbi.sql` — vistas de solo lectura para Power BI (ver `docs/power-bi.md`). Se puede repetir.
 - `migrations/009_rechazo_devolucion.sql` — añade `pedidos.devolucion_pendiente` (pedido pagado y después rechazado por el veterinario). Se puede repetir.
+- `migrations/010_salidas_expedicion.sql` — salidas de expedición: `destinos.codigo`, `clinicas.destino_habitual_id` y salida del pedido (`pedidos.destino_id`, `destino_manual`, `destino_asignado_por_id`, `fecha_asignacion_destino`). No asigna salida a pedidos existentes. Se puede repetir (ver `docs/logistica-salidas-bultos.md`).
 
-**Instalaciones existentes:** aplicar en orden las migraciones que falten (002–009) y no volver a ejecutar el esquema inicial si hay datos que conservar. Firma y pago pueden llegar en cualquier orden; solo se prepara con firma válida y pago completo (ver `docs/modelo-y-reglas.md`). Instrucciones para Windows: `docs/instalacion-windows.md`. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
+**Instalaciones existentes:** aplicar en orden las migraciones que falten (002–010) y no volver a ejecutar el esquema inicial si hay datos que conservar. Firma y pago pueden llegar en cualquier orden; solo se prepara con firma válida y pago completo (ver `docs/modelo-y-reglas.md`). Instrucciones para Windows: `docs/instalacion-windows.md`. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
 
 ## Cómo cargarla
 
@@ -37,8 +38,8 @@ El backend se conecta con las credenciales de `backend/src/main/resources/applic
 | `lineas_pedido` | Líneas: producto, cantidad y **precio unitario copiado** en el momento del pedido (histórico inmune a cambios de precio) | N:1 con `pedidos` y `productos` |
 | `firmas` | Una confirmación por pedido: firmante real en `usuario_id`, tipo (`DIBUJO`/`IMAGEN`), imagen PNG/JPG, colegiado opcional identificativo y copia inmutable | 1:1 con `pedidos`; N:1 con `usuarios` |
 | `pagos` | Intentos de pago: referencia única, importe, moneda, proveedor, estado y nº de intentos | N:1 con `pedidos` (varios intentos = varios registros) |
-| `destinos` | Destinos de envío (por ejemplo ciudades) | — |
-| `palets` | Palets de expedición con destino y fecha de expedición | N:1 con `destinos` |
+| `destinos` | Salidas de expedición: código opcional y único (p. ej. `14`) y nombre | — |
+| `palets` | Palets de expedición con su salida y fecha de expedición | N:1 con `destinos` |
 | `bultos` | Bultos individuales asignados a un palet | N:1 con `palets` y `pedidos` |
 | `documentos` | PDF adjuntos (máx. 10 MB) guardados en la base de datos, con tipo y quién lo subió | N:1 con `pedidos` y `usuarios` |
 | `movimientos_stock` | Historial de entradas/salidas manuales y consumos por expedición | N:1 con `productos` y `usuarios` |
@@ -63,7 +64,7 @@ El backend se conecta con las credenciales de `backend/src/main/resources/applic
 - 3 clínicas, 3 veterinarios, 1 auxiliar y 1 administrador.
 - 10 productos de las 3 categorías (MED, CLI, ALI) con stock variado (hay 3 bajo mínimo para ver el aviso).
 - 4 pedidos en distintos estados (borrador, pendiente de firma, en preparación y expedido con su histórico completo).
-- 3 destinos, movimientos de stock de ejemplo.
+- 3 salidas (Valencia, Alicante y Regional con código 14, salida habitual de San Roque), movimientos de stock de ejemplo.
 
 ### Cuentas de prueba
 

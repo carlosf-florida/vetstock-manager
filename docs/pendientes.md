@@ -1,6 +1,6 @@
 # Pendientes
 
-Actualizado el 2 de noviembre de 2026. Entrega: finales de febrero de 2027.
+Actualizado el 3 de noviembre de 2026. Entrega: finales de febrero de 2027.
 
 ## Para la entrega académica (recomendado)
 
@@ -10,9 +10,10 @@ Actualizado el 2 de noviembre de 2026. Entrega: finales de febrero de 2027.
 | Alta | Comprobar la importación en IntelliJ (ver `instalacion-windows.md`, apartado 7) |
 | Alta | Ensayar el guion de defensa con los datos recién cargados |
 | Media | Edición y baja (desactivación) de usuarios y clínicas en administración |
-| Media | Botón «Registrar bulto» directamente desde la ficha del pedido (ahora se hace en Admin → Bultos) |
 | Media | Marcar un palet como expedido desde la interfaz (el endpoint existe: `PATCH /api/palets/{id}/expedir`) |
 | Media | Informe Power BI en Desktop sobre las vistas, si hay acceso a Power BI |
+| Media | Confirmar los códigos de las salidas Valencia y Alicante (solo Regional = 14 está confirmado) y la salida habitual del resto de clínicas |
+| Baja | Captura de Odoo con las columnas Bultos y Salida (en esta revisión se comprobó leyendo la página) |
 | Baja | Paginación en el servidor si crecen mucho los pedidos (ahora la tabla pagina en el cliente) |
 | Baja | Actualizar `backend/README.md` y `docs/guia-del-proyecto.md` si se cambian más reglas |
 

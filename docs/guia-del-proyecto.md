@@ -144,8 +144,8 @@ Spring elige una según la propiedad `vetstock.odoo.modo`:
 `odoo_log`; las tablas `productos`, `clinicas` y `pedidos` guardan el
 `odoo_id` asignado por el ERP. Todo es **idempotente**: sincronizar dos veces
 no duplica productos ni clientes. En una fase anterior se comprobó contra un
-servidor Odoo real (pedidos de venta S00001, S00002...); en la revisión actual
-solo se han ejecutado sus pruebas unitarias.
+servidor Odoo real (pedidos de venta S00001, S00002...) y el 3 de noviembre de 2026 se
+volvió a comprobar en vivo (bultos, salida y reintento con Odoo parado).
 
 Para levantar el servidor Odoo de pruebas: `bash scripts/arrancar_odoo.sh`.
 
@@ -156,7 +156,7 @@ deshace el pago ni la firma; queda pendiente para reintento manual. La nota de
 `sale.order` contiene un único bloque de estado de firma, conservando las notas
 manuales. Usa delimitadores de texto porque Odoo elimina atributos HTML. Cuando el
 pedido está pagado y con firma válida, lo confirma en Odoo (presupuesto → pedido de venta);
-no altera impuestos ni registra cobros reales.
+no altera impuestos ni registra cobros reales. También envía los **bultos** y la **salida** de expedición (campos de solo lectura en Odoo; ver [logistica-salidas-bultos.md](logistica-salidas-bultos.md)).
 
 ### La máquina de estados (detallada)
 

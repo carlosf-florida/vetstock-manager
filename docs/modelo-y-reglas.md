@@ -5,15 +5,16 @@
 | Tabla | Para qué sirve | Relaciones |
 |---|---|---|
 | `usuarios` | Cuenta, contraseña (BCrypt) y rol: ADMIN, VETERINARIO o AUXILIAR | — |
-| `clinicas` | Clínicas cliente | `veterinario_responsable_id` → `veterinarios` |
+| `clinicas` | Clínicas cliente | `veterinario_responsable_id` → `veterinarios`; `destino_habitual_id` → `destinos` (salida habitual) |
 | `veterinarios` | Veterinario de una clínica (nº de colegiado) | 1:1 `usuarios`, N:1 `clinicas` |
 | `auxiliares` | Auxiliar de una clínica | 1:1 `usuarios`, N:1 `clinicas` |
 | `productos` | Referencia única, nombre, descripción, precio, `stock_actual`, `stock_reservado`, `stock_minimo` | — |
-| `pedidos` | Estado, veterinario firmante, creador, último modificador, IVA y fechas de cada hito | N:1 `clinicas`, `veterinarios`, `usuarios` |
+| `pedidos` | Estado, veterinario firmante, creador, último modificador, IVA, fechas de cada hito y salida de expedición (`destino_id`, `destino_manual`, quién y cuándo) | N:1 `clinicas`, `veterinarios`, `usuarios`, `destinos` |
 | `lineas_pedido` | Producto, cantidad y **precio copiado** al crear la línea | N:1 `pedidos`; único (pedido, producto) |
 | `firmas` | Firmante, tipo, imagen, fecha y **copia JSON inmutable** del contenido autorizado | 1:1 `pedidos` |
 | `pagos` | Intentos de pago: referencia única, importe, moneda, estado e intentos de notificación | N:1 `pedidos` |
-| `destinos`, `palets`, `bultos` | Logística: bulto → pedido; bulto → palet → destino | |
+| `destinos` | Salidas de expedición: `codigo` opcional y único (p. ej. «14») y nombre | |
+| `palets`, `bultos` | Logística: bulto → pedido; bulto → palet → salida | |
 | `documentos` | PDF de pedido, factura o albarán (de prueba) | N:1 `pedidos` |
 | `movimientos_stock` | Entradas y salidas, incluida la salida al expedir | |
 | `odoo_log` | Registro de la integración opcional con Odoo | |
@@ -23,7 +24,7 @@ Stock **disponible** = `stock_actual - stock_reservado` (se calcula, no se guard
 Scripts: `database/migrations/001_esquema_inicial.sql` crea el esquema actual
 completo con datos ficticios y se puede volver a ejecutar para reiniciar la
 demo. Las migraciones `002`–`007` actualizan bases antiguas sin borrar datos, y
-`008` crea las vistas para Power BI.
+`008` crea las vistas para Power BI, `009` añade la devolución pendiente y `010` las salidas de expedición.
 
 ## Veterinario responsable de cada clínica
 
@@ -88,5 +89,5 @@ sustituye a la no válida (una sola firma por pedido).
 9. **Stock:** se reserva al enviar a firma, en una sola sentencia SQL condicionada (sin sobreventa en concurrencia). Al expedir se descuenta el físico y se libera la reserva, una sola vez.
 10. **Caducidad (decisión acordada):** cada 15 minutos, los pagos PENDIENTES de más de 60 min pasan a FALLADO. Los pedidos enviados a firma sin pago confirmado durante **72 h** se cancelan y liberan la reserva, con el motivo guardado. Un pedido con un pago en curso reciente no caduca en esa pasada.
 11. **Un pedido pagado no se cancela desde la aplicación.** Solo el veterinario asignado puede **rechazarlo** mientras no lo haya firmado: se cancela, libera stock y queda «devolución pendiente» (el dinero se devuelve fuera de la aplicación; no hay reembolsos en el alcance).
-12. **Logística:** PREPARADO exige al menos un bulto. EXPEDIDO exige todos los bultos asignados a un palet (y, por tanto, a un destino). Un palet expedido no admite bultos.
+12. **Logística:** PREPARADO exige al menos un bulto y una salida: si el pedido no la tiene, toma la salida habitual de la clínica; si la clínica tampoco tiene, se rechaza. EXPEDIDO exige todos los bultos en un palet. Un bulto solo va en un palet de la misma salida que su pedido. La salida solo la cambia administración y nunca en un pedido expedido o cancelado. Un palet expedido no admite bultos. Detalle en [logistica-salidas-bultos.md](logistica-salidas-bultos.md).
 13. Documentos: solo PDF reales (cabecera `%PDF-`) de 10 MB como máximo. Los sube administración y los descarga la clínica del pedido.

@@ -61,4 +61,18 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                 p.getFechaAsignacionDestino(),
                 habitual == null ? null : habitual.getEtiqueta(), bultos);
     }
+
+    /** Copia sin la logística interna (salida, quién la asignó y bultos): la clínica no la ve. */
+    public PedidoResponse sinLogisticaInterna() {
+        return new PedidoResponse(id, clinicaId, clinicaNombre, veterinarioId, veterinarioNombre,
+                creadoPorNombre, creadoPorUsername, estado, observaciones, total,
+                fechaCreacion, fechaEnvioFirma, fechaFirma, fechaPago,
+                fechaListoPreparar, fechaInicioPreparacion, fechaPreparacion, fechaExpedicion,
+                fechaCancelacion, lineas, estadoFirma, estadoPago, firmanteNombre, firmanteRol,
+                veterinarioUsername, numeroColegiadoResponsable, odooId,
+                odooSincronizacionPendiente, odooUltimoError, baseImponible, ivaPorcentaje,
+                importeIva, moneda, modificadoPorNombre, fechaModificacion, motivoCancelacion,
+                devolucionPendiente, autorizacion,
+                null, null, false, null, null, null, null);
+    }
 }

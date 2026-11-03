@@ -66,7 +66,7 @@ export default function LogisticaPedido({ pedido, onCambio }) {
       </p>
       <p className="texto-suave">
         Salida habitual de la clínica: {pedido.salidaHabitualClinica || 'ninguna configurada'}.
-        {!pedido.salida && ' Al marcar el pedido como preparado se le asignará la salida habitual, salvo que elijas otra aquí.'}
+        {!pedido.salida && pedido.salidaHabitualClinica && ' Al marcar el pedido como preparado se le asignará la salida habitual, salvo que elijas otra aquí.'}
       </p>
       {faltaSalida && (
         <p className="caja-aviso">

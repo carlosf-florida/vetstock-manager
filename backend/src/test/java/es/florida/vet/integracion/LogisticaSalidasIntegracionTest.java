@@ -67,6 +67,12 @@ class LogisticaSalidasIntegracionTest extends IntegracionBase {
 
         bulto(id, "LS-C-" + id);
         getJson(admin, "/api/pedidos/" + id).andExpect(jsonPath("$.bultos").value(3));
+        // La clínica no ve la logística interna de su pedido
+        getJson(drGarcia(), "/api/pedidos/" + id).andExpect(status().isOk())
+                .andExpect(jsonPath("$.salida").doesNotExist()).andExpect(jsonPath("$.bultos").doesNotExist())
+                .andExpect(jsonPath("$.salidaAsignadaPor").doesNotExist());
+        JsonNode listaClinica = json(getJson(auxSanRoque(), "/api/pedidos"));
+        listaClinica.forEach(p -> assertTrue(!p.hasNonNull("salida") && !p.hasNonNull("bultos"), "la clínica ve la salida o los bultos"));
 
         // Cambiar la salida habitual de la clínica NO cambia los pedidos ya preparados
         putJson(admin, "/api/clinicas/1/salida-habitual", "{\"destinoId\":2}").andExpect(status().isOk());

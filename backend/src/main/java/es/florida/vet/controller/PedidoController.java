@@ -47,39 +47,40 @@ public class PedidoController {
                                        @RequestParam(required = false) Long clinicaId,
                                        Authentication auth) {
         EstadoPedido estadoPedido = parseEstado(estado);
-        return pedidoService.listar(estadoPedido, clinicaId, auth.getName(), AuthUtil.esAdmin(auth));
+        List<PedidoResponse> pedidos = pedidoService.listar(estadoPedido, clinicaId, auth.getName(), AuthUtil.esAdmin(auth));
+        return AuthUtil.esAdmin(auth) ? pedidos : pedidos.stream().map(PedidoResponse::sinLogisticaInterna).toList();
     }
 
     @GetMapping("/{id}")
     public PedidoResponse obtener(@PathVariable Long id, Authentication auth) {
-        return pedidoService.obtener(id, auth.getName(), AuthUtil.esAdmin(auth));
+        return segunRol(pedidoService.obtener(id, auth.getName(), AuthUtil.esAdmin(auth)), auth);
     }
 
     /** Crear pedido: ADMIN (en nombre de un cliente), VETERINARIO o AUXILIAR. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PedidoResponse crear(@Valid @RequestBody PedidoRequest datos, Authentication auth) {
-        return pedidoService.crear(datos, auth.getName(), AuthUtil.esAdmin(auth));
+        return segunRol(pedidoService.crear(datos, auth.getName(), AuthUtil.esAdmin(auth)), auth);
     }
 
     /** Reemplazar líneas de un pedido en BORRADOR (creador o ADMIN). */
     @PutMapping("/{id}/lineas")
     public PedidoResponse modificarLineas(@PathVariable Long id, @Valid @RequestBody LineasRequest datos,
                                           Authentication auth) {
-        return pedidoService.modificarLineas(id, datos, auth.getName(), AuthUtil.esAdmin(auth));
+        return segunRol(pedidoService.modificarLineas(id, datos, auth.getName(), AuthUtil.esAdmin(auth)), auth);
     }
 
     /** BORRADOR -> PENDIENTE_FIRMA: reserva el stock de forma atómica. */
     @PatchMapping("/{id}/enviar-firma")
     public PedidoResponse enviarFirma(@PathVariable Long id, Authentication auth) {
-        return pedidoService.enviarFirma(id, auth.getName(), AuthUtil.esAdmin(auth));
+        return segunRol(pedidoService.enviarFirma(id, auth.getName(), AuthUtil.esAdmin(auth)), auth);
     }
 
     /** PENDIENTE_FIRMA -> FIRMADO: SOLO el veterinario asignado. */
     @PatchMapping("/{id}/firmar")
     public PedidoResponse firmar(@PathVariable Long id, @Valid @RequestBody FirmaRequest datos,
                                  Authentication auth) {
-        return pedidoService.firmar(id, datos, auth.getName());
+        return segunRol(pedidoService.firmar(id, datos, auth.getName()), auth);
     }
 
     @GetMapping("/{id}/firma")
@@ -97,12 +98,12 @@ public class PedidoController {
     /** El veterinario asignado rechaza un pedido que no ha firmado. Cuerpo: {"motivo": "..."} */
     @PatchMapping("/{id}/rechazar")
     public PedidoResponse rechazar(@PathVariable Long id, @RequestBody java.util.Map<String, String> cuerpo, Authentication auth) {
-        return pedidoService.rechazar(id, cuerpo.get("motivo"), auth.getName());
+        return segunRol(pedidoService.rechazar(id, cuerpo.get("motivo"), auth.getName()), auth);
     }
 
     @PatchMapping("/{id}/cancelar")
     public PedidoResponse cancelar(@PathVariable Long id, Authentication auth) {
-        return pedidoService.cancelar(id, auth.getName(), AuthUtil.esAdmin(auth));
+        return segunRol(pedidoService.cancelar(id, auth.getName(), AuthUtil.esAdmin(auth)), auth);
     }
 
     // ----- Estados internos (solo ADMIN; lo protege SecurityConfig) -----
@@ -120,6 +121,11 @@ public class PedidoController {
     @PatchMapping("/{id}/expedir")
     public PedidoResponse expedir(@PathVariable Long id, Authentication auth) {
         return pedidoService.cambiarEstadoInterno(id, EstadoPedido.EXPEDIDO, auth.getName());
+    }
+
+    /** La salida de expedición y los bultos son logística interna: solo los ve administración. */
+    private PedidoResponse segunRol(PedidoResponse pedido, Authentication auth) {
+        return AuthUtil.esAdmin(auth) ? pedido : pedido.sinLogisticaInterna();
     }
 
     private EstadoPedido parseEstado(String estado) {

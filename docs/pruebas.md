@@ -188,9 +188,9 @@ Docker con Odoo real, sobre la base `vetstock` tras aplicar `010` (copia previa:
 | 14 | Permisos | dr.garcia y aux.sanroque | 403 en salidas, bultos, palets y salida del pedido; el pedido les llega sin salida ni bultos |
 | — | Expedir | #19: sin palet → 400; con palet → EXPEDIDO; cambiar salida → 400 | Odoo: EXPEDIDO, 1 bulto, 14 - Regional |
 
-Datos que quedan de estas pruebas: #17 y #18 PREPARADO, #19 EXPEDIDO (stock físico
-descontado una vez), 6 bultos (BULTO-17-01/02/03, BULTO-18-01/02, BULTO-19-01) y 2
-palets (PALET-VAL-01, PALET-REG-01).
+Datos que quedaron de estas pruebas: #17 y #18 PREPARADO, #19 EXPEDIDO (stock físico
+descontado una vez), 6 bultos y 2 palets (PALET-VAL-01, PALET-REG-01). Con la regla de
+bultos por peso (2e) sobraban 3; se limpiaron después (ver abajo).
 
 ## 2e. Bultos por peso (en vivo, 3 de noviembre de 2026)
 
@@ -206,6 +206,7 @@ Tras aplicar `011` y los pesos ficticios de la demo (copia previa:
 | Reexportar 2 veces | 1 solo pedido VSM-21 en Odoo y 2 registros de bultos |
 | Quitar el peso de la vacuna desde Admin → Productos | El pedido #11 muestra «Cálculo incompleto: falta el peso de Vacuna antirrábica. Peso conocido: 18,5 kg»; registrar bulto → 400. Peso restaurado (0,020 kg) desde la misma pantalla |
 | Pedidos de prueba anteriores | #17: 3 registros y le corresponde 1; #18: 2 y 1, todos en palets. La ficha avisa y ofrece «Sacar del palet» en cada bulto. No se ha cambiado nada (ver pendientes) |
+| Limpieza de sobrantes (#17 y #18) | Copia previa `_respaldos-vetstock/antes-limpiar-bultos-sobrantes-20261103.sql`. Sacados del palet y eliminados BULTO-17-02, BULTO-17-03 y BULTO-18-02. Eliminar el último bulto de #17 → 400 (no sobra). Ahora #17 y #18 tienen 1 registro = 1 calculado (BULTO-17-01 en PALET-REG-01, BULTO-18-01 en PALET-VAL-01). Odoo: VSM-17 y VSM-18 con 1 bulto y su peso; VSM-19 reexportado (1 bulto, 0,45 kg) |
 | Sacar del palet (#21) | VSM-21-B1 al palet PALET-REG-01 y sacarlo → 200 (vuelve a quedar sin palet); repetir → 400; BULTO-19-01 (pedido expedido) → 400 |
 
 Errores encontrados y corregidos en esta prueba: editar un producto desde la pantalla fallaba

@@ -206,7 +206,7 @@ class OdooJsonRpcConnectorTest {
         return new OdooConnector.FichaPedido("VSM-15", 7,
                 List.of(new OdooConnector.LineaPedido("CLI-001", 2, new BigDecimal("9.95"))),
                 99, firmaValida ? "FIRMADO" : "PENDIENTE", "Dr. Antonio García", null, null, null, estado,
-                null, null, null, null, null, pagado, firmaValida, "Sonia Ruiz (Auxiliar)", 2, "14 - Regional");
+                null, null, null, null, null, pagado, firmaValida, "Sonia Ruiz (Auxiliar)", 2, "14 - Regional", new BigDecimal("37.500"));
     }
 
     @Test

@@ -106,13 +106,25 @@ public class LogisticaService {
     public BultoResponse crearBulto(BultoRequest datos) {
         Pedido pedido = pedidoRepository.findById(datos.pedidoId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("El pedido no existe"));
-        // Solo pedidos que ya superaron el pago pueden tener bultos
+        // Solo pedidos que ya superaron el pago y aún no han salido pueden tener bultos nuevos
         boolean preparacionValida = pedido.getEstado() == EstadoPedido.LISTO_PREPARAR
                 || pedido.getEstado() == EstadoPedido.EN_PREPARACION
-                || pedido.getEstado() == EstadoPedido.PREPARADO
-                || pedido.getEstado() == EstadoPedido.EXPEDIDO;
+                || pedido.getEstado() == EstadoPedido.PREPARADO;
         if (!preparacionValida) {
-            throw new ReglaNegocioException("El pedido todavía no está listo para preparar");
+            throw new ReglaNegocioException(pedido.getEstado() == EstadoPedido.EXPEDIDO
+                    ? "El pedido ya está expedido: no admite bultos nuevos"
+                    : "El pedido todavía no está listo para preparar");
+        }
+        // El registro manual no puede pasar de los bultos que exige el peso del pedido
+        PesoPedido peso = PesoPedido.de(pedido);
+        if (!peso.completo()) {
+            throw new ReglaNegocioException("No se pueden registrar bultos: falta el peso de "
+                    + String.join(", ", peso.productosSinPeso()));
+        }
+        long registrados = bultoRepository.countByPedidoId(pedido.getId());
+        if (registrados >= peso.bultosCalculados()) {
+            throw new ReglaNegocioException("El pedido ya tiene los " + peso.bultosCalculados()
+                    + " bultos que le corresponden por su peso (" + peso.pesoTotalKg() + " kg)");
         }
         String identificador = datos.identificador().trim();
         if (bultoRepository.existsByIdentificador(identificador)) {
@@ -121,6 +133,32 @@ public class LogisticaService {
         Bulto bulto = bultoRepository.save(new Bulto(identificador, pedido));
         sincronizarConOdoo(pedido); // cambia el número de bultos que muestra Odoo
         return BultoResponse.desde(bulto);
+    }
+
+    /**
+     * Elimina un bulto SOBRANTE (hay más registros que los calculados por peso). Nunca uno que
+     * ya esté en un palet ni de un pedido expedido o cancelado: esos conflictos los resuelve
+     * administración a mano (sacarlo del palet no existe a propósito).
+     */
+    @Transactional
+    public void eliminarBulto(Long bultoId) {
+        Bulto bulto = bultoRepository.findById(bultoId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("El bulto no existe"));
+        Pedido pedido = bulto.getPedido();
+        if (pedido.getEstado() == EstadoPedido.EXPEDIDO || pedido.getEstado() == EstadoPedido.CANCELADO) {
+            throw new ReglaNegocioException("No se puede eliminar un bulto de un pedido expedido o cancelado");
+        }
+        if (bulto.getPalet() != null) {
+            throw new ReglaNegocioException("El bulto está en el palet " + bulto.getPalet().getIdentificador()
+                    + ": no se puede eliminar");
+        }
+        PesoPedido peso = PesoPedido.de(pedido);
+        long registrados = bultoRepository.countByPedidoId(pedido.getId());
+        if (!peso.completo() || registrados <= peso.bultosCalculados()) {
+            throw new ReglaNegocioException("Solo se pueden eliminar bultos que sobren respecto a los calculados por peso");
+        }
+        bultoRepository.delete(bulto);
+        sincronizarConOdoo(pedido);
     }
 
     @Transactional

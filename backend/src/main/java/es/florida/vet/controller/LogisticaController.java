@@ -45,6 +45,13 @@ public class LogisticaController {
         return logisticaService.crearBulto(datos);
     }
 
+    /** Elimina un bulto sobrante (más registros que los calculados por peso) que no esté en un palet. */
+    @org.springframework.web.bind.annotation.DeleteMapping("/bultos/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void eliminarBulto(@PathVariable Long id) {
+        logisticaService.eliminarBulto(id);
+    }
+
     @PatchMapping("/bultos/{id}/asignar-palet")
     public BultoResponse asignarPalet(@PathVariable Long id, @RequestBody Map<String, Long> cuerpo) {
         Long paletId = cuerpo.get("paletId");

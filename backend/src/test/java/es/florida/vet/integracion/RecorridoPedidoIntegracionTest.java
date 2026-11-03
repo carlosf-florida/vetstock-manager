@@ -110,13 +110,16 @@ class RecorridoPedidoIntegracionTest extends IntegracionBase {
         postJson(aux, "/api/pagos/" + id + "/iniciar", "{}").andExpect(status().isBadRequest());
         patchJson(aux, "/api/pedidos/" + id + "/cancelar", null).andExpect(status().isBadRequest());
 
-        // 10. Preparación: sin bultos no se marca preparado; sin palet no se expide
+        // 10. Preparación: 5 × 0,050 kg = 0,25 kg → 1 bulto; no se registran más de los calculados;
+        //     sin palet no se expide
         patchJson(aux, "/api/pedidos/" + id + "/iniciar-preparacion", null).andExpect(status().isForbidden());
         patchJson(admin, "/api/pedidos/" + id + "/iniciar-preparacion", null)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("EN_PREPARACION"));
-        patchJson(admin, "/api/pedidos/" + id + "/preparar", null).andExpect(status().isBadRequest());
+                .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("EN_PREPARACION"))
+                .andExpect(jsonPath("$.bultosCalculados").value(1));
         long bulto = json(postJson(admin, "/api/bultos", "{\"identificador\":\"IT-B-" + id + "\",\"pedidoId\":" + id + "}")
                 .andExpect(status().isCreated())).get("id").asLong();
+        postJson(admin, "/api/bultos", "{\"identificador\":\"IT-B2-" + id + "\",\"pedidoId\":" + id + "}")
+                .andExpect(status().isBadRequest());
         // Al prepararse toma la salida habitual de su clínica (San Roque → 14 - Regional)
         patchJson(admin, "/api/pedidos/" + id + "/preparar", null)
                 .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("PREPARADO"))

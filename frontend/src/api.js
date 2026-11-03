@@ -57,6 +57,7 @@ export const api = {
   post: (url, body) => apiFetch(url, { method: 'POST', body }),
   put: (url, body) => apiFetch(url, { method: 'PUT', body }),
   patch: (url, body) => apiFetch(url, { method: 'PATCH', body: body ?? undefined }),
+  delete: (url) => apiFetch(url, { method: 'DELETE' }),
   // Subida multipart: el navegador pone el Content-Type con el boundary
   postForm: (url, formData) => apiFetch(url, { method: 'POST', body: formData }),
   // Descarga de binarios (documentos, imagen de firma)

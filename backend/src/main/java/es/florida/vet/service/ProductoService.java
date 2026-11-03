@@ -82,6 +82,7 @@ public class ProductoService {
             throw new ReglaNegocioException("La categoría no es válida");
         }
         producto.setPrecio(datos.precio());
+        producto.setPesoUnitarioKg(datos.pesoUnitarioKg());
         producto.setStockMinimo(datos.stockMinimo());
     }
 

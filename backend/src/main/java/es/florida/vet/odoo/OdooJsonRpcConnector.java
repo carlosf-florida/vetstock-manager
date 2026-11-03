@@ -173,6 +173,7 @@ public class OdooJsonRpcConnector implements OdooConnector {
             {"x_vetstock_responsable_firma", "char", "VetStock: responsable de firma"},
             {"x_vetstock_bultos", "integer", "Bultos"},
             {"x_vetstock_salida", "char", "Salida"},
+            {"x_vetstock_peso_kg", "float", "Peso total (kg)"},
     };
     private static final String FILTRO_PENDIENTES_FIRMA = "Pagados pendientes de firma (VetStock)";
     private static final String FILTRO_FIRMADOS_PAGADOS = "Firmados y pagados (VetStock)";
@@ -229,6 +230,7 @@ public class OdooJsonRpcConnector implements OdooConnector {
         String arch = "<data><xpath expr=\"//field[@name='payment_term_id']\" position=\"after\">"
                 + "<field name=\"x_vetstock_bultos\" string=\"Bultos\" readonly=\"1\"/>"
                 + "<field name=\"x_vetstock_salida\" string=\"Salida\" readonly=\"1\"/>"
+                + "<field name=\"x_vetstock_peso_kg\" string=\"Peso total (kg)\" digits=\"[16,3]\" readonly=\"1\"/>"
                 + "</xpath></data>";
         JsonNode existentes = buscar("ir.ui.view", array().add(array().add("name").add("=").add(NOMBRE_VISTA_FICHA)));
         if (!existentes.isEmpty()) {
@@ -255,6 +257,7 @@ public class OdooJsonRpcConnector implements OdooConnector {
                 + "<field name=\"amount_total\" sum=\"Total\"/>"
                 + "<field name=\"x_vetstock_bultos\" string=\"Bultos\" sum=\"Bultos\"/>"
                 + "<field name=\"x_vetstock_salida\" string=\"Salida\" optional=\"show\"/>"
+                + "<field name=\"x_vetstock_peso_kg\" string=\"Peso (kg)\" digits=\"[16,3]\" optional=\"show\"/>"
                 + "<field name=\"x_vetstock_pagado\" string=\"Pagado\"/>"
                 + "<field name=\"x_vetstock_firma_valida\" string=\"Firma válida\"/>"
                 + "<field name=\"x_vetstock_estado\" string=\"Estado VetStock\"/>"
@@ -307,7 +310,11 @@ public class OdooJsonRpcConnector implements OdooConnector {
         valores.put("x_vetstock_estado", ficha.estadoPedido());
         valores.put("x_vetstock_realizado_por", ficha.creadoPorNombre());
         valores.put("x_vetstock_responsable_firma", ficha.responsableNombre());
+        // Sin cálculo completo (faltan pesos) los campos quedan vacíos, nunca con un número viejo
         if (ficha.bultos() != null) valores.put("x_vetstock_bultos", ficha.bultos());
+        else valores.put("x_vetstock_bultos", false);
+        if (ficha.pesoTotalKg() != null) valores.put("x_vetstock_peso_kg", ficha.pesoTotalKg().doubleValue());
+        else valores.put("x_vetstock_peso_kg", false);
         if (ficha.salida() != null) valores.put("x_vetstock_salida", ficha.salida());
         else valores.put("x_vetstock_salida", false); // sin salida: el campo queda vacío
     }

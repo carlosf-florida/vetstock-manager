@@ -93,6 +93,10 @@ abstract class IntegracionBase {
         return mvc.perform(put(url).session(sesion).contentType(MediaType.APPLICATION_JSON).content(aJson(cuerpo)));
     }
 
+    protected ResultActions deleteJson(MockHttpSession sesion, String url) throws Exception {
+        return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(url).session(sesion));
+    }
+
     protected ResultActions patchJson(MockHttpSession sesion, String url, Object cuerpo) throws Exception {
         var peticion = patch(url).session(sesion);
         if (cuerpo != null) peticion.contentType(MediaType.APPLICATION_JSON).content(aJson(cuerpo));

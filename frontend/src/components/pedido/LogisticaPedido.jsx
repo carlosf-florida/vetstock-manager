@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api.js'
-import { fecha } from '../../format.js'
+import { fecha, kg } from '../../format.js'
 import { ErrorBox, Spinner } from '../Spinner.jsx'
 import { useNotificaciones } from '../Notificaciones.jsx'
 
@@ -49,6 +49,23 @@ export default function LogisticaPedido({ pedido, onCambio }) {
     }
   }
 
+  async function eliminarBulto(b) {
+    if (!window.confirm(`¿Eliminar el bulto ${b.identificador}? Sobra respecto al peso del pedido.`)) return
+    try {
+      await api.delete(`/api/bultos/${b.id}`)
+      notificar({ texto: `Bulto ${b.identificador} eliminado.` })
+      onCambio?.()
+    } catch (err) {
+      notificar({ tipo: 'error', texto: err.message })
+    }
+  }
+
+  // Comparación entre registros y bultos calculados (el cálculo es del servidor)
+  const calculados = pedido.bultosCalculados ?? null
+  const registrados = bultos?.length ?? 0
+  const faltan = calculados == null ? 0 : Math.max(0, calculados - registrados)
+  const sobran = calculados == null ? 0 : Math.max(0, registrados - calculados)
+
   const editable = ESTADOS_CON_SALIDA_EDITABLE.includes(pedido.estado)
   const faltaSalida = !pedido.salida && !pedido.salidaHabitualClinica && ['LISTO_PREPARAR', 'EN_PREPARACION'].includes(pedido.estado)
 
@@ -88,17 +105,45 @@ export default function LogisticaPedido({ pedido, onCambio }) {
         pedido.estado === 'EXPEDIDO' && <p className="texto-suave">Pedido expedido: su salida ya no se puede cambiar.</p>
       )}
 
-      <h2>Bultos</h2>
+      <h2>Peso y bultos</h2>
+      {/* El peso y los bultos calculados vienen del servidor (máx. 25 kg por bulto) */}
+      {calculados == null ? (
+        <p className="caja-aviso">
+          <strong>Cálculo incompleto:</strong> falta el peso de {(pedido.productosSinPeso || []).join(', ')}.
+          {Number(pedido.pesoTotalKg) > 0 && ` Peso conocido: ${kg(pedido.pesoTotalKg)} kg (el total real es mayor).`}
+          {' '}Complétalo en <Link to="/admin/productos">Productos</Link>; sin peso no se puede preparar.
+        </p>
+      ) : (
+        <p>
+          <strong>Peso total: {kg(pedido.pesoTotalKg)} kg</strong> · <strong>Bultos calculados: {calculados}</strong>
+          <small className="texto-suave"> (hasta 25 kg por bulto; 25 kg exactos = 1 bulto)</small>
+        </p>
+      )}
+
       <ErrorBox mensaje={error} onReintentar={cargar} />
       {bultos === null && !error ? (
         <Spinner texto="Cargando bultos…" />
       ) : (
         <>
-          <p><strong>Total: {bultos?.length ?? 0}</strong> {bultos?.length === 1 ? 'bulto' : 'bultos'} (paquetes, no unidades)</p>
-          {bultos?.length > 0 && (
+          <p>Registros de bultos: <strong>{registrados}</strong></p>
+          {faltan > 0 && ['LISTO_PREPARAR', 'EN_PREPARACION'].includes(pedido.estado) && (
+            <p className="texto-suave">
+              Al marcar el pedido como preparado se crearán {faltan === 1 ? 'el bulto que falta' : `los ${faltan} bultos que faltan`} (VSM-{pedido.id}-B1…).
+            </p>
+          )}
+          {faltan > 0 && pedido.estado === 'PREPARADO' && (
+            <p className="caja-aviso">Faltan {faltan} {faltan === 1 ? 'bulto' : 'bultos'} respecto al peso actual: regístralos antes de expedir.</p>
+          )}
+          {sobran > 0 && (
+            <p className="caja-aviso">
+              Hay {registrados} registros y por peso corresponden {calculados}: elimina {sobran === 1 ? 'el sobrante' : `${sobran} sobrantes`} que no {sobran === 1 ? 'esté' : 'estén'} en un palet.
+              No se borra ninguno automáticamente.
+            </p>
+          )}
+          {registrados > 0 && (
             <div className="tabla-scroll">
               <table className="tabla">
-                <thead><tr><th>Bulto</th><th>Palet</th><th>Salida del palet</th><th>Alta</th></tr></thead>
+                <thead><tr><th>Bulto</th><th>Palet</th><th>Salida del palet</th><th>Alta</th><th></th></tr></thead>
                 <tbody>
                   {bultos.map((b) => (
                     <tr key={b.id}>
@@ -106,13 +151,18 @@ export default function LogisticaPedido({ pedido, onCambio }) {
                       <td>{b.paletIdentificador || <span className="texto-suave">Sin palet</span>}</td>
                       <td>{b.paletSalida || '—'}</td>
                       <td>{fecha(b.fechaAlta)}</td>
+                      <td>
+                        {sobran > 0 && !b.paletId && !['EXPEDIDO', 'CANCELADO'].includes(pedido.estado) && (
+                          <button type="button" className="btn btn-mini btn-secundario" onClick={() => eliminarBulto(b)}>Eliminar sobrante</button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-          {['LISTO_PREPARAR', 'EN_PREPARACION', 'PREPARADO'].includes(pedido.estado) && (
+          {faltan > 0 && ['LISTO_PREPARAR', 'EN_PREPARACION', 'PREPARADO'].includes(pedido.estado) && (
             <Link className="btn btn-secundario" to={`/admin/bultos?pedidoId=${pedido.id}`}>Registrar bulto de este pedido</Link>
           )}
         </>

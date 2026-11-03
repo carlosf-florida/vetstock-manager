@@ -111,10 +111,10 @@ export default function AdminBultos() {
                 <option value="">— Elige un pedido —</option>
                 {/* Solo pedidos firmados y pagados que están en preparación admiten bultos */}
                 {pedidos.filter((p) => ['LISTO_PREPARAR', 'EN_PREPARACION', 'PREPARADO'].includes(p.estado)).map((p) => (
-                  <option key={p.id} value={p.id}>#{p.id} · {p.clinicaNombre || ''} · {NOMBRE_ESTADO_PEDIDO(p.estado)}</option>
+                  <option key={p.id} value={p.id}>#{p.id} · {p.clinicaNombre || ''} · {NOMBRE_ESTADO_PEDIDO(p.estado)} · {p.bultos ?? 0}/{p.bultosCalculados ?? '?'} bultos</option>
                 ))}
               </select>
-              <small className="texto-suave">Solo aparecen pedidos firmados y pagados, listos o en preparación.</small>
+              <small className="texto-suave">Solo pedidos firmados y pagados, listos o en preparación. Se muestra registrados/calculados por peso: no se pueden registrar más de los calculados, y al marcar el pedido como preparado se crean solos los que falten.</small>
               {errores.pedidoId && <small className="error-campo">{errores.pedidoId}</small>}
             </label>
           </div>

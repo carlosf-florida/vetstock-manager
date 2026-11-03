@@ -236,6 +236,7 @@ public class OdooSincronizacionService {
                 ? firma.getUsuario().getRol().name() : null;
         String numeroColegiado = firmado ? firma.getNumeroColegiado() : null;
         String estadoPedido = pedido.getEstado() == null ? null : pedido.getEstado().name();
+        es.florida.vet.service.PesoPedido peso = es.florida.vet.service.PesoPedido.de(pedido);
 
         return new OdooConnector.FichaPedido("VSM-" + pedido.getId(), odooClienteId, lineas,
                 pedido.getOdooId(), firmado ? "FIRMADO" : "PENDIENTE",
@@ -243,9 +244,11 @@ public class OdooSincronizacionService {
                 pedido.getIvaPorcentaje(), pedido.getBaseImponible(), pedido.getImporteIva(),
                 pedido.getTotal(), pedido.getMoneda(), autorizacion.pagoCompleto(), autorizacion.firmaValida(),
                 pedido.getCreadoPor() == null ? null : pedido.getCreadoPor().getNombreCompleto(),
-                // VetStock es la fuente: número real de bultos y salida asignada (o vacía)
-                (int) bultoRepository.countByPedidoId(pedido.getId()),
-                pedido.getDestino() == null ? null : pedido.getDestino().getEtiqueta());
+                // VetStock es la fuente: bultos calculados por peso (vacío si faltan pesos),
+                // salida asignada (o vacía) y peso total (solo si está completo)
+                peso.bultosCalculados(),
+                pedido.getDestino() == null ? null : pedido.getDestino().getEtiqueta(),
+                peso.completo() ? peso.pesoTotalKg() : null);
     }
 
     private java.math.BigDecimal importeConfirmado(Pedido pedido) {

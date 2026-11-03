@@ -3,6 +3,13 @@
 // Formato único de moneda en toda la aplicación: «1234,50 €» (español, euros)
 const FORMATO_MONEDA = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
 
+// Kilos tal y como llegan del servidor (hasta 3 decimales, sin redondear a 2)
+const FORMATO_KG = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
+export function kg(valor) {
+  const n = Number(valor)
+  return Number.isFinite(n) ? FORMATO_KG.format(n) : '—'
+}
+
 export function dinero(importe) {
   const n = Number(importe ?? 0)
   return FORMATO_MONEDA.format(Number.isFinite(n) ? n : 0)

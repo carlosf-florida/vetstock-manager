@@ -7,6 +7,7 @@ import es.florida.vet.dto.LineasRequest;
 import es.florida.vet.dto.PedidoRequest;
 import es.florida.vet.dto.PedidoResponse;
 import es.florida.vet.entity.Auxiliar;
+import es.florida.vet.entity.Bulto;
 import es.florida.vet.entity.Clinica;
 import es.florida.vet.entity.Firma;
 import es.florida.vet.entity.LineaPedido;
@@ -516,9 +517,6 @@ public class PedidoService {
         switch (destino) {
             case EN_PREPARACION -> pedido.setFechaInicioPreparacion(LocalDateTime.now());
             case PREPARADO -> {
-                if (bultoRepository.findByPedidoId(id).isEmpty()) {
-                    throw new ReglaNegocioException("Registra al menos un bulto antes de marcar el pedido como preparado");
-                }
                 // Salida de expedición: si administración ya eligió una, se respeta; si no, la habitual
                 // de la clínica. Nunca se elige una arbitraria.
                 if (pedido.getDestino() == null) {
@@ -529,9 +527,11 @@ public class PedidoService {
                     }
                     pedido.asignarDestino(habitual, usuario, false);
                 }
+                completarBultosCalculados(pedido);
                 pedido.setFechaPreparacion(LocalDateTime.now());
             }
             case EXPEDIDO -> {
+                comprobarBultosCuadran(pedido);
                 if (bultoRepository.findByPedidoId(id).stream().anyMatch(b -> b.getPalet() == null)) {
                     throw new ReglaNegocioException("Todos los bultos deben estar asignados a un palet con destino antes de expedir");
                 }
@@ -553,6 +553,46 @@ public class PedidoService {
         pedido.setEstado(destino);
         programarSincronizacion(pedido);
         return respuesta(pedidoRepository.save(pedido));
+    }
+
+    /**
+     * Al preparar: el peso tiene que estar completo y existir un registro de bulto por cada bulto
+     * calculado. Crea solo los que falten, con identificador fijo VSM-{pedido}-B{n}, así repetir
+     * no duplica nada. Si ya hay MÁS registros de los calculados no borra ninguno: lo rechaza
+     * para que administración decida cuál sobra.
+     */
+    private void completarBultosCalculados(Pedido pedido) {
+        PesoPedido peso = PesoPedido.de(pedido);
+        if (!peso.completo()) {
+            throw new ReglaNegocioException("No se puede preparar: falta el peso de "
+                    + String.join(", ", peso.productosSinPeso()) + " (Administración → Productos)");
+        }
+        long registrados = bultoRepository.countByPedidoId(pedido.getId());
+        if (registrados > peso.bultosCalculados()) {
+            throw new ReglaNegocioException("El pedido tiene " + registrados + " bultos registrados y por su peso ("
+                    + peso.pesoTotalKg() + " kg) le corresponden " + peso.bultosCalculados()
+                    + ": elimina los sobrantes que no estén en un palet");
+        }
+        for (int n = 1; registrados < peso.bultosCalculados(); n++) {
+            String identificador = "VSM-" + pedido.getId() + "-B" + n;
+            if (!bultoRepository.existsByIdentificador(identificador)) {
+                bultoRepository.save(new Bulto(identificador, pedido));
+                registrados++;
+            }
+        }
+    }
+
+    /** Antes de expedir, los registros de bultos tienen que coincidir con los que exige el peso. */
+    private void comprobarBultosCuadran(Pedido pedido) {
+        PesoPedido peso = PesoPedido.de(pedido);
+        long registrados = bultoRepository.countByPedidoId(pedido.getId());
+        if (!peso.completo()) {
+            throw new ReglaNegocioException("No se puede expedir: falta el peso de " + String.join(", ", peso.productosSinPeso()));
+        }
+        if (registrados != peso.bultosCalculados()) {
+            throw new ReglaNegocioException("No se puede expedir: hay " + registrados + " bultos registrados y por su peso le corresponden "
+                    + peso.bultosCalculados());
+        }
     }
 
     // ------------------------------------------------------------------

@@ -52,6 +52,9 @@ public class Producto {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal precio = BigDecimal.ZERO;
 
+    @Column(name = "peso_unitario_kg", precision = 10, scale = 3)
+    private BigDecimal pesoUnitarioKg;   // kg por unidad de venta; null = peso desconocido (no es 0)
+
     @Column(name = "stock_actual", nullable = false)
     private int stockActual;
 
@@ -114,6 +117,8 @@ public class Producto {
     public void setCategoria(CategoriaProducto categoria) { this.categoria = categoria; }
     public BigDecimal getPrecio() { return precio; }
     public void setPrecio(BigDecimal precio) { this.precio = precio; }
+    public BigDecimal getPesoUnitarioKg() { return pesoUnitarioKg; }
+    public void setPesoUnitarioKg(BigDecimal pesoUnitarioKg) { this.pesoUnitarioKg = pesoUnitarioKg; }
     public int getStockActual() { return stockActual; }
     public void setStockActual(int stockActual) { this.stockActual = stockActual; }
     public int getStockReservado() { return stockReservado; }

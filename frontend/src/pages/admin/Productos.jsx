@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../../api.js'
-import { dinero } from '../../format.js'
+import { dinero, kg } from '../../format.js'
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox, Spinner } from '../../components/Spinner.jsx'
 import { BadgeActivo, BadgeStockBajo } from '../../components/Badges.jsx'
 
 const FORMULARIO_VACIO = {
-  codigo: '', nombre: '', descripcion: '', categoria: '', precio: '', stockInicial: '0', stockMinimo: '0',
+  codigo: '', nombre: '', descripcion: '', categoria: '', precio: '', pesoUnitarioKg: '', stockInicial: '0', stockMinimo: '0',
 }
 
 export default function AdminProductos() {
@@ -57,6 +57,11 @@ export default function AdminProductos() {
     if (!datos.nombre.trim()) errs.nombre = 'El nombre es obligatorio.'
     const precio = Number(datos.precio)
     if (datos.precio === '' || !Number.isFinite(precio) || precio <= 0) errs.precio = 'El precio debe ser un número mayor que 0.'
+    // Peso opcional (vacío = desconocido, nunca 0): kg con hasta 3 decimales (gramos)
+    const peso = datos.pesoUnitarioKg.trim().replace(',', '.')
+    if (peso && (!/^d{1,7}(.d{1,3})?$/.test(peso) || Number(peso) <= 0)) {
+      errs.pesoUnitarioKg = 'Peso en kg mayor que 0, con 3 decimales como mucho (por ejemplo 0,250).'
+    }
     for (const campo of ['stockInicial', 'stockMinimo']) {
       const v = Number(datos[campo])
       if (!Number.isInteger(v) || v < 0) errs[campo] = 'Debe ser un número entero igual o mayor que 0.'
@@ -78,6 +83,7 @@ export default function AdminProductos() {
       descripcion: destino.descripcion.trim() || null,
       categoria: destino.categoria.trim() || null,
       precio: Number(destino.precio),
+      pesoUnitarioKg: destino.pesoUnitarioKg.trim() ? Number(destino.pesoUnitarioKg.trim().replace(',', '.')) : null,
       stockMinimo: Number(destino.stockMinimo),
     }
     try {
@@ -117,6 +123,7 @@ export default function AdminProductos() {
       descripcion: p.descripcion || '',
       categoria: p.categoria || '',
       precio: String(p.precio ?? ''),
+      pesoUnitarioKg: p.pesoUnitarioKg != null ? String(p.pesoUnitarioKg) : '',
       stockMinimo: String(p.stockMinimo ?? '0'),
       stockInicial: '0',
     })
@@ -169,6 +176,12 @@ export default function AdminProductos() {
               <input className="input" type="number" min="0.01" step="0.01" value={actual.precio} onChange={setCampo('precio')} />
               {errores.precio && <small className="error-campo">{errores.precio}</small>}
             </label>
+            <label className="campo">
+              <span>Peso por unidad (kg)</span>
+              <input className="input" inputMode="decimal" value={actual.pesoUnitarioKg} onChange={setCampo('pesoUnitarioKg')} placeholder="Sin peso" />
+              <small className="texto-suave">Con embalaje. Vacío = desconocido: el pedido no se podrá preparar.</small>
+              {errores.pesoUnitarioKg && <small className="error-campo">{errores.pesoUnitarioKg}</small>}
+            </label>
             {!editando && (
               <label className="campo">
                 <span>Stock inicial</span>
@@ -202,6 +215,7 @@ export default function AdminProductos() {
           { key: 'nombre', label: 'Nombre' },
           { key: 'categoria', label: 'Categoría', soloEscritorio: true },
           { key: 'precio', label: 'Precio', render: (p) => dinero(p.precio) },
+          { key: 'pesoUnitarioKg', label: 'Peso/ud.', render: (p) => (p.pesoUnitarioKg != null ? `${kg(p.pesoUnitarioKg)} kg` : <span className="etiqueta est-pago-pendiente">Sin peso</span>) },
           { key: 'stockDisponible', label: 'Stock disp.', render: (p) => `${p.stockDisponible ?? '—'}${p.stockReservado ? ` (${p.stockReservado} res.)` : ''}` },
           { key: 'aviso', label: 'Avisos', render: (p) => (<><BadgeStockBajo bajo={p.stockBajo ?? (p.stockDisponible <= p.stockMinimo)} /> {p.activo === false && <span className="etiqueta est-cancelado">⛔ Inactivo</span>}</>) },
           { key: 'activo', label: 'Estado', render: (p) => <BadgeActivo activo={p.activo} /> },

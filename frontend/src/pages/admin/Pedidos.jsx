@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../../api.js'
-import { dinero, fechaCorta, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO, totalPedido } from '../../format.js'
+import { dinero, fechaCorta, kg, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO, totalPedido } from '../../format.js'
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox } from '../../components/Spinner.jsx'
 import { BadgeEstadoPedido } from '../../components/Badges.jsx'
@@ -140,8 +140,17 @@ export default function AdminPedidos() {
               ),
             },
             { key: 'salida', label: 'Salida', render: (p) => p.salida || <span className="texto-suave">Sin asignar</span> },
-            // Número real de bultos (paquetes) registrados, no unidades ni líneas
-            { key: 'bultos', label: 'Bultos', render: (p) => p.bultos ?? 0 },
+            // Peso y bultos los calcula el servidor (máx. 25 kg por bulto); aquí solo se muestran
+            {
+              key: 'peso', label: 'Peso', render: (p) => (p.bultosCalculados == null
+                ? <>{Number(p.pesoTotalKg) > 0 && <span>≥ {kg(p.pesoTotalKg)} kg</span>}<small className="error-campo">Faltan pesos</small></>
+                : `${kg(p.pesoTotalKg)} kg`),
+            },
+            {
+              key: 'bultos', label: 'Bultos', render: (p) => (p.bultosCalculados == null
+                ? <span className="texto-suave">Sin calcular</span>
+                : <>{p.bultosCalculados}{(p.bultos ?? 0) !== p.bultosCalculados && <small className="texto-suave">{p.bultos ?? 0} registrados</small>}</>),
+            },
             { key: 'total', label: 'Total', render: (p) => (totalPedido(p) != null ? dinero(totalPedido(p)) : '—') },
             { key: 'gestion', label: '', render: (p) => <Link className="btn btn-mini btn-secundario" to={`/admin/pedidos/${p.id}`}>Gestionar</Link> },
           ]}

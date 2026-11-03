@@ -105,6 +105,7 @@ CREATE TABLE productos (
     descripcion     VARCHAR(255),
     categoria       VARCHAR(30)  NOT NULL,
     precio          DECIMAL(10,2) NOT NULL,         -- precio unitario con IVA aparte (fuera del MVP)
+    peso_unitario_kg DECIMAL(10,3) NULL,            -- kg por unidad (3 decimales = gramos exactos); NULL = desconocido
     stock_actual    INT NOT NULL DEFAULT 0,         -- unidades físicas en el almacén
     stock_reservado INT NOT NULL DEFAULT 0,         -- comprometidas en pedidos no expedidos
     stock_minimo    INT NOT NULL DEFAULT 0,         -- umbral de aviso "stock bajo"
@@ -115,6 +116,7 @@ CREATE TABLE productos (
     CONSTRAINT ck_prod_categoria CHECK (categoria IN
         ('MEDICAMENTO', 'MATERIAL_CLINICO', 'HIGIENE', 'ALIMENTACION')),
     CONSTRAINT ck_prod_precio    CHECK (precio >= 0),
+    CONSTRAINT ck_prod_peso      CHECK (peso_unitario_kg IS NULL OR peso_unitario_kg > 0),
     CONSTRAINT ck_prod_actual    CHECK (stock_actual >= 0),
     CONSTRAINT ck_prod_reservado CHECK (stock_reservado >= 0),
     CONSTRAINT ck_prod_minimo    CHECK (stock_minimo >= 0)
@@ -356,6 +358,14 @@ INSERT INTO destinos (id, codigo, nombre) VALUES
 (1, NULL, 'Valencia'), (2, NULL, 'Alicante'), (3, '14', 'Regional');
 -- Dato confirmado: la Clínica Veterinaria San Roque sale por la 14 - Regional
 UPDATE clinicas SET destino_habitual_id = 3 WHERE id = 1;
+
+-- PESOS FICTICIOS de la demo (kg por unidad, embalaje incluido). No son pesos reales; mismos
+-- valores que database/demo/pesos_ficticios_demo.sql. Se cambian en Administración → Productos.
+UPDATE productos SET peso_unitario_kg = CASE codigo
+    WHEN 'MED-001' THEN 0.050 WHEN 'MED-002' THEN 0.060 WHEN 'MED-003' THEN 0.080 WHEN 'MED-004' THEN 0.020
+    WHEN 'CLI-001' THEN 0.600 WHEN 'CLI-002' THEN 0.700 WHEN 'CLI-003' THEN 0.150 WHEN 'CLI-004' THEN 0.400
+    WHEN 'HIG-001' THEN 0.550 WHEN 'HIG-002' THEN 1.100 WHEN 'ALI-001' THEN 12.500 WHEN 'ALI-002' THEN 4.800
+END;
 
 -- Pedidos de ejemplo (datos ficticios). Los enviados a firma toman la fecha de carga
 -- de la base de datos: si pasan 72 h sin pago, la caducidad los cancela (ver docs).

@@ -2,6 +2,7 @@ package es.florida.vet.dto;
 
 import es.florida.vet.entity.Pedido;
 import es.florida.vet.service.AutorizacionPedido;
+import es.florida.vet.service.PesoPedido;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,18 +27,24 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                              AutorizacionPedido autorizacion,
                              Long salidaId, String salida, boolean salidaManual,
                              String salidaAsignadaPor, LocalDateTime fechaAsignacionSalida,
-                             String salidaHabitualClinica, Long bultos) {
+                             String salidaHabitualClinica, Long bultos,
+                             BigDecimal pesoTotalKg, Integer bultosCalculados,
+                             List<String> productosSinPeso) {
 
     /** Sin el cálculo de firma y pago (listados del panel y del dashboard). */
     public static PedidoResponse desde(Pedido p) {
         return desde(p, null, null);
     }
 
-    /** bultos: número real de bultos registrados (null si no se ha calculado). */
+    /**
+     * bultos: registros de bultos que existen (null si no se ha contado).
+     * bultosCalculados: los que exige el peso (máx. 25 kg por bulto); null si faltan pesos.
+     */
     public static PedidoResponse desde(Pedido p, AutorizacionPedido autorizacion, Long bultos) {
         var salida = p.getDestino();
         var habitual = p.getClinica().getDestinoHabitual();
         var firma = p.getFirma();
+        var peso = PesoPedido.de(p);
         return new PedidoResponse(p.getId(), p.getClinica().getId(), p.getClinica().getNombre(),
                 p.getVeterinario().getId(), p.getVeterinario().getUsuario().getNombreCompleto(),
                 p.getCreadoPor().getNombreCompleto(), p.getCreadoPor().getUsername(),
@@ -59,10 +66,11 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                 p.isDestinoManual(),
                 p.getDestinoAsignadoPor() == null ? null : p.getDestinoAsignadoPor().getNombreCompleto(),
                 p.getFechaAsignacionDestino(),
-                habitual == null ? null : habitual.getEtiqueta(), bultos);
+                habitual == null ? null : habitual.getEtiqueta(), bultos,
+                peso.pesoTotalKg(), peso.bultosCalculados(), peso.productosSinPeso());
     }
 
-    /** Copia sin la logística interna (salida, quién la asignó y bultos): la clínica no la ve. */
+    /** Copia sin la logística interna (salida, quién la asignó, peso y bultos): la clínica no la ve. */
     public PedidoResponse sinLogisticaInterna() {
         return new PedidoResponse(id, clinicaId, clinicaNombre, veterinarioId, veterinarioNombre,
                 creadoPorNombre, creadoPorUsername, estado, observaciones, total,
@@ -73,6 +81,6 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                 odooSincronizacionPendiente, odooUltimoError, baseImponible, ivaPorcentaje,
                 importeIva, moneda, modificadoPorNombre, fechaModificacion, motivoCancelacion,
                 devolucionPendiente, autorizacion,
-                null, null, false, null, null, null, null);
+                null, null, false, null, null, null, null, null, null, null);
     }
 }

@@ -87,7 +87,8 @@ Por eso VetStock **copia** su clasificación en tres campos propios de `sale.ord
 | `x_vetstock_estado` | Estado logístico en VetStock |
 | `x_vetstock_realizado_por` | Quién hizo el pedido (auxiliar, veterinario o administración) |
 | `x_vetstock_responsable_firma` | Veterinario responsable que debe firmarlo (siempre el asignado) |
-| `x_vetstock_bultos` | Número de bultos registrados (solo lectura) |
+| `x_vetstock_bultos` | Bultos calculados por peso, máx. 25 kg por bulto (solo lectura) |
+| `x_vetstock_peso_kg` | Peso total del pedido en kg (solo lectura) |
 | `x_vetstock_salida` | Salida de expedición, p. ej. «14 - Regional» (solo lectura) |
 
 Y crea **dos entradas de menú** en **Sales → Orders** (Ventas → Pedidos): «Pagados pendientes

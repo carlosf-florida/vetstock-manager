@@ -17,6 +17,6 @@ public record ProductoRequest(
         // kg por unidad, opcional (null = desconocido); como mucho 3 decimales (gramos)
         @DecimalMin(value = "0.001", message = "El peso debe ser mayor que 0")
         @Digits(integer = 7, fraction = 3, message = "El peso admite como mucho 3 decimales") BigDecimal pesoUnitarioKg,
-        @NotNull @Min(0) Integer stockInicial,
+        @Min(0) Integer stockInicial,       // solo al crear; al modificar no se usa (el stock se mueve en Stock)
         @NotNull @Min(0) Integer stockMinimo) {
 }

@@ -20,7 +20,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 ### Última ejecución registrada
 
 - Fecha: 3 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
-- Resultado: **67 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
+- Resultado: **86 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
 - La prueba de concurrencia se repitió 3 veces seguidas con el mismo resultado.
 
 ### Correspondencia con las pruebas pedidas
@@ -59,6 +59,13 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 | Cambio de salida: no si expedido ni con bultos en palet de otra salida | `…cambioDeSalidaConReglas` |
 | Palet de otra salida rechazado | `RecorridoPedidoIntegracionTest.recorridoCompleto` y `…cambioDeSalidaConReglas` |
 | Permisos de salidas y bultos | `…permisos` |
+| Bultos por peso: 10; 24,99; 25; 25,000; 25,001; 25,01; 25,1; 49,99; 50; 50,01; 50,1; 75; 75,001; 0,001 kg | `PesoPedidoTest.limites` (14 casos) |
+| Cantidades múltiples (peso por unidad × cantidad) y varias líneas | `PesoPedidoTest.cantidadesMultiples` |
+| Sin errores de coma flotante (24,999 + 0,001; 8,333 × 3) | `PesoPedidoTest.sinErroresDeComaFlotante` |
+| Producto sin peso: incompleto, sin bultos, no cuenta como 0 | `PesoPedidoTest.productoSinPeso` y `LogisticaSalidasIntegracionTest.bultosPorPeso` |
+| Al preparar se crean los bultos que faltan; repetir no duplica; no se registra por encima de lo calculado | `…salidaHabitualYRecuentoDeBultos` y `…bultosPorPeso` |
+| Sobran registros: no se prepara ni se borra solo; admin elimina el sobrante sin palet | `…bultosSobrantes` |
+| Editar un producto sin enviar stockInicial (como el formulario) | `…bultosPorPeso` (ayudante `pesoProducto`) |
 
 ### Errores reales que encontraron estas pruebas (ya corregidos)
 
@@ -183,6 +190,25 @@ Docker con Odoo real, sobre la base `vetstock` tras aplicar `010` (copia previa:
 Datos que quedan de estas pruebas: #17 y #18 PREPARADO, #19 EXPEDIDO (stock físico
 descontado una vez), 6 bultos (BULTO-17-01/02/03, BULTO-18-01/02, BULTO-19-01) y 2
 palets (PALET-VAL-01, PALET-REG-01).
+
+## 2e. Bultos por peso (en vivo, 3 de noviembre de 2026)
+
+Tras aplicar `011` y los pesos ficticios de la demo (copia previa:
+`_respaldos-vetstock/antes-migracion-011-20261103.sql`):
+
+| Prueba | Resultado |
+|---|---|
+| Pedido nuevo #21 (`aux.sanroque`): 3 sacos de pienso (12,5 kg) + 1 caja de guantes (0,6 kg) | 38,1 kg → **2 bultos calculados** |
+| Firmado por el Dr. García, pagado (pasarela de demostración), iniciar preparación, preparar | PREPARADO, salida 14 - Regional, registros **VSM-21-B1 y VSM-21-B2** creados solos |
+| Preparar otra vez / registrar un tercer bulto a mano | 400 / 400 («ya tiene los 2 bultos que le corresponden»); siguen 2 registros |
+| Odoo (S00013) | Bultos 2, Peso total 38,1 kg, Salida 14 - Regional, solo lectura (lista y formulario) |
+| Reexportar 2 veces | 1 solo pedido VSM-21 en Odoo y 2 registros de bultos |
+| Quitar el peso de la vacuna desde Admin → Productos | El pedido #11 muestra «Cálculo incompleto: falta el peso de Vacuna antirrábica. Peso conocido: 18,5 kg»; registrar bulto → 400. Peso restaurado (0,020 kg) desde la misma pantalla |
+| Pedidos de prueba anteriores | #17: 3 registros y le corresponde 1; #18: 2 y 1. Todos sus bultos están en palets: no se pueden eliminar ni expedir hasta decidir qué hacer (ver pendientes). No se ha cambiado nada |
+
+Errores encontrados y corregidos en esta prueba: editar un producto desde la pantalla fallaba
+siempre («no debe ser nulo») porque el formulario no envía `stockInicial` (error antiguo, del
+primer frontend); y la validación del peso en el formulario tenía mal escrita la expresión regular.
 
 ## 3. Guía de comprobación manual (para repetirla)
 

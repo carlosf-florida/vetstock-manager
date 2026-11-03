@@ -11,9 +11,9 @@ bultos solo se veían en la pantalla Admin → Bultos. Ahora:
   Clínica Veterinaria San Roque sale por la salida **14 - Regional**.
 - Al marcar un pedido como **PREPARADO** se le asigna esa salida (salvo que
   administración ya le haya elegido otra a mano).
-- El listado y el detalle del pedido muestran **cuántos bultos** tiene (contados
-  de verdad, no un contador aparte) y por qué salida va.
-- Odoo recibe los **Bultos** y la **Salida** del pedido, en solo lectura.
+- El listado y el detalle del pedido muestran su **peso**, los **bultos que le corresponden**
+  (hasta 25 kg por bulto) y por qué salida va.
+- Odoo recibe los **Bultos**, el **Peso** y la **Salida** del pedido, en solo lectura.
 
 No se han inventado más salidas ni relaciones ciudad → salida: solo Regional
 tiene código (14). Valencia y Alicante siguen sin código hasta que alguien lo confirme.
@@ -32,8 +32,8 @@ apuntaban a ella).
 | `pedidos` | `destino_asignado_por_id` → `usuarios`, `fecha_asignacion_destino` | Quién y cuándo la asignó |
 
 La etiqueta que se muestra es `código - nombre` («14 - Regional») o solo el
-nombre si no hay código. El **número de bultos** no se guarda: se calcula con
-`COUNT` sobre `bultos`, así nunca se desincroniza.
+nombre si no hay código. El **número de bultos** no se guarda en el pedido: se calcula a
+partir del peso (ver «Bultos calculados por peso»).
 
 ## Reglas
 
@@ -62,12 +62,69 @@ nombre si no hay código. El **número de bultos** no se guarda: se calcula con
 
 - **Salidas** (antes «Destinos»): alta y edición de código y nombre.
 - **Clínicas**: columna «Salida habitual» con un selector.
-- **Pedidos**: columnas «Salida» («Sin asignar» si no tiene) y «Bultos», y filtro por salida.
+- **Pedidos**: columnas «Salida» («Sin asignar» si no tiene), «Peso» y «Bultos» (calculados; si
+  no coinciden con los registros se indica cuántos hay), y filtro por salida.
+- **Productos**: campo «Peso por unidad (kg)» y columna «Peso/ud.» («Sin peso» si falta).
 - **Detalle del pedido**: tarjeta «Salida de expedición» (salida, quién y cuándo
-  la asignó, salida habitual de la clínica, aviso si falta) y sección «Bultos»
-  (total, identificador, palet, salida del palet) con el botón «Registrar bulto
-  de este pedido», que abre Admin → Bultos con el pedido ya elegido.
+  la asignó, salida habitual de la clínica, aviso si falta) y sección «Peso y bultos»
+  (peso total, bultos calculados, aviso si faltan pesos, registros con su palet, avisos si
+  faltan o sobran y «Eliminar sobrante»). «Registrar bulto de este pedido» solo aparece si
+  faltan registros.
 - **Bultos** y **Palets**: muestran la salida del pedido y la del palet.
+
+## Bultos calculados por peso (máx. 25 kg por bulto)
+
+**Regla:** cada pedido lleva al menos 1 bulto y cada bulto admite hasta 25 kg.
+
+```
+peso total = suma de (peso por unidad × cantidad) de cada línea
+bultos     = peso total / 25 redondeado HACIA ARRIBA, mínimo 1
+```
+
+| Peso | Bultos |
+|---|---|
+| 10 kg · 24,99 kg · 25 kg exactos | 1 |
+| 25,01 kg · 49,99 kg · 50 kg exactos | 2 |
+| 50,01 kg · 75 kg exactos | 3 |
+
+- **Dónde está el peso:** `productos.peso_unitario_kg` (migración `011`), en kg por unidad
+  de venta con 3 decimales (gramos exactos), embalaje incluido. Solo se admite kg. Se edita en
+  Admin → Productos. Vacío = **desconocido**, nunca 0.
+- **Pesos de la demo: FICTICIOS.** Ningún producto tenía peso. Los valores de
+  `database/demo/pesos_ficticios_demo.sql` (y del esquema `001`) son estimaciones inventadas
+  para poder probar; no son pesos medidos. El nombre «Pienso 12 kg» o «Gel 1 L» indica el
+  contenido, no el peso de envío, y los ml no son gramos: no se usaron como pesos.
+- **Cálculo en el backend** (`PesoPedido`, regla fija como `AutorizacionPedido`), con
+  `BigDecimal`: 25,000 kg da 1 bulto y 25,001 kg da 2, sin errores de coma flotante. El
+  frontend solo muestra el resultado. Se calcula al leer el pedido, así que siempre
+  corresponde a sus líneas actuales (que solo cambian en BORRADOR).
+- **Si falta algún peso:** el cálculo queda *incompleto*: se muestra el peso conocido como
+  mínimo («≥ 18,5 kg»), qué productos faltan, y los bultos quedan **sin calcular**. No se
+  pueden registrar bultos ni marcar el pedido como preparado.
+
+### Bultos calculados y registros de bultos
+
+Son dos cosas distintas y no se dejan contradictorias:
+
+- **Bultos calculados**: los que exige el peso (un número).
+- **Registros de bultos** (tabla `bultos`): cada paquete físico, con identificador único,
+  pedido, palet y salida.
+
+| Momento | Qué pasa |
+|---|---|
+| Registro manual (Admin → Bultos) | Permitido solo hasta el número calculado |
+| **Marcar como preparado** | Exige peso completo. Crea solos los registros que falten con identificador `VSM-{pedido}-B{n}` (p. ej. `VSM-21-B1`). Repetir no crea duplicados |
+| Hay MÁS registros que los calculados | No se prepara ni se expide, y **no se borra nada solo**. Admin puede eliminar un sobrante si no está en un palet y el pedido no está expedido (`DELETE /api/bultos/{id}`) |
+| Expedir | Exige peso completo, registros = calculados y todos en un palet |
+
+El cálculo dice **cuántos** bultos exige la regla; no reparte el peso entre ellos ni dice qué
+lleva cada uno.
+
+### En Odoo
+
+`x_vetstock_bultos` = bultos **calculados** (vacío si faltan pesos) y el nuevo campo
+`x_vetstock_peso_kg` («Peso total (kg)», 3 decimales, solo lectura) en la ficha del pedido y en
+la lista VetStock. Odoo no mantiene ningún contador propio.
 
 ## Odoo
 
@@ -75,7 +132,8 @@ VetStock crea (si no existen) dos campos más en `sale.order`, en **solo lectura
 
 | Campo | Contenido |
 |---|---|
-| `x_vetstock_bultos` (entero) | Número de bultos registrados en VetStock |
+| `x_vetstock_bultos` (entero) | Bultos calculados por peso (vacío si faltan pesos) |
+| `x_vetstock_peso_kg` (decimal) | Peso total del pedido en kg (vacío si faltan pesos) |
 | `x_vetstock_salida` (texto) | Salida, p. ej. «14 - Regional» |
 
 Además añade las columnas a la lista «VetStock» (menús *Pagados pendientes de
@@ -94,9 +152,9 @@ reintenta con «Actualizar en Odoo» (o `POST /api/odoo/pedidos/{id}/exportar`).
 ### Cómo verlo en Odoo
 
 1. Entra en http://localhost:8069 (cuenta de la demo).
-2. Ventas → Pedidos → **Firmados y pagados (VetStock)**: columnas *Bultos* y *Salida*.
-3. Abre un pedido (por ejemplo `VSM-17`): bajo *Payment Terms* aparecen *Bultos* y
-   *Salida*, sin poder editarlos.
+2. Ventas → Pedidos → **Firmados y pagados (VetStock)**: columnas *Bultos*, *Salida* y *Peso (kg)*.
+3. Abre un pedido (por ejemplo `VSM-21`): bajo *Payment Terms* aparecen *Bultos*,
+   *Peso total (kg)* y *Salida*, sin poder editarlos.
 
 No hace falta instalar nada: los campos y las vistas se crean la primera vez que se
 exporta un pedido.

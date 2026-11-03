@@ -46,6 +46,9 @@ public class ProductoService {
         if (productoRepository.existsByCodigo(datos.codigo())) {
             throw new ReglaNegocioException("Ya existe un producto con el código " + datos.codigo());
         }
+        if (datos.stockInicial() == null) {
+            throw new ReglaNegocioException("El stock inicial es obligatorio al crear un producto");
+        }
         Producto producto = new Producto();
         producto.setCodigo(datos.codigo());
         aplicarDatos(producto, datos);

@@ -12,6 +12,8 @@ Actualizado el 3 de noviembre de 2026. Entrega: finales de febrero de 2027.
 | Media | Edición y baja (desactivación) de usuarios y clínicas en administración |
 | Media | Marcar un palet como expedido desde la interfaz (el endpoint existe: `PATCH /api/palets/{id}/expedir`) |
 | Media | Informe Power BI en Desktop sobre las vistas, si hay acceso a Power BI |
+| Alta | Decidir qué hacer con los bultos sobrantes que ya están en un palet (#17: 3 registros y le corresponde 1; #18: 2 y le corresponde 1). La aplicación no permite sacar un bulto de un palet, así que esos pedidos no se pueden expedir |
+| Media | Sustituir los pesos ficticios de la demo por pesos reales de los productos |
 | Media | Confirmar los códigos de las salidas Valencia y Alicante (solo Regional = 14 está confirmado) y la salida habitual del resto de clínicas |
 | Baja | Captura de Odoo con las columnas Bultos y Salida (en esta revisión se comprobó leyendo la página) |
 | Baja | Paginación en el servidor si crecen mucho los pedidos (ahora la tabla pagina en el cliente) |

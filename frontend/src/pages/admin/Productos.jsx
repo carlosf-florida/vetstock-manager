@@ -59,7 +59,7 @@ export default function AdminProductos() {
     if (datos.precio === '' || !Number.isFinite(precio) || precio <= 0) errs.precio = 'El precio debe ser un número mayor que 0.'
     // Peso opcional (vacío = desconocido, nunca 0): kg con hasta 3 decimales (gramos)
     const peso = datos.pesoUnitarioKg.trim().replace(',', '.')
-    if (peso && (!/^d{1,7}(.d{1,3})?$/.test(peso) || Number(peso) <= 0)) {
+    if (peso && (!/^\d{1,7}(\.\d{1,3})?$/.test(peso) || Number(peso) <= 0)) {
       errs.pesoUnitarioKg = 'Peso en kg mayor que 0, con 3 decimales como mucho (por ejemplo 0,250).'
     }
     for (const campo of ['stockInicial', 'stockMinimo']) {

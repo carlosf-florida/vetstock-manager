@@ -65,6 +65,7 @@ export default function LogisticaPedido({ pedido, onCambio }) {
   const registrados = bultos?.length ?? 0
   const faltan = calculados == null ? 0 : Math.max(0, calculados - registrados)
   const sobran = calculados == null ? 0 : Math.max(0, registrados - calculados)
+  const eliminables = (bultos || []).filter((b) => !b.paletId).length
 
   const editable = ESTADOS_CON_SALIDA_EDITABLE.includes(pedido.estado)
   const faltaSalida = !pedido.salida && !pedido.salidaHabitualClinica && ['LISTO_PREPARAR', 'EN_PREPARACION'].includes(pedido.estado)
@@ -87,7 +88,7 @@ export default function LogisticaPedido({ pedido, onCambio }) {
       </p>
       {faltaSalida && (
         <p className="caja-aviso">
-          La clínica no tiene salida habitual: <strong>elige una salida</strong> antes de marcar el pedido como preparado.
+          <span>La clínica no tiene salida habitual: <strong>elige una salida</strong> antes de marcar el pedido como preparado.</span>
         </p>
       )}
       {editable ? (
@@ -109,9 +110,11 @@ export default function LogisticaPedido({ pedido, onCambio }) {
       {/* El peso y los bultos calculados vienen del servidor (máx. 25 kg por bulto) */}
       {calculados == null ? (
         <p className="caja-aviso">
-          <strong>Cálculo incompleto:</strong> falta el peso de {(pedido.productosSinPeso || []).join(', ')}.
-          {Number(pedido.pesoTotalKg) > 0 && ` Peso conocido: ${kg(pedido.pesoTotalKg)} kg (el total real es mayor).`}
-          {' '}Complétalo en <Link to="/admin/productos">Productos</Link>; sin peso no se puede preparar.
+          <span>
+            <strong>Cálculo incompleto:</strong> falta el peso de {(pedido.productosSinPeso || []).join(', ')}.
+            {Number(pedido.pesoTotalKg) > 0 && ` Peso conocido: ${kg(pedido.pesoTotalKg)} kg (el total real es mayor).`}
+            {' '}Complétalo en <Link to="/admin/productos">Productos</Link>; sin peso no se puede preparar.
+          </span>
         </p>
       ) : (
         <p>
@@ -136,8 +139,12 @@ export default function LogisticaPedido({ pedido, onCambio }) {
           )}
           {sobran > 0 && (
             <p className="caja-aviso">
-              Hay {registrados} registros y por peso corresponden {calculados}: elimina {sobran === 1 ? 'el sobrante' : `${sobran} sobrantes`} que no {sobran === 1 ? 'esté' : 'estén'} en un palet.
-              No se borra ninguno automáticamente.
+              <span>
+                Hay {registrados} registros y por peso corresponden {calculados}. No se borra ninguno automáticamente.{' '}
+                {eliminables >= sobran
+                  ? `Elimina ${sobran === 1 ? 'el sobrante' : `${sobran} sobrantes`} entre los que no están en un palet.`
+                  : `Solo ${eliminables === 1 ? 'hay 1 bulto' : `hay ${eliminables} bultos`} fuera de un palet; el resto ya están en uno y la aplicación no permite sacarlos. Hasta resolverlo, el pedido no se puede expedir.`}
+              </span>
             </p>
           )}
           {registrados > 0 && (

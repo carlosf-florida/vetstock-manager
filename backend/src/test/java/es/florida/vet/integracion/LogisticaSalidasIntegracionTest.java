@@ -143,13 +143,13 @@ class LogisticaSalidasIntegracionTest extends IntegracionBase {
         patchJson(admin, "/api/pedidos/" + id + "/salida", "{\"destinoId\":3}").andExpect(status().isBadRequest());
     }
 
-    /** Cambia el peso por unidad de un producto conservando el resto de sus datos. */
+    /** Cambia el peso por unidad de un producto conservando el resto (como el formulario: sin stockInicial). */
     private void pesoProducto(long productoId, String pesoKg) throws Exception {
         JsonNode p = producto(productoId);
         String cuerpo = "{\"codigo\":\"" + p.get("codigo").asText() + "\",\"nombre\":\"" + p.get("nombre").asText()
                 + "\",\"descripcion\":\"" + p.get("descripcion").asText() + "\",\"categoria\":\"" + p.get("categoria").asText()
                 + "\",\"precio\":" + p.get("precio").asText() + ",\"pesoUnitarioKg\":" + pesoKg
-                + ",\"stockInicial\":0,\"stockMinimo\":" + p.get("stockMinimo").asInt() + "}";
+                + ",\"stockMinimo\":" + p.get("stockMinimo").asInt() + "}";
         putJson(admin(), "/api/productos/" + productoId, cuerpo).andExpect(status().isOk());
     }
 
@@ -179,6 +179,9 @@ class LogisticaSalidasIntegracionTest extends IntegracionBase {
         } finally {
             pesoProducto(4, "0.020");
         }
+        // Al crear un producto el stock inicial sí es obligatorio
+        postJson(admin, "/api/productos", "{\"codigo\":\"TST-PESO\",\"nombre\":\"Prueba\",\"categoria\":\"HIGIENE\",\"precio\":1,\"stockMinimo\":0}")
+                .andExpect(status().isBadRequest());
     }
 
     @Test

@@ -8,7 +8,7 @@
 | `clinicas` | Clínicas cliente | `veterinario_responsable_id` → `veterinarios`; `destino_habitual_id` → `destinos` (salida habitual) |
 | `veterinarios` | Veterinario de una clínica (nº de colegiado) | 1:1 `usuarios`, N:1 `clinicas` |
 | `auxiliares` | Auxiliar de una clínica | 1:1 `usuarios`, N:1 `clinicas` |
-| `productos` | Referencia única, nombre, descripción, precio, `stock_actual`, `stock_reservado`, `stock_minimo` | — |
+| `productos` | Referencia única, nombre, descripción, precio, `peso_unitario_kg` (opcional; NULL = desconocido), `stock_actual`, `stock_reservado`, `stock_minimo` | — |
 | `pedidos` | Estado, veterinario firmante, creador, último modificador, IVA, fechas de cada hito y salida de expedición (`destino_id`, `destino_manual`, quién y cuándo) | N:1 `clinicas`, `veterinarios`, `usuarios`, `destinos` |
 | `lineas_pedido` | Producto, cantidad y **precio copiado** al crear la línea | N:1 `pedidos`; único (pedido, producto) |
 | `firmas` | Firmante, tipo, imagen, fecha y **copia JSON inmutable** del contenido autorizado | 1:1 `pedidos` |
@@ -24,7 +24,7 @@ Stock **disponible** = `stock_actual - stock_reservado` (se calcula, no se guard
 Scripts: `database/migrations/001_esquema_inicial.sql` crea el esquema actual
 completo con datos ficticios y se puede volver a ejecutar para reiniciar la
 demo. Las migraciones `002`–`007` actualizan bases antiguas sin borrar datos, y
-`008` crea las vistas para Power BI, `009` añade la devolución pendiente y `010` las salidas de expedición.
+`008` crea las vistas para Power BI, `009` añade la devolución pendiente y `010` las salidas de expedición y `011` el peso de los productos.
 
 ## Veterinario responsable de cada clínica
 
@@ -89,5 +89,5 @@ sustituye a la no válida (una sola firma por pedido).
 9. **Stock:** se reserva al enviar a firma, en una sola sentencia SQL condicionada (sin sobreventa en concurrencia). Al expedir se descuenta el físico y se libera la reserva, una sola vez.
 10. **Caducidad (decisión acordada):** cada 15 minutos, los pagos PENDIENTES de más de 60 min pasan a FALLADO. Los pedidos enviados a firma sin pago confirmado durante **72 h** se cancelan y liberan la reserva, con el motivo guardado. Un pedido con un pago en curso reciente no caduca en esa pasada.
 11. **Un pedido pagado no se cancela desde la aplicación.** Solo el veterinario asignado puede **rechazarlo** mientras no lo haya firmado: se cancela, libera stock y queda «devolución pendiente» (el dinero se devuelve fuera de la aplicación; no hay reembolsos en el alcance).
-12. **Logística:** PREPARADO exige al menos un bulto y una salida: si el pedido no la tiene, toma la salida habitual de la clínica; si la clínica tampoco tiene, se rechaza. EXPEDIDO exige todos los bultos en un palet. Un bulto solo va en un palet de la misma salida que su pedido. La salida solo la cambia administración y nunca en un pedido expedido o cancelado. Un palet expedido no admite bultos. Detalle en [logistica-salidas-bultos.md](logistica-salidas-bultos.md).
+12. **Logística:** PREPARADO exige al menos un bulto y una salida: si el pedido no la tiene, toma la salida habitual de la clínica; si la clínica tampoco tiene, se rechaza. Los bultos se calculan por peso (máx. 25 kg por bulto, mínimo 1); al preparar se crean los registros que falten y, si falta algún peso o sobran registros, no se prepara. EXPEDIDO exige registros = calculados y todos en un palet. Un bulto solo va en un palet de la misma salida que su pedido. La salida solo la cambia administración y nunca en un pedido expedido o cancelado. Un palet expedido no admite bultos. Detalle en [logistica-salidas-bultos.md](logistica-salidas-bultos.md).
 13. Documentos: solo PDF reales (cabecera `%PDF-`) de 10 MB como máximo. Los sube administración y los descarga la clínica del pedido.

@@ -14,8 +14,10 @@ Todo lo relativo a la base de datos de VetStock Manager vive en esta carpeta.
 - `migrations/008_vistas_powerbi.sql` — vistas de solo lectura para Power BI (ver `docs/power-bi.md`). Se puede repetir.
 - `migrations/009_rechazo_devolucion.sql` — añade `pedidos.devolucion_pendiente` (pedido pagado y después rechazado por el veterinario). Se puede repetir.
 - `migrations/010_salidas_expedicion.sql` — salidas de expedición: `destinos.codigo`, `clinicas.destino_habitual_id` y salida del pedido (`pedidos.destino_id`, `destino_manual`, `destino_asignado_por_id`, `fecha_asignacion_destino`). No asigna salida a pedidos existentes. Se puede repetir (ver `docs/logistica-salidas-bultos.md`).
+- `migrations/011_peso_productos.sql` — `productos.peso_unitario_kg` (kg por unidad, 3 decimales; NULL = desconocido) para calcular los bultos. No rellena pesos. Se puede repetir.
+- `demo/pesos_ficticios_demo.sql` — **pesos FICTICIOS** solo para la demo; no pisa pesos ya introducidos.
 
-**Instalaciones existentes:** aplicar en orden las migraciones que falten (002–010) y no volver a ejecutar el esquema inicial si hay datos que conservar. Firma y pago pueden llegar en cualquier orden; solo se prepara con firma válida y pago completo (ver `docs/modelo-y-reglas.md`). Instrucciones para Windows: `docs/instalacion-windows.md`. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
+**Instalaciones existentes:** aplicar en orden las migraciones que falten (002–011) y no volver a ejecutar el esquema inicial si hay datos que conservar. Firma y pago pueden llegar en cualquier orden; solo se prepara con firma válida y pago completo (ver `docs/modelo-y-reglas.md`). Instrucciones para Windows: `docs/instalacion-windows.md`. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
 
 ## Cómo cargarla
 
@@ -62,6 +64,7 @@ El backend se conecta con las credenciales de `backend/src/main/resources/applic
 ## Datos de prueba incluidos
 
 - 3 clínicas, 3 veterinarios, 1 auxiliar y 1 administrador.
+- Productos con **pesos ficticios** de demostración (no medidos).
 - 10 productos de las 3 categorías (MED, CLI, ALI) con stock variado (hay 3 bajo mínimo para ver el aviso).
 - 4 pedidos en distintos estados (borrador, pendiente de firma, en preparación y expedido con su histórico completo).
 - 3 salidas (Valencia, Alicante y Regional con código 14, salida habitual de San Roque), movimientos de stock de ejemplo.

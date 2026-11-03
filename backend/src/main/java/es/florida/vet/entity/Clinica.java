@@ -30,6 +30,10 @@ public class Clinica {
     @JoinColumn(name = "veterinario_responsable_id")
     private Veterinario veterinarioResponsable;
 
+    @ManyToOne
+    @JoinColumn(name = "destino_habitual_id")
+    private Destino destinoHabitual;   // salida de expedición habitual (puede faltar)
+
     public Clinica() {
     }
 
@@ -53,6 +57,8 @@ public class Clinica {
     public void setOdooId(Integer v) { this.odooId = v; }
     public LocalDateTime getOdooSincronizado() { return odooSincronizado; }
     public void setOdooSincronizado(LocalDateTime f) { this.odooSincronizado = f; }
+    public Destino getDestinoHabitual() { return destinoHabitual; }
+    public void setDestinoHabitual(Destino destinoHabitual) { this.destinoHabitual = destinoHabitual; }
     public Veterinario getVeterinarioResponsable() { return veterinarioResponsable; }
     public void setVeterinarioResponsable(Veterinario veterinarioResponsable) {
         this.veterinarioResponsable = veterinarioResponsable;

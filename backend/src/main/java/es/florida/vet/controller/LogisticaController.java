@@ -80,6 +80,18 @@ public class LogisticaController {
         return logisticaService.listarDestinos();
     }
 
+    @org.springframework.web.bind.annotation.PutMapping("/destinos/{id}")
+    public DestinoResponse actualizarDestino(@PathVariable Long id, @Valid @RequestBody DestinoRequest datos) {
+        return logisticaService.actualizarDestino(id, datos);
+    }
+
+    /** Asignar o cambiar la salida de un pedido (solo administración). Cuerpo: {"destinoId": 3} */
+    @PatchMapping("/pedidos/{id}/salida")
+    public es.florida.vet.dto.PedidoResponse asignarSalida(@PathVariable Long id, @RequestBody Map<String, Long> cuerpo,
+                                                          org.springframework.security.core.Authentication auth) {
+        return logisticaService.asignarSalida(id, cuerpo.get("destinoId"), auth.getName());
+    }
+
     @PostMapping("/destinos")
     @ResponseStatus(HttpStatus.CREATED)
     public DestinoResponse crearDestino(@Valid @RequestBody DestinoRequest datos) {

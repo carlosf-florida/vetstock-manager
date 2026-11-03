@@ -63,6 +63,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PATCH, "/api/pedidos/*/iniciar-preparacion",
                         "/api/pedidos/*/preparar", "/api/pedidos/*/expedir").hasRole("ADMIN")
                 .requestMatchers("/api/bultos/**", "/api/palets/**", "/api/destinos/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH, "/api/pedidos/*/salida").hasRole("ADMIN")
                 .requestMatchers("/api/informes/**", "/api/odoo/**").hasRole("ADMIN")
                 // Subir documentos: solo el almacén
                 .requestMatchers(HttpMethod.POST, "/api/pedidos/*/documentos").hasRole("ADMIN")

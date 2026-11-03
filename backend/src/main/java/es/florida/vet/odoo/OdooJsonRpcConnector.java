@@ -171,6 +171,8 @@ public class OdooJsonRpcConnector implements OdooConnector {
             {"x_vetstock_estado", "char", "VetStock: estado logístico"},
             {"x_vetstock_realizado_por", "char", "VetStock: realizado por"},
             {"x_vetstock_responsable_firma", "char", "VetStock: responsable de firma"},
+            {"x_vetstock_bultos", "integer", "Bultos"},
+            {"x_vetstock_salida", "char", "Salida"},
     };
     private static final String FILTRO_PENDIENTES_FIRMA = "Pagados pendientes de firma (VetStock)";
     private static final String FILTRO_FIRMADOS_PAGADOS = "Firmados y pagados (VetStock)";
@@ -190,10 +192,15 @@ public class OdooJsonRpcConnector implements OdooConnector {
         for (String[] campo : CAMPOS_CLASIFICACION) {
             ArrayNode dominio = array().add(array().add("model").add("=").add("sale.order"))
                     .add(array().add("name").add("=").add(campo[0]));
-            if (buscar("ir.model.fields", dominio).isEmpty()) {
+            JsonNode existente = buscar("ir.model.fields", dominio);
+            if (existente.isEmpty()) {
                 ObjectNode valores = json.createObjectNode().put("name", campo[0]).put("ttype", campo[1])
-                        .put("field_description", campo[2]).put("model_id", modeloId).put("state", "manual");
+                        .put("field_description", campo[2]).put("model_id", modeloId).put("state", "manual")
+                        .put("readonly", true);
                 crear("ir.model.fields", valores);
+            } else {
+                // Los datos los manda VetStock: en Odoo se muestran como solo lectura
+                escribir("ir.model.fields", existente.get(0).asInt(), json.createObjectNode().put("readonly", true));
             }
         }
         String abiertos = "('x_vetstock_estado', 'not in', ['CANCELADO', 'BORRADOR'])";
@@ -206,10 +213,36 @@ public class OdooJsonRpcConnector implements OdooConnector {
         int vista = asegurarVistaClasificacion();
         asegurarMenu(FILTRO_PENDIENTES_FIRMA, pendientes, vista, 90);
         asegurarMenu(FILTRO_FIRMADOS_PAGADOS, firmados, vista, 91);
+        asegurarFichaLogistica();
         clasificacionPreparada = true;
     }
 
     private static final String NOMBRE_VISTA = "vetstock.sale.order.clasificacion.list";
+
+    private static final String NOMBRE_VISTA_FICHA = "vetstock.sale.order.form.logistica";
+
+    /**
+     * Añade «Bultos» y «Salida» (solo lectura) a la ficha estándar del pedido de venta mediante
+     * una vista heredada. No se toca la vista original: si se borra esta, Odoo queda como estaba.
+     */
+    private void asegurarFichaLogistica() {
+        String arch = "<data><xpath expr=\"//field[@name='payment_term_id']\" position=\"after\">"
+                + "<field name=\"x_vetstock_bultos\" string=\"Bultos\" readonly=\"1\"/>"
+                + "<field name=\"x_vetstock_salida\" string=\"Salida\" readonly=\"1\"/>"
+                + "</xpath></data>";
+        JsonNode existentes = buscar("ir.ui.view", array().add(array().add("name").add("=").add(NOMBRE_VISTA_FICHA)));
+        if (!existentes.isEmpty()) {
+            escribir("ir.ui.view", existentes.get(0).asInt(), json.createObjectNode().put("arch", arch));
+            return;
+        }
+        JsonNode padre = buscar("ir.model.data", array()
+                .add(array().add("module").add("=").add("sale"))
+                .add(array().add("name").add("=").add("view_order_form")));
+        if (padre.isEmpty()) return; // sin la ficha estándar los datos siguen en la lista VetStock
+        int idPadre = leerRegistro("ir.model.data", padre.get(0).asInt(), "res_id").path("res_id").asInt();
+        crear("ir.ui.view", json.createObjectNode().put("name", NOMBRE_VISTA_FICHA).put("model", "sale.order")
+                .put("type", "form").put("mode", "extension").put("inherit_id", idPadre).put("arch", arch));
+    }
 
     /** Lista propia con las columnas de VetStock (no modifica las vistas estándar de Ventas). */
     private int asegurarVistaClasificacion() {
@@ -220,6 +253,8 @@ public class OdooJsonRpcConnector implements OdooConnector {
                 + "<field name=\"x_vetstock_realizado_por\" string=\"Realizado por\"/>"
                 + "<field name=\"x_vetstock_responsable_firma\" string=\"Responsable de firma\"/>"
                 + "<field name=\"amount_total\" sum=\"Total\"/>"
+                + "<field name=\"x_vetstock_bultos\" string=\"Bultos\" sum=\"Bultos\"/>"
+                + "<field name=\"x_vetstock_salida\" string=\"Salida\" optional=\"show\"/>"
                 + "<field name=\"x_vetstock_pagado\" string=\"Pagado\"/>"
                 + "<field name=\"x_vetstock_firma_valida\" string=\"Firma válida\"/>"
                 + "<field name=\"x_vetstock_estado\" string=\"Estado VetStock\"/>"
@@ -272,6 +307,9 @@ public class OdooJsonRpcConnector implements OdooConnector {
         valores.put("x_vetstock_estado", ficha.estadoPedido());
         valores.put("x_vetstock_realizado_por", ficha.creadoPorNombre());
         valores.put("x_vetstock_responsable_firma", ficha.responsableNombre());
+        if (ficha.bultos() != null) valores.put("x_vetstock_bultos", ficha.bultos());
+        if (ficha.salida() != null) valores.put("x_vetstock_salida", ficha.salida());
+        else valores.put("x_vetstock_salida", false); // sin salida: el campo queda vacío
     }
 
     @Override

@@ -66,7 +66,8 @@ CREATE TABLE clinicas (
     activa    BOOLEAN NOT NULL DEFAULT TRUE,
     odoo_id   INT NULL,                             -- id del cliente (res.partner) en Odoo
     odoo_sincronizado DATETIME NULL,
-    veterinario_responsable_id BIGINT NULL
+    veterinario_responsable_id BIGINT NULL,
+    destino_habitual_id BIGINT NULL        -- salida de expedición habitual (FK más abajo, tras crear destinos)
 ) ENGINE=InnoDB;
 
 -- Un veterinario es un cliente con cuenta propia que puede firmar pedidos
@@ -149,6 +150,10 @@ CREATE TABLE pedidos (
     fecha_cancelacion     DATETIME,
     motivo_cancelacion    VARCHAR(255),      -- usuario que cancela, rechazo del veterinario o reserva caducada
     devolucion_pendiente  BOOLEAN NOT NULL DEFAULT FALSE, -- pagado y rechazado: devolver fuera de la app
+    destino_id            BIGINT NULL,       -- salida de expedición asignada (FK tras crear destinos)
+    destino_manual        BOOLEAN NOT NULL DEFAULT FALSE, -- la eligió administración: no se sobrescribe
+    destino_asignado_por_id BIGINT NULL,
+    fecha_asignacion_destino DATETIME NULL,
     odoo_id               INT NULL,   -- id del sale.order en Odoo (ERP)
     odoo_enviado          DATETIME,   -- cuándo se exportó a Odoo
     odoo_sincronizacion_pendiente BOOLEAN NOT NULL DEFAULT FALSE,
@@ -160,7 +165,8 @@ CREATE TABLE pedidos (
     CONSTRAINT fk_ped_clinica      FOREIGN KEY (clinica_id)     REFERENCES clinicas(id),
     CONSTRAINT fk_ped_veterinario  FOREIGN KEY (veterinario_id) REFERENCES veterinarios(id),
     CONSTRAINT fk_ped_creado_por   FOREIGN KEY (creado_por_id)  REFERENCES usuarios(id),
-    CONSTRAINT fk_ped_modificado_por FOREIGN KEY (modificado_por_id) REFERENCES usuarios(id)
+    CONSTRAINT fk_ped_modificado_por FOREIGN KEY (modificado_por_id) REFERENCES usuarios(id),
+    CONSTRAINT fk_ped_destino_asignado_por FOREIGN KEY (destino_asignado_por_id) REFERENCES usuarios(id)
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_ped_estado  ON pedidos(estado);
@@ -224,8 +230,12 @@ CREATE TABLE pagos (
 
 CREATE TABLE destinos (
     id     BIGINT AUTO_INCREMENT PRIMARY KEY,
+    codigo VARCHAR(10) NULL UNIQUE,      -- código de salida del negocio (p. ej. '14'), no el id
     nombre VARCHAR(60) NOT NULL UNIQUE   -- ej. Valencia, Alicante, Regional...
 ) ENGINE=InnoDB;
+
+ALTER TABLE clinicas ADD CONSTRAINT fk_clinica_destino_habitual FOREIGN KEY (destino_habitual_id) REFERENCES destinos(id);
+ALTER TABLE pedidos  ADD CONSTRAINT fk_ped_destino FOREIGN KEY (destino_id) REFERENCES destinos(id);
 
 CREATE TABLE palets (
     id            BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -341,8 +351,11 @@ INSERT INTO productos (id, codigo, nombre, descripcion, categoria, precio, stock
 (11, 'ALI-001', 'Pienso hipoalergénico 12 kg', 'Saco de 12 kg para perros',              'ALIMENTACION',     42.90,  15, 0, 10, TRUE),
 (12, 'ALI-002', 'Dieta renal en lata',         'Pack de 12 latas',                       'ALIMENTACION',     24.15,   3, 0,  8, TRUE);
 
-INSERT INTO destinos (id, nombre) VALUES
-(1, 'Valencia'), (2, 'Alicante'), (3, 'Regional');
+-- Solo la salida 14 - Regional está confirmada; Valencia y Alicante quedan sin código
+INSERT INTO destinos (id, codigo, nombre) VALUES
+(1, NULL, 'Valencia'), (2, NULL, 'Alicante'), (3, '14', 'Regional');
+-- Dato confirmado: la Clínica Veterinaria San Roque sale por la 14 - Regional
+UPDATE clinicas SET destino_habitual_id = 3 WHERE id = 1;
 
 -- Pedidos de ejemplo (datos ficticios). Los enviados a firma toman la fecha de carga
 -- de la base de datos: si pasan 72 h sin pago, la caducidad los cancela (ver docs).

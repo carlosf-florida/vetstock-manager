@@ -23,14 +23,20 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                              BigDecimal importeIva, String moneda,
                              String modificadoPorNombre, LocalDateTime fechaModificacion,
                              String motivoCancelacion, boolean devolucionPendiente,
-                             AutorizacionPedido autorizacion) {
+                             AutorizacionPedido autorizacion,
+                             Long salidaId, String salida, boolean salidaManual,
+                             String salidaAsignadaPor, LocalDateTime fechaAsignacionSalida,
+                             String salidaHabitualClinica, Long bultos) {
 
     /** Sin el cálculo de firma y pago (listados del panel y del dashboard). */
     public static PedidoResponse desde(Pedido p) {
-        return desde(p, null);
+        return desde(p, null, null);
     }
 
-    public static PedidoResponse desde(Pedido p, AutorizacionPedido autorizacion) {
+    /** bultos: número real de bultos registrados (null si no se ha calculado). */
+    public static PedidoResponse desde(Pedido p, AutorizacionPedido autorizacion, Long bultos) {
+        var salida = p.getDestino();
+        var habitual = p.getClinica().getDestinoHabitual();
         var firma = p.getFirma();
         return new PedidoResponse(p.getId(), p.getClinica().getId(), p.getClinica().getNombre(),
                 p.getVeterinario().getId(), p.getVeterinario().getUsuario().getNombreCompleto(),
@@ -48,6 +54,11 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                 p.getOdooId(), p.isOdooSincronizacionPendiente(), p.getOdooUltimoError(),
                 p.getBaseImponible(), p.getIvaPorcentaje(), p.getImporteIva(), p.getMoneda(),
                 p.getModificadoPor() == null ? null : p.getModificadoPor().getNombreCompleto(),
-                p.getFechaModificacion(), p.getMotivoCancelacion(), p.isDevolucionPendiente(), autorizacion);
+                p.getFechaModificacion(), p.getMotivoCancelacion(), p.isDevolucionPendiente(), autorizacion,
+                salida == null ? null : salida.getId(), salida == null ? null : salida.getEtiqueta(),
+                p.isDestinoManual(),
+                p.getDestinoAsignadoPor() == null ? null : p.getDestinoAsignadoPor().getNombreCompleto(),
+                p.getFechaAsignacionDestino(),
+                habitual == null ? null : habitual.getEtiqueta(), bultos);
     }
 }

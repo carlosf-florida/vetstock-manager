@@ -44,6 +44,12 @@ public class ClinicaController {
         return clinicaService.crearClinica(datos);
     }
 
+    /** Salida de expedición habitual. Cuerpo: {"destinoId": 3} o {"destinoId": null} para quitarla. */
+    @PutMapping("/clinicas/{id}/salida-habitual")
+    public ClinicaResponse salidaHabitual(@PathVariable Long id, @RequestBody java.util.Map<String, Long> cuerpo) {
+        return clinicaService.asignarSalidaHabitual(id, cuerpo.get("destinoId"));
+    }
+
     @PutMapping("/clinicas/{id}/responsable")
     public ClinicaResponse asignarResponsable(@PathVariable Long id,
                                                @Valid @RequestBody ResponsableClinicaRequest datos) {

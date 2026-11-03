@@ -107,6 +107,21 @@ public class Pedido {
     @Column(name = "motivo_cancelacion", length = 255)
     private String motivoCancelacion;   // cancelado por un usuario, rechazado por el veterinario o reserva caducada
 
+    /** Salida de expedición del pedido: se fija al prepararlo y ya no cambia sola. */
+    @ManyToOne
+    @JoinColumn(name = "destino_id")
+    private Destino destino;
+
+    @Column(name = "destino_manual", nullable = false)
+    private boolean destinoManual;      // elegida por administración: preparar no la sobrescribe
+
+    @ManyToOne
+    @JoinColumn(name = "destino_asignado_por_id")
+    private Usuario destinoAsignadoPor;
+
+    @Column(name = "fecha_asignacion_destino")
+    private LocalDateTime fechaAsignacionDestino;
+
     @Column(name = "devolucion_pendiente", nullable = false)
     private boolean devolucionPendiente; // pagado y después rechazado: devolver el dinero fuera de la aplicación
 
@@ -215,6 +230,18 @@ public class Pedido {
     public void setFechaCancelacion(LocalDateTime fecha) { this.fechaCancelacion = fecha; }
     public String getMotivoCancelacion() { return motivoCancelacion; }
     public void setMotivoCancelacion(String motivo) { this.motivoCancelacion = motivo; }
+    public Destino getDestino() { return destino; }
+    public boolean isDestinoManual() { return destinoManual; }
+    public Usuario getDestinoAsignadoPor() { return destinoAsignadoPor; }
+    public LocalDateTime getFechaAsignacionDestino() { return fechaAsignacionDestino; }
+
+    /** Guarda la salida asignada, quién la asignó y si fue una elección manual de administración. */
+    public void asignarDestino(Destino destino, Usuario usuario, boolean manual) {
+        this.destino = destino;
+        this.destinoManual = manual;
+        this.destinoAsignadoPor = usuario;
+        this.fechaAsignacionDestino = LocalDateTime.now();
+    }
     public boolean isDevolucionPendiente() { return devolucionPendiente; }
     public void setDevolucionPendiente(boolean v) { this.devolucionPendiente = v; }
 

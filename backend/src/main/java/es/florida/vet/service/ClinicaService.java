@@ -37,9 +37,13 @@ public class ClinicaService {
     private final PasswordEncoder passwordEncoder;
     private final SesionService sesionService;
 
+    private final es.florida.vet.repository.DestinoRepository destinoRepository;
+
     public ClinicaService(ClinicaRepository clinicaRepository, UsuarioRepository usuarioRepository,
                           VeterinarioRepository veterinarioRepository, AuxiliarRepository auxiliarRepository,
-                          PasswordEncoder passwordEncoder, SesionService sesionService) {
+                          PasswordEncoder passwordEncoder, SesionService sesionService,
+                          es.florida.vet.repository.DestinoRepository destinoRepository) {
+        this.destinoRepository = destinoRepository;
         this.clinicaRepository = clinicaRepository;
         this.usuarioRepository = usuarioRepository;
         this.veterinarioRepository = veterinarioRepository;
@@ -75,6 +79,19 @@ public class ClinicaService {
             throw new ReglaNegocioException("El veterinario debe pertenecer a la clínica seleccionada");
         }
         clinica.setVeterinarioResponsable(veterinario);
+        return ClinicaResponse.desde(clinicaRepository.save(clinica));
+    }
+
+    /**
+     * Salida de expedición habitual de la clínica (null = quitarla). Solo afecta a los pedidos que
+     * se preparen a partir de ahora: los ya preparados o expedidos conservan la suya.
+     */
+    @Transactional
+    public ClinicaResponse asignarSalidaHabitual(Long clinicaId, Long destinoId) {
+        Clinica clinica = clinicaRepository.findById(clinicaId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("La clínica no existe"));
+        clinica.setDestinoHabitual(destinoId == null ? null : destinoRepository.findById(destinoId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("La salida no existe")));
         return ClinicaResponse.desde(clinicaRepository.save(clinica));
     }
 

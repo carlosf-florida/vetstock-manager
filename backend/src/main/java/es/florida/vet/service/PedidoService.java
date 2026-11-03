@@ -122,9 +122,15 @@ public class PedidoService {
         for (Pago pago : pagoRepository.findByEstado(EstadoPago.CONFIRMADO)) {
             confirmados.put(pago.getPedido().getId(), pago.getImporte());
         }
+        // Recuento de bultos de todos los pedidos en una sola consulta agregada
+        Map<Long, Long> bultos = new HashMap<>();
+        for (Object[] fila : bultoRepository.contarPorPedido()) {
+            bultos.put((Long) fila[0], (Long) fila[1]);
+        }
         return pedidos.stream()
                 .filter(p -> estado == null || p.getEstado() == estado)
-                .map(p -> PedidoResponse.desde(p, AutorizacionPedido.de(p, confirmados.get(p.getId()))))
+                .map(p -> PedidoResponse.desde(p, AutorizacionPedido.de(p, confirmados.get(p.getId())),
+                        bultos.getOrDefault(p.getId(), 0L)))
                 .toList();
     }
 
@@ -513,6 +519,16 @@ public class PedidoService {
                 if (bultoRepository.findByPedidoId(id).isEmpty()) {
                     throw new ReglaNegocioException("Registra al menos un bulto antes de marcar el pedido como preparado");
                 }
+                // Salida de expedición: si administración ya eligió una, se respeta; si no, la habitual
+                // de la clínica. Nunca se elige una arbitraria.
+                if (pedido.getDestino() == null) {
+                    var habitual = pedido.getClinica().getDestinoHabitual();
+                    if (habitual == null) {
+                        throw new ReglaNegocioException("La clínica " + pedido.getClinica().getNombre()
+                                + " no tiene salida habitual: asigna una salida al pedido antes de marcarlo como preparado");
+                    }
+                    pedido.asignarDestino(habitual, usuario, false);
+                }
                 pedido.setFechaPreparacion(LocalDateTime.now());
             }
             case EXPEDIDO -> {
@@ -554,7 +570,7 @@ public class PedidoService {
     }
 
     private PedidoResponse respuesta(Pedido pedido) {
-        return PedidoResponse.desde(pedido, autorizacion(pedido));
+        return PedidoResponse.desde(pedido, autorizacion(pedido), bultoRepository.countByPedidoId(pedido.getId()));
     }
 
     private void programarSincronizacion(Pedido pedido) {

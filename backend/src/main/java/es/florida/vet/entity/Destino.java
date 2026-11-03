@@ -15,6 +15,9 @@ public class Destino {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Código de salida del negocio (p. ej. "14"); no es el id interno. Puede faltar. */
+    private String codigo;
+
     private String nombre;
 
     public Destino() {
@@ -27,4 +30,11 @@ public class Destino {
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
+    public String getCodigo() { return codigo; }
+    public void setCodigo(String codigo) { this.codigo = codigo; }
+
+    /** Texto para pantallas y Odoo: «14 - Regional», o solo el nombre si no tiene código. */
+    public String getEtiqueta() {
+        return (codigo == null || codigo.isBlank()) ? nombre : codigo + " - " + nombre;
+    }
 }

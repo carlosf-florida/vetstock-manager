@@ -46,6 +46,7 @@ public class OdooSincronizacionService {
     private final PedidoRepository pedidoRepository;
     private final OdooLogRepository odooLogRepository;
     private final PagoRepository pagoRepository;
+    private final es.florida.vet.repository.BultoRepository bultoRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -58,13 +59,15 @@ public class OdooSincronizacionService {
                                      ClinicaRepository clinicaRepository,
                                      PedidoRepository pedidoRepository,
                                      OdooLogRepository odooLogRepository,
-                                     PagoRepository pagoRepository) {
+                                     PagoRepository pagoRepository,
+                                     es.florida.vet.repository.BultoRepository bultoRepository) {
         this.odoo = odoo;
         this.productoRepository = productoRepository;
         this.clinicaRepository = clinicaRepository;
         this.pedidoRepository = pedidoRepository;
         this.odooLogRepository = odooLogRepository;
         this.pagoRepository = pagoRepository;
+        this.bultoRepository = bultoRepository;
     }
 
     @Transactional
@@ -239,7 +242,10 @@ public class OdooSincronizacionService {
                 nombreResponsable(pedido), firmanteNombre, firmanteRol, numeroColegiado, estadoPedido,
                 pedido.getIvaPorcentaje(), pedido.getBaseImponible(), pedido.getImporteIva(),
                 pedido.getTotal(), pedido.getMoneda(), autorizacion.pagoCompleto(), autorizacion.firmaValida(),
-                pedido.getCreadoPor() == null ? null : pedido.getCreadoPor().getNombreCompleto());
+                pedido.getCreadoPor() == null ? null : pedido.getCreadoPor().getNombreCompleto(),
+                // VetStock es la fuente: número real de bultos y salida asignada (o vacía)
+                (int) bultoRepository.countByPedidoId(pedido.getId()),
+                pedido.getDestino() == null ? null : pedido.getDestino().getEtiqueta());
     }
 
     private java.math.BigDecimal importeConfirmado(Pedido pedido) {

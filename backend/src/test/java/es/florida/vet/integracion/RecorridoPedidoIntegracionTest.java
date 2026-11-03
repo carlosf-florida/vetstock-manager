@@ -117,15 +117,21 @@ class RecorridoPedidoIntegracionTest extends IntegracionBase {
         patchJson(admin, "/api/pedidos/" + id + "/preparar", null).andExpect(status().isBadRequest());
         long bulto = json(postJson(admin, "/api/bultos", "{\"identificador\":\"IT-B-" + id + "\",\"pedidoId\":" + id + "}")
                 .andExpect(status().isCreated())).get("id").asLong();
+        // Al prepararse toma la salida habitual de su clínica (San Roque → 14 - Regional)
         patchJson(admin, "/api/pedidos/" + id + "/preparar", null)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("PREPARADO"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.estado").value("PREPARADO"))
+                .andExpect(jsonPath("$.salida").value("14 - Regional")).andExpect(jsonPath("$.bultos").value(1));
         patchJson(admin, "/api/pedidos/" + id + "/expedir", null).andExpect(status().isBadRequest());
 
-        long palet = json(postJson(admin, "/api/palets", "{\"identificador\":\"IT-P-" + id + "\",\"destinoId\":1}")
+        // Un palet de otra salida (Valencia) no admite el bulto; el de Regional sí
+        long paletValencia = json(postJson(admin, "/api/palets", "{\"identificador\":\"IT-PV-" + id + "\",\"destinoId\":1}")
+                .andExpect(status().isCreated())).get("id").asLong();
+        patchJson(admin, "/api/bultos/" + bulto + "/asignar-palet", "{\"paletId\":" + paletValencia + "}").andExpect(status().isBadRequest());
+        long palet = json(postJson(admin, "/api/palets", "{\"identificador\":\"IT-P-" + id + "\",\"destinoId\":3}")
                 .andExpect(status().isCreated())).get("id").asLong();
         patchJson(admin, "/api/bultos/" + bulto + "/asignar-palet", "{\"paletId\":" + palet + "}").andExpect(status().isOk());
         JsonNode contenidoPalet = json(getJson(admin, "/api/palets/" + palet).andExpect(status().isOk()));
-        assertEquals("Valencia", contenidoPalet.get("destinoNombre").asText());
+        assertEquals("Regional", contenidoPalet.get("destinoNombre").asText());
         assertEquals(id, contenidoPalet.get("bultos").get(0).get("pedidoId").asLong());
 
         // 11. Expedición: descuenta stock físico y libera la reserva UNA sola vez

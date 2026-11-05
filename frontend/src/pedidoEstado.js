@@ -56,39 +56,10 @@ export const SITUACIONES = {
   LISTO: { texto: 'Listo para preparar (firma válida y pago)', cumple: (p) => Boolean(p?.autorizacion?.listoParaPreparar) },
 }
 
-// Pestañas de administración, las mismas que los apartados de Odoo: un paso del trabajo en cada una.
-// La clasificación por firma y pago la calcula el backend (pedido.autorizacion).
-export const APARTADOS_PEDIDOS = {
-  PENDIENTE_FIRMA: {
-    texto: 'Pagados pendientes de firma',
-    ayuda: 'Pago completo confirmado, pero falta la firma válida del veterinario asignado: todavía no se pueden preparar. La columna «Firma» indica qué falta.',
-    cumple: (p) => p.autorizacion?.clasificacion === 'PAGADO_PENDIENTE_FIRMA',
-  },
-  LISTOS: {
-    texto: 'Listos para preparar',
-    ayuda: 'Firma válida y pago completo: se puede empezar a prepararlos.',
-    cumple: (p) => Boolean(p.autorizacion?.listoParaPreparar),
-  },
-  EN_PREPARACION: {
-    texto: 'En preparación',
-    ayuda: 'Se están preparando. Al marcarlos como preparados se crean sus bultos y se asigna la salida.',
-    cumple: (p) => p.estado === 'EN_PREPARACION',
-  },
-  PREPARADOS: {
-    texto: 'Preparados',
-    ayuda: 'Listos para salir: filtra por salida para ver lo que va en cada una y asigna los bultos a su palet.',
-    cumple: (p) => p.estado === 'PREPARADO',
-  },
-  EXPEDIDOS: {
-    texto: 'Expedidos',
-    ayuda: 'Ya han salido. Filtra por salida para consultarlos.',
-    cumple: (p) => p.estado === 'EXPEDIDO',
-  },
-  OTROS: {
-    texto: 'Otros',
-    ayuda: 'Borradores, pedidos sin pago completo y cancelados.',
-    cumple: (p) => p.autorizacion?.clasificacion === 'OTROS',
-  },
+export const CLASIFICACIONES = {
+  PAGADO_PENDIENTE_FIRMA: 'Pagados pendientes de firma',
+  FIRMADO_Y_PAGADO: 'Firmados y pagados',
+  OTROS: 'Otros pendientes',
 }
 
 export function infoEstadoPago(pedido) {

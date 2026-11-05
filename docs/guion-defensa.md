@@ -35,11 +35,12 @@ integración opcional.
 
 ## 2b. Firma y pago separados (1 min)
 
-Admin → Pedidos: una pestaña por paso del trabajo («Pagados pendientes de firma», «Listos para preparar», «En preparación», «Preparados» y «Expedidos», además de «Otros»).
+Admin → Pedidos: «Pagados pendientes de firma», «Firmados y pagados» y «Otros pendientes».
 Explicar: «Se puede pagar antes o después de firmar, pero pagado no basta: hace falta la firma
 VÁLIDA del veterinario asignado sobre el contenido actual. Lo decide una regla fija en el backend
 (`AutorizacionPedido`), no una IA.»
-En Odoo → Sales → Orders aparecen los mismos cinco apartados numerados, cada uno con un solo estado; preparados y expedidos salen agrupados por salida, y expedidos muestra la dirección de entrega;
+En Administración, la pestaña «Por salida» separa los pedidos por salida y permite imprimir el listado para comprobarlos en el almacén.
+En Odoo → Sales → Orders aparecen las mismas dos listas, con *Bultos*, *Salida* y *Peso (kg)*, y un apartado más, «Pedidos por salida»;
 cuando un pedido está pagado y con firma válida, Odoo lo pasa solo de presupuesto a pedido de venta.
 
 ## 3. Seguridad y reglas (2 min)

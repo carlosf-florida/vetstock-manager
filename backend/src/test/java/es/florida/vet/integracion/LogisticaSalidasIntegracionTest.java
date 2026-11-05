@@ -68,6 +68,7 @@ class LogisticaSalidasIntegracionTest extends IntegracionBase {
         patchJson(admin, "/api/pedidos/" + id + "/preparar", null).andExpect(status().isOk())
                 .andExpect(jsonPath("$.salida").value("14 - Regional"))
                 .andExpect(jsonPath("$.salidaManual").value(false))
+                .andExpect(jsonPath("$.direccionEntrega").isNotEmpty())
                 .andExpect(jsonPath("$.salidaAsignadaPor").value("Laura Sánchez (Almacén)"))
                 .andExpect(jsonPath("$.bultos").value(2)).andExpect(jsonPath("$.bultosCalculados").value(2));
         JsonNode registros = json(getJson(admin, "/api/bultos?pedidoId=" + id));
@@ -84,7 +85,7 @@ class LogisticaSalidasIntegracionTest extends IntegracionBase {
         getJson(drGarcia(), "/api/pedidos/" + id).andExpect(status().isOk())
                 .andExpect(jsonPath("$.salida").doesNotExist()).andExpect(jsonPath("$.bultos").doesNotExist())
                 .andExpect(jsonPath("$.salidaAsignadaPor").doesNotExist())
-                .andExpect(jsonPath("$.odooId").doesNotExist()).andExpect(jsonPath("$.odooUltimoError").doesNotExist());
+                .andExpect(jsonPath("$.odooId").doesNotExist()).andExpect(jsonPath("$.direccionEntrega").doesNotExist()).andExpect(jsonPath("$.odooUltimoError").doesNotExist());
         JsonNode resumenClinica = json(getJson(auxSanRoque(), "/api/dashboard"));
         resumenClinica.get("ultimosPedidos").forEach(p -> assertTrue(!p.hasNonNull("odooId") && !p.hasNonNull("salida") && !p.hasNonNull("bultos"), "el resumen de la clínica muestra datos internos"));
         postJson(auxSanRoque(), "/api/pedidos", "{\"lineas\":[{\"productoId\":1,\"cantidad\":10000}]}").andExpect(status().isBadRequest());

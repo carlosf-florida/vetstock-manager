@@ -29,7 +29,8 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                              String salidaAsignadaPor, LocalDateTime fechaAsignacionSalida,
                              String salidaHabitualClinica, Long bultos,
                              BigDecimal pesoTotalKg, Integer bultosCalculados,
-                             List<String> productosSinPeso, List<String> productosSobreLimite) {
+                             List<String> productosSinPeso, List<String> productosSobreLimite,
+                             String direccionEntrega) {
 
     /** Sin el cálculo de firma y pago (listados del panel y del dashboard). */
     public static PedidoResponse desde(Pedido p) {
@@ -67,7 +68,8 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                 p.getDestinoAsignadoPor() == null ? null : p.getDestinoAsignadoPor().getNombreCompleto(),
                 p.getFechaAsignacionDestino(),
                 habitual == null ? null : habitual.getEtiqueta(), bultos,
-                peso.pesoTotalKg(), peso.bultosCalculados(), peso.productosSinPeso(), peso.productosSobreLimite());
+                peso.pesoTotalKg(), peso.bultosCalculados(), peso.productosSinPeso(), peso.productosSobreLimite(),
+                p.getClinica().getDireccion());
     }
 
     /** Copia sin datos internos (salida, peso, bultos y sincronización con Odoo): la clínica no los ve. */
@@ -81,6 +83,6 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                 false, null, baseImponible, ivaPorcentaje,
                 importeIva, moneda, modificadoPorNombre, fechaModificacion, motivoCancelacion,
                 devolucionPendiente, autorizacion,
-                null, null, false, null, null, null, null, null, null, null, null);
+                null, null, false, null, null, null, null, null, null, null, null, null);
     }
 }

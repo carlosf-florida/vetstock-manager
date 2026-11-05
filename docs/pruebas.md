@@ -65,7 +65,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 | Producto sin peso: incompleto, sin bultos, no cuenta como 0 | `PesoPedidoTest.productoSinPeso` y `LogisticaSalidasIntegracionTest.bultosPorPeso` |
 | Al preparar se crean los bultos que faltan; repetir no duplica; no se registra por encima de lo calculado | `…salidaHabitualYRecuentoDeBultos` y `…bultosPorPeso` |
 | Varias reservas vencidas en la misma pasada: se cancelan todas y se libera su stock | `RecorridoPedidoIntegracionTest.caducidadDeVariasReservas` |
-| Odoo: un apartado por estado, expedidos por salida; los antiguos se desactivan sin borrarlos | `OdooJsonRpcConnectorTest.apartadosPorEstado` |
+| Odoo: dos listas de firma y pago y un apartado más por salida | `OdooJsonRpcConnectorTest.apartadoPorSalida` |
 | Una unidad de más de 25 kg se señala | `PesoPedidoTest.unidadSobreElLimite` |
 | La clínica no recibe datos internos, tampoco en el resumen; cantidad máxima por línea | `LogisticaSalidasIntegracionTest.salidaHabitualYRecuentoDeBultos` |
 | Sobran registros en un palet: no se prepara ni se borra solo; se saca del palet (no la clínica) y se elimina | `…bultosSobrantes` |
@@ -241,13 +241,19 @@ Caducidad desplegada (copia previa: `_respaldos-vetstock/antes-caducidad-2026110
 se cancelaron #6 y #8, ambos sin pago desde el 31/10, con el motivo guardado. La reserva de MED-001 bajó de 11 a 9 y su stock físico
 no cambió (119). Sin errores en el registro.
 
-## 2g. Un apartado por estado (en vivo, 5 de noviembre de 2026)
+## 2g. Apartado por salida y paso automático al firmar (en vivo, 5 de noviembre de 2026)
 
-Con Odoo real, tras reexportar los 10 pedidos vinculados: 1 pagado pendiente de firma (VSM-11), 3 listos, 1 en preparación,
-3 preparados (14 - Regional: 2; Valencia: 1) y 2 expedidos (14 - Regional: 2, con dirección y fecha de expedición). Coincide con las pestañas de VetStock.
-Los menús y favoritos antiguos quedan inactivos. Capturas: [Preparados](capturas/mejoras/odoo-preparados-por-salida.jpg) y [Expedidos](capturas/mejoras/odoo-expedidos-por-salida.jpg).
+| Prueba | Resultado |
+|---|---|
+| Pedido pagado sin firma | VetStock: pagado pendiente de firma · Odoo: presupuesto, en «Pagados pendientes de firma» |
+| Lo firma el veterinario asignado, sin más acciones | VetStock: listo para preparar · Odoo: mismo pedido, ya pedido de venta, en «Firmados y pagados»; una sola copia |
+| Odoo → «Pedidos por salida» | Agrupado: 14 - Regional (4 pedidos) y Valencia (1), con dirección, estado, bultos y peso ([captura](capturas/mejoras/odoo-pedidos-por-salida.jpg)) |
+| VetStock → pestaña «Por salida» | Mismas salidas y totales ([captura](capturas/mejoras/vetstock-por-salida.jpg)) |
+| Vista de impresión | Reglas de impresión simuladas en pantalla: sin cabecera ni filtros y la tabla cabe en el ancho. **No se ha impreso en papel** |
 
-Limpieza de datos de práctica (copia previa: `_respaldos-vetstock/antes-borrar-pedidos-6-7-23-20261105.sql`): se borraron #6, #7 y #23, todos cancelados y sin copia en Odoo. Quedan 12 pedidos; el stock no cambia.
+Después se borraron todos los pedidos en VetStock y en Odoo para empezar las pruebas de cero (copias previas en `_respaldos-vetstock/`:
+`antes-borrar-todos-los-pedidos-20261105.sql` y `odoo-antes-borrar-pedidos-20261105.sql`). Se devolvió al stock físico lo que habían restado las
+expediciones y las reservas quedaron a 0. Se conservan productos, clínicas, cuentas, salidas, los 2 palets vacíos y los movimientos de stock manuales.
 
 ## 3. Guía de comprobación manual (para repetirla)
 

@@ -638,3 +638,20 @@ input[type="radio"]:focus-visible,
   .filtros-panel { grid-template-columns: 1fr 1fr; }
   .vistas-pedidos .btn { flex: 1 1 45%; font-size: 0.85rem; padding: 0.4rem 0.5rem; }
 }
+
+/* ============ Listado de pedidos por salida (imprimible) ============ */
+.listado-salidas-controles { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: flex-end; margin: 0.8rem 0; }
+.casilla-papel { display: inline-block; width: 1rem; height: 1rem; border: 1.5px solid var(--texto-suave); border-radius: 2px; }
+.solo-imprimir { display: none; }
+
+@media print {
+  .cabecera, .pie, .no-imprimir, .notificaciones { display: none !important; }
+  .solo-imprimir { display: block; font-weight: 600; }
+  body { background: #fff; }
+  .contenido { padding: 0; max-width: none; }
+  .tarjeta { box-shadow: none; border: none; padding: 0; }
+  .tabla-scroll { overflow: visible; border: none; }
+  .listado-salida { break-inside: avoid; }
+  .tabla th, .tabla td { padding: 0.25rem 0.4rem; border: 1px solid #999; }
+  a { color: inherit; text-decoration: none; }
+}

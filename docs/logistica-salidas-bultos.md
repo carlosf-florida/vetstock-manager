@@ -138,7 +138,7 @@ VetStock crea (si no existen) dos campos más en `sale.order`, en **solo lectura
 | `x_vetstock_salida` (texto) | Salida, p. ej. «14 - Regional» |
 
 Además añade las columnas a la lista «VetStock» (menús *Pagados pendientes de
-firma* a *Expedidos por salida*) y una vista heredada del formulario de pedido
+firma* y *Firmados y pagados*) y una vista heredada del formulario de pedido
 (`vetstock.sale.order.form.logistica`) que los enseña debajo de las condiciones de pago.
 La fuente de verdad es VetStock: en Odoo no se pueden editar.
 
@@ -153,7 +153,7 @@ reintenta con «Actualizar en Odoo» (o `POST /api/odoo/pedidos/{id}/exportar`).
 ### Cómo verlo en Odoo
 
 1. Entra en http://localhost:8069 (cuenta de la demo).
-2. Ventas → Pedidos → **4. Preparados por salida (VetStock)** o **5. Expedidos por salida (VetStock)**: columnas *Bultos*, *Salida* y *Peso (kg)*.
+2. Ventas → Pedidos → **Firmados y pagados (VetStock)**: columnas *Bultos*, *Salida* y *Peso (kg)*.
 3. Abre un pedido (por ejemplo `VSM-21`): bajo *Payment Terms* aparecen *Bultos*,
    *Peso total (kg)* y *Salida*, sin poder editarlos.
 

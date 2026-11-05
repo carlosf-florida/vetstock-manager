@@ -11,8 +11,8 @@ pedidos, documentos, bultos, palets, destinos e informes).
 
 **Regla principal:** ningún pedido pasa a preparación sin la **firma válida del veterinario
 asignado** y el **pago completo confirmado** por la notificación del proveedor. Administración
-los ve separados por paso del trabajo: «Pagados pendientes de firma», «Listos para preparar», «En preparación», «Preparados» y «Expedidos» (igual en Odoo Ventas,
-donde preparados y expedidos salen agrupados por salida).
+los ve separados en «Pagados pendientes de firma», «Firmados y pagados» y «Otros pendientes»
+(también como favoritos en Odoo Ventas).
 
 ## Recorrido principal
 

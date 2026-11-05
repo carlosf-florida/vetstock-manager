@@ -249,8 +249,7 @@ public class OdooSincronizacionService {
                 peso.bultosCalculados(),
                 pedido.getDestino() == null ? null : pedido.getDestino().getEtiqueta(),
                 peso.completo() ? peso.pesoTotalKg() : null,
-                pedido.getClinica().getDireccion(),
-                pedido.getFechaExpedicion() == null ? null : pedido.getFechaExpedicion().toLocalDate());
+                pedido.getClinica().getDireccion());
     }
 
     private java.math.BigDecimal importeConfirmado(Pedido pedido) {

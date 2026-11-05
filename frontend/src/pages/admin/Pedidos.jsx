@@ -5,7 +5,8 @@ import { dinero, fechaCorta, kg, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO, totalPedi
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox } from '../../components/Spinner.jsx'
 import { BadgeEstadoPedido } from '../../components/Badges.jsx'
-import { APARTADOS_PEDIDOS, SITUACIONES, infoEstadoFirma, infoEstadoPago } from '../../pedidoEstado.js'
+import ListadoPorSalida from '../../components/pedido/ListadoPorSalida.jsx'
+import { CLASIFICACIONES, SITUACIONES, infoEstadoFirma, infoEstadoPago } from '../../pedidoEstado.js'
 
 function Etiqueta({ info }) {
   return <span className={`etiqueta ${info.clase}`}>{info.texto}</span>
@@ -36,7 +37,7 @@ export default function AdminPedidos() {
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState(paramsUrl.get('q') || '')
   const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
-  // Pestaña activa: una por paso del trabajo (ver APARTADOS_PEDIDOS)
+  // Vista por firma y pago: la clasificación la calcula el backend (pedido.autorizacion)
   const [vista, setVista] = useState(paramsUrl.get('vista') || '')
   // Desde las tarjetas del resumen: ?situacion=FIRMA | PAGO | LISTO (misma regla que el contador)
   const [situacion, setSituacion] = useState(paramsUrl.get('situacion') || '')
@@ -78,9 +79,9 @@ export default function AdminPedidos() {
   }, [])
 
   // Filtro por fecha de creación: las fechas llegan en ISO y se compara el día (AAAA-MM-DD)
-  const contar = (clave) => (pedidos || []).filter(APARTADOS_PEDIDOS[clave].cumple).length
+  const contar = (clave) => (pedidos || []).filter((p) => p.autorizacion?.clasificacion === clave).length
 
-  const filasFiltradas = (pedidos || []).filter((p) => !vista || (APARTADOS_PEDIDOS[vista]?.cumple(p) ?? true))
+  const filasFiltradas = (pedidos || []).filter((p) => !vista || vista === 'POR_SALIDA' || p.autorizacion?.clasificacion === vista)
     .filter((p) => !situacion || (SITUACIONES[situacion]?.cumple(p) ?? true)).filter((p) => {
     const dia = (p.fechaCreacion || '').slice(0, 10)
     return (!desde || dia >= desde) && (!hasta || dia <= hasta)
@@ -93,18 +94,22 @@ export default function AdminPedidos() {
 
   return (
     <section>
-      <h1>Pedidos (administración)</h1>
+      <h1 className="no-imprimir">Pedidos (administración)</h1>
 
-      <div className="vistas-pedidos" role="group" aria-label="Separar pedidos por paso del trabajo">
+      <div className="vistas-pedidos no-imprimir" role="group" aria-label="Separar pedidos por firma y pago">
         <button type="button" className={'btn ' + (vista === '' ? 'btn-primario' : 'btn-secundario')} aria-pressed={vista === ''} onClick={() => setVista('')}>
           Todos ({(pedidos || []).length})
         </button>
-        {Object.entries(APARTADOS_PEDIDOS).map(([clave, { texto }]) => (
+        {Object.entries(CLASIFICACIONES).map(([clave, texto]) => (
           <button key={clave} type="button" className={'btn ' + (vista === clave ? 'btn-primario' : 'btn-secundario')}
             aria-pressed={vista === clave} onClick={() => setVista(clave)}>
             {texto} ({contar(clave)})
           </button>
         ))}
+        <button type="button" className={'btn ' + (vista === 'POR_SALIDA' ? 'btn-primario' : 'btn-secundario')}
+          aria-pressed={vista === 'POR_SALIDA'} onClick={() => setVista('POR_SALIDA')}>
+          Por salida
+        </button>
       </div>
       {situacion && SITUACIONES[situacion] && (
         <p className="caja-aviso">
@@ -112,23 +117,33 @@ export default function AdminPedidos() {
           <button type="button" className="btn btn-mini btn-secundario" onClick={() => setSituacion('')}>Quitar filtro</button>
         </p>
       )}
-      {APARTADOS_PEDIDOS[vista] && <p className="texto-suave">{APARTADOS_PEDIDOS[vista].ayuda}</p>}
-      <p className="texto-suave">Busca pedidos por número, clínica, fecha y estado; consulta su firma y su pago y entra a gestionarlos.</p>
-
-      <div className="filtros-panel">
-        <label className="campo">
-          <span>Creado desde</span>
-          <input className="input" type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} />
-        </label>
-        <label className="campo">
-          <span>Hasta</span>
-          <input className="input" type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} />
-        </label>
-      </div>
+      <p className="texto-suave">
+        {vista === 'PAGADO_PENDIENTE_FIRMA' && 'Pago completo confirmado, pero falta la firma válida del veterinario asignado: no se pueden preparar. La columna «Firma» indica qué falta.'}
+        {vista === 'FIRMADO_Y_PAGADO' && 'Firma válida del veterinario asignado y pago completo. Solo los marcados «Listo para preparar» pueden empezar la preparación.'}
+        {vista === 'OTROS' && 'Borradores, pedidos sin pago completo y cancelados.'}
+      </p>
+      {vista !== 'POR_SALIDA' && (
+        <>
+          <p className="texto-suave">Busca pedidos por número, clínica, fecha y estado; consulta su firma y su pago y entra a gestionarlos.</p>
+    
+          <div className="filtros-panel">
+            <label className="campo">
+              <span>Creado desde</span>
+              <input className="input" type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} />
+            </label>
+            <label className="campo">
+              <span>Hasta</span>
+              <input className="input" type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} />
+            </label>
+          </div>
+        </>
+      )}
 
       <ErrorBox mensaje={error} onReintentar={cargar} />
 
-      {!error && (
+      {!error && vista === 'POR_SALIDA' && <ListadoPorSalida pedidos={pedidos || []} cargando={cargando} />}
+
+      {!error && vista !== 'POR_SALIDA' && (
         <Tabla
           columns={[
             { key: 'id', label: 'Nº', render: (p) => <Link to={`/admin/pedidos/${p.id}`} state={{ volver: location.search }}>#{p.id}</Link> },

@@ -50,9 +50,9 @@ implementado y comprobado a mano en el navegador; **Parcial**; **Pendiente**.
 | RF-07 | Firma del veterinario asignado (dibujo o PNG/JPG ≤ 5 MB) tras revisar el contenido; copia inmutable | Hecho |
 | RF-08 | Bloqueo de productos y cantidades desde el envío a firma | Hecho |
 | RF-09 | Pago obligatorio (antes o después de la firma), por pasarela **de demostración** | Hecho |
-| RF-25 | Separación de pedidos por paso del trabajo (pagados pendientes de firma, listos, en preparación, preparados, expedidos y otros) con reglas fijas (firma válida + pago completo) | Hecho |
+| RF-25 | Separación «Pagados pendientes de firma» / «Firmados y pagados» / «Otros» con reglas fijas (firma válida + pago completo) | Hecho |
 | RF-26 | Rechazo del veterinario asignado con motivo; devolución pendiente si estaba pagado | Hecho (la devolución es manual, fuera de la app) |
-| RF-27 | Mismas listas en Odoo Ventas, una por estado, con preparados y expedidos agrupados por salida (campos x_vetstock_*, menús y favoritos) | Hecho (solo pedidos pagados, que son los que se exportan) |
+| RF-27 | Mismas listas en Odoo Ventas (campos x_vetstock_* y favoritos compartidos) | Hecho (solo pedidos pagados, que son los que se exportan) |
 | RF-10 | Confirmación del pago solo por notificación autenticada (HMAC), con validación de importe y moneda e idempotencia | Hecho |
 | RF-11 | Reintento de pagos fallidos sin duplicar cobros | Hecho |
 | RF-12 | Preparación solo con firma y pago | Hecho |
@@ -69,6 +69,7 @@ implementado y comprobado a mano en el navegador; **Parcial**; **Pendiente**.
 | RF-23 | Integración con Odoo (opcional, adaptador): exporta sin duplicar y permite reintentar si falla | Hecho (comprobado en vivo; no forma parte del recorrido principal) |
 | RF-24 | Pasarela real (Redsys/Bizum) | Pendiente: requiere contrato y credenciales (ver `firma-y-pagos.md`) |
 | RF-28 | Salida de expedición: habitual de cada clínica, asignada al preparar; solo administración la cambia, nunca en un pedido expedido | Hecho (ver `logistica-salidas-bultos.md`) |
+| RF-30 | Listado de pedidos con salida, separado por salida e imprimible, en Administración y en Odoo | Hecho |
 | RF-29 | Peso del pedido y bultos calculados (hasta 25 kg por bulto, mínimo 1); al preparar se crean los que falten y sin peso completo no se prepara | Hecho (pesos de la demo ficticios; ver `logistica-salidas-bultos.md`) |
 
 ## Requisitos no funcionales

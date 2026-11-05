@@ -104,7 +104,8 @@ El pago confirmado, la firma posterior y las transiciones de logística solicita
 - ADMIN: `GET /api/palets`, `POST /api/palets` `{identificador,destinoId}`, `GET /api/palets/{id}` (con sus bultos), `PATCH /api/palets/{id}/expedir`. Un palet expedido no admite bultos.
 - ADMIN: `GET /api/destinos`, `POST /api/destinos` y `PUT /api/destinos/{id}` `{codigo?,nombre}` (código único). Respuesta: `{id,codigo,nombre,etiqueta}`.
 - ADMIN: `PUT /api/clinicas/{id}/salida-habitual` `{destinoId|null}`; no cambia pedidos ya preparados.
-- Pedidos: `salidaId`, `salida`, `salidaManual`, `salidaAsignadaPor`, `fechaAsignacionSalida`, `salidaHabitualClinica`, `bultos` (registros), `pesoTotalKg`, `bultosCalculados` (null si faltan pesos) y `productosSinPeso` solo llegan con datos a ADMIN; a la clínica le llegan vacíos.
+- Pedidos: `salidaId`, `salida`, `salidaManual`, `salidaAsignadaPor`, `fechaAsignacionSalida`, `salidaHabitualClinica`, `bultos` (registros), `pesoTotalKg`, `bultosCalculados` (null si faltan pesos), `productosSinPeso`, `productosSobreLimite` (una unidad de más de 25 kg) y los datos de Odoo (`odooId`, `odooSincronizacionPendiente`, `odooUltimoError`) solo llegan con datos a ADMIN; a la clínica le llegan vacíos, también en `/api/dashboard`.
+- Líneas de pedido: `cantidad` entre 1 y 9999.
 - Productos: `pesoUnitarioKg` opcional (> 0, máx. 3 decimales). `stockInicial` solo es obligatorio al crear.
 - ADMIN: `POST /api/pedidos/{id}/documentos`, multipart PDF ≤10 MB con `archivo` y `tipo` PEDIDO/FACTURA/ALBARAN.
 - ADMIN o su clínica: `GET /api/pedidos/{id}/documentos`, `GET /api/documentos/{id}/descargar`.

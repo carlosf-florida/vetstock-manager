@@ -4,7 +4,7 @@ import { useAuth } from '../auth.jsx'
 import { Spinner } from '../components/Spinner.jsx'
 
 export default function Login() {
-  const { usuario, cargando, login } = useAuth()
+  const { usuario, cargando, sesionCaducada, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [username, setUsername] = useState('')
@@ -46,7 +46,7 @@ export default function Login() {
         <ul className="login-pasos">
           <li><strong>Pide</strong> desde el catálogo, con el stock disponible a la vista.</li>
           <li><strong>Autoriza:</strong> el veterinario asignado revisa y firma el pedido.</li>
-          <li><strong>Paga</strong> el pedido firmado; la confirmación es automática.</li>
+          <li><strong>Paga</strong> antes o después de la firma; la confirmación es automática.</li>
           <li><strong>Sigue</strong> la preparación y el envío desde «Mis pedidos».</li>
         </ul>
         <p className="login-aviso">Proyecto académico: datos ficticios y pasarela de pago de demostración, sin cobros reales.</p>
@@ -54,6 +54,10 @@ export default function Login() {
       <form className="login-tarjeta" onSubmit={enviar} noValidate>
         <h1 className="login-titulo"><span aria-hidden="true">🐾</span> VetStock Manager</h1>
         <p className="login-subtitulo">Distribuidora de productos veterinarios · Acceso al portal</p>
+
+        {sesionCaducada && !error && (
+          <p className="caja-aviso" role="status">Tu sesión ha caducado. Vuelve a iniciar sesión para continuar.</p>
+        )}
 
         {error && (
           <div className="caja-error" role="alert">

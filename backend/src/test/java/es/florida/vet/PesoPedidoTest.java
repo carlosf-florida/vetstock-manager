@@ -69,6 +69,17 @@ class PesoPedidoTest {
     }
 
     @Test
+    @DisplayName("una unidad de más de 25 kg se señala, pero el cálculo no se inventa nada más")
+    void unidadSobreElLimite() {
+        Pedido pedido = new Pedido();
+        pedido.agregarLinea(producto("Bidón", "30.000"), 1);
+        pedido.agregarLinea(producto("Saco", "25.000"), 1);
+        PesoPedido peso = PesoPedido.de(pedido);
+        assertEquals(List.of("Bidón"), peso.productosSobreLimite());
+        assertEquals(3, peso.bultosCalculados()); // 55 kg
+    }
+
+    @Test
     @DisplayName("producto sin peso: cálculo incompleto, sin bultos y sin tratarlo como 0")
     void productoSinPeso() {
         Pedido pedido = new Pedido();

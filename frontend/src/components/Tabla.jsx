@@ -6,6 +6,7 @@ import { SinDatos } from './Spinner.jsx'
  * columns: [{ key, label, render?(fila), soloEscritorio? }]
  * busquedaCampos: claves de la fila (o función) sobre las que busca el texto.
  * filtros: [{ etiqueta, valor, setValor, opciones:[{value,label}], cumple(fila, valor) }]
+ * filtrosExternosActivos / onLimpiarExternos: filtros que la página tiene fuera de la tabla (fechas, vistas).
  */
 export default function Tabla({
   columns,
@@ -19,6 +20,8 @@ export default function Tabla({
   tamanoPagina = 10,
   textoVacio = 'No hay datos para mostrar.',
   cargando = false,
+  filtrosExternosActivos = false,
+  onLimpiarExternos = null,
 }) {
   const [pagina, setPagina] = useState(1)
 
@@ -46,6 +49,13 @@ export default function Tabla({
   const paginas = Math.max(1, Math.ceil(filtradas.length / tamanoPagina))
   const paginaSegura = Math.min(pagina, paginas)
   const visibles = filtradas.slice((paginaSegura - 1) * tamanoPagina, paginaSegura * tamanoPagina)
+
+  const hayFiltros = filtrosExternosActivos || busquedaValor.trim() !== '' || filtros.some((f) => f.valor !== '' && f.valor != null)
+  function limpiarFiltros() {
+    onBusqueda?.('')
+    filtros.forEach((f) => f.setValor(''))
+    onLimpiarExternos?.()
+  }
 
   return (
     <div className="tabla-zona">
@@ -75,16 +85,20 @@ export default function Tabla({
               </select>
             </label>
           ))}
+          {hayFiltros && (
+            <button type="button" className="btn btn-secundario tabla-limpiar" onClick={limpiarFiltros}>Limpiar filtros</button>
+          )}
         </div>
       )}
 
       {cargando ? (
         <p className="cargando-tabla">Cargando datos…</p>
       ) : visibles.length === 0 ? (
-        <SinDatos mensaje={textoVacio} />
+        // «No hay datos» y «no hay resultados» son situaciones distintas
+        <SinDatos mensaje={hayFiltros ? 'Ningún registro coincide con estos filtros.' : textoVacio} />
       ) : (
         <div className="tabla-scroll">
-          <table className="tabla">
+          <table className="tabla tabla-tarjetas">
             <thead>
               <tr>
                 {columns.map((c) => (
@@ -96,8 +110,8 @@ export default function Tabla({
               {visibles.map((fila, i) => (
                 <tr key={claveFila(fila, i)}>
                   {columns.map((c) => (
-                    <td key={c.key} className={c.soloEscritorio ? 'solo-escritorio' : ''}>
-                      {c.render ? c.render(fila) : String(fila[c.key] ?? '—')}
+                    <td key={c.key} className={c.soloEscritorio ? 'solo-escritorio' : ''} data-etiqueta={c.label}>
+                      <div className="celda">{c.render ? c.render(fila) : String(fila[c.key] ?? '—')}</div>
                     </td>
                   ))}
                 </tr>

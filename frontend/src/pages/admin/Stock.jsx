@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api.js'
+import { useNotificaciones } from '../../components/Notificaciones.jsx'
 import { fecha } from '../../format.js'
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox, Spinner } from '../../components/Spinner.jsx'
@@ -12,7 +13,7 @@ export default function AdminStock() {
   const [motivo, setMotivo] = useState('')
   const [errores, setErrores] = useState({})
   const [error, setError] = useState(null)
-  const [ok, setOk] = useState(null)
+  const { notificar } = useNotificaciones()
   const [guardando, setGuardando] = useState(false)
 
   const [movimientos, setMovimientos] = useState(null)
@@ -44,8 +45,7 @@ export default function AdminStock() {
   useEffect(() => { cargarMovimientos() }, [filtroProducto])
 
   function avisar(texto) {
-    setOk(texto)
-    setTimeout(() => setOk(null), 3500)
+    notificar({ texto })
   }
 
   async function registrar(e) {
@@ -82,7 +82,6 @@ export default function AdminStock() {
       <h1>Gestión de stock</h1>
       <p className="texto-suave">Registra entradas y salidas de mercancía y consulta el historial de movimientos.</p>
 
-      {ok && <div className="caja-ok"><span aria-hidden="true">✔️</span> {ok}</div>}
       <ErrorBox mensaje={error} />
 
       <div className="tarjeta">

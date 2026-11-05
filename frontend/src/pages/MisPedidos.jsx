@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { dinero, fechaCorta, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO } from '../format.js'
@@ -14,8 +14,9 @@ export default function MisPedidos() {
   const [pedidos, setPedidos] = useState(null)
   const [error, setError] = useState(null)
   const [cargando, setCargando] = useState(true)
-  const [busqueda, setBusqueda] = useState('')
-  const [paramsUrl] = useSearchParams()
+  const [paramsUrl, setParamsUrl] = useSearchParams()
+  const location = useLocation()
+  const [busqueda, setBusqueda] = useState(paramsUrl.get('q') || '')
   // Desde las tarjetas del inicio se llega con ?situacion=FIRMA | PAGO | PREPARACION
   const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
   const [situacion, setSituacion] = useState(paramsUrl.get('situacion') || '')
@@ -38,6 +39,13 @@ export default function MisPedidos() {
 
   useEffect(() => { cargar() }, [estado])
 
+  // Los filtros viven en la URL: al volver del detalle siguen aplicados
+  useEffect(() => {
+    const valores = { estado, situacion, q: busqueda }
+    setParamsUrl(Object.fromEntries(Object.entries(valores).filter(([, v]) => v)), { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estado, situacion, busqueda])
+
   const opcionesEstado = [
     { value: '', label: 'Todos los estados' },
     ...Object.keys(ESTADOS_PEDIDO).map((e) => ({ value: e, label: NOMBRE_ESTADO_PEDIDO(e) })),
@@ -56,7 +64,7 @@ export default function MisPedidos() {
       {!error && (
         <Tabla
           columns={[
-            { key: 'id', label: 'Nº pedido', render: (p) => <Link to={`/pedidos/${p.id}`}>#{p.id}</Link> },
+            { key: 'id', label: 'Nº pedido', render: (p) => <Link to={`/pedidos/${p.id}`} state={{ volver: location.search }}>#{p.id}</Link> },
             { key: 'fechaCreacion', label: 'Fecha', render: (p) => fechaCorta(p.fechaCreacion || p.fecha) },
             { key: 'creadoPorNombre', label: 'Realizado por', soloEscritorio: true },
             { key: 'veterinarioNombre', label: 'Responsable de firma', soloEscritorio: true },
@@ -87,7 +95,7 @@ export default function MisPedidos() {
               return <span className={`etiqueta ${pago.clase}`}>{pago.texto}</span>
             } },
             { key: 'total', label: 'Total', render: (p) => (totalPedido(p) != null ? dinero(totalPedido(p)) : '—') },
-            { key: 'ver', label: '', render: (p) => <Link className="btn btn-mini btn-secundario" to={`/pedidos/${p.id}`}>Ver detalle</Link> },
+            { key: 'ver', label: '', render: (p) => <Link className="btn btn-mini btn-secundario" to={`/pedidos/${p.id}`} state={{ volver: location.search }}>Ver detalle</Link> },
           ]}
           filas={pedidos || []}
           claveFila={(p) => p.id}
@@ -108,7 +116,7 @@ export default function MisPedidos() {
               cumple: (p, v) => SITUACIONES[v]?.cumple(p) ?? true,
             },
           ]}
-          textoVacio="Todavía no tienes pedidos, o ninguno coincide con el filtro."
+          textoVacio="Todavía no tienes pedidos."
           cargando={cargando}
         />
       )}

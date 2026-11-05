@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { api } from '../../api.js'
 import { fecha } from '../../format.js'
 import { Spinner, ErrorBox } from '../../components/Spinner.jsx'
@@ -20,6 +20,7 @@ import {
 
 export default function AdminPedidoDetalle() {
   const { id } = useParams()
+  const location = useLocation()
   const [pedido, setPedido] = useState(null)
   const [error, setError] = useState(null)
   const [cargando, setCargando] = useState(true)
@@ -61,6 +62,9 @@ export default function AdminPedidoDetalle() {
       })
     return () => { if (objetoUrl) URL.revokeObjectURL(objetoUrl) }
   }, [pedido])
+
+  // Vuelve al listado con los filtros que tenía
+  const volverA = '/admin/pedidos' + (location.state?.volver || '')
 
   async function accion(fn, mensajeOk) {
     setProcesando(true)
@@ -114,7 +118,7 @@ export default function AdminPedidoDetalle() {
   if (error) return (
     <section>
       <ErrorBox mensaje={error} onReintentar={cargar} />
-      <p><Link className="btn btn-secundario" to="/admin/pedidos">← Volver a pedidos</Link></p>
+      <p><Link className="btn btn-secundario" to={volverA}>← Volver a pedidos</Link></p>
     </section>
   )
   if (!pedido) return null
@@ -126,7 +130,7 @@ export default function AdminPedidoDetalle() {
 
   return (
     <section>
-      <p><Link to="/admin/pedidos" className="enlace-volver">← Volver a pedidos</Link></p>
+      <p><Link to={volverA} className="enlace-volver">← Volver a pedidos</Link></p>
       <div className="cabecera-pedido">
         <h1>Pedido #{pedido.id}</h1>
         <BadgeEstadoPedido estado={estado} />

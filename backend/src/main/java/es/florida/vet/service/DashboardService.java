@@ -64,7 +64,7 @@ public class DashboardService {
             datos.put("enCamino", pedidos.stream().filter(p -> p.getEstado() == EstadoPedido.PREPARADO
                     || p.getEstado() == EstadoPedido.EN_PREPARACION).count());
             datos.put("expedidos", pedidos.stream().filter(p -> p.getEstado() == EstadoPedido.EXPEDIDO).count());
-            datos.put("ultimosPedidos", pedidos.stream().limit(5).map(PedidoResponse::desde).toList());
+            datos.put("ultimosPedidos", pedidos.stream().limit(5).map(PedidoResponse::desde).map(PedidoResponse::sinLogisticaInterna).toList());
         }
         return datos;
     }

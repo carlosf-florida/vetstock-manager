@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { apiFetch } from './api.js'
+import { apiFetch, EVENTO_SESION_CADUCADA } from './api.js'
 import { usarCarritoDe } from './carrito.js'
 
 const AuthContext = createContext(null)
@@ -7,6 +7,7 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null)
   const [cargando, setCargando] = useState(true)
+  const [sesionCaducada, setSesionCaducada] = useState(false)
 
   // Cada cuenta usa su propio carrito: al entrar o salir se cambia de carrito
   useEffect(() => { usarCarritoDe(usuario?.username) }, [usuario?.username])
@@ -20,8 +21,19 @@ export function AuthProvider({ children }) {
     return () => { activo = false }
   }, [])
 
+  // Si el servidor responde 401 en mitad de la sesión, se vuelve al login explicando el motivo
+  useEffect(() => {
+    const alCaducar = () => {
+      setUsuario(null)
+      setSesionCaducada(true)
+    }
+    window.addEventListener(EVENTO_SESION_CADUCADA, alCaducar)
+    return () => window.removeEventListener(EVENTO_SESION_CADUCADA, alCaducar)
+  }, [])
+
   async function login(username, password) {
     // Login de formulario de Spring Security: application/x-www-form-urlencoded
+    setSesionCaducada(false)
     const datos = await apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -43,7 +55,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ usuario, cargando, login, logout }}>
+    <AuthContext.Provider value={{ usuario, cargando, sesionCaducada, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

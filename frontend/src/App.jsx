@@ -32,15 +32,16 @@ function RequiereSesion({ children }) {
   const { usuario, cargando } = useAuth()
   const location = useLocation()
   if (cargando) return <div className="centrado-pagina"><Spinner /> <p>Comprobando sesión…</p></div>
-  if (!usuario) return <Navigate to="/login" state={{ desde: location.pathname }} replace />
+  if (!usuario) return <Navigate to="/login" state={{ desde: location.pathname + location.search }} replace />
   return children
 }
 
 // Guard: exige rol ADMIN; en caso contrario muestra página de acceso no permitido
 function RequiereAdmin({ children }) {
   const { usuario, cargando } = useAuth()
+  const location = useLocation()
   if (cargando) return <div className="centrado-pagina"><Spinner /> <p>Comprobando sesión…</p></div>
-  if (!usuario) return <Navigate to="/login" replace />
+  if (!usuario) return <Navigate to="/login" state={{ desde: location.pathname + location.search }} replace />
   if (usuario.rol !== 'ADMIN') return <AccesoNoPermitido />
   return children
 }

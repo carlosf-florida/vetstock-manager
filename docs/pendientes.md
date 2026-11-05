@@ -1,6 +1,6 @@
 # Pendientes
 
-Actualizado el 3 de noviembre de 2026. Entrega: finales de febrero de 2027.
+Actualizado el 5 de noviembre de 2026. Entrega: finales de febrero de 2027.
 
 ## Para la entrega académica (recomendado)
 
@@ -12,6 +12,9 @@ Actualizado el 3 de noviembre de 2026. Entrega: finales de febrero de 2027.
 | Media | Edición y baja (desactivación) de usuarios y clínicas en administración |
 | Media | Marcar un palet como expedido desde la interfaz (el endpoint existe: `PATCH /api/palets/{id}/expedir`) |
 | Media | Informe Power BI en Desktop sobre las vistas, si hay acceso a Power BI |
+| Media | Hacer la sincronización con Odoo en segundo plano: ahora se ejecuta dentro de la petición y confirmar un pago tarda más mientras Odoo responde |
+| Media | Definir la regla para productos cuya unidad pesa más de 25 kg (ahora solo se avisa) |
+| Baja | Página de detalle de producto (no existe; la tarjeta del catálogo muestra los datos) |
 | Media | Sustituir los pesos ficticios de la demo por pesos reales de los productos |
 | Media | Confirmar los códigos de las salidas Valencia y Alicante (solo Regional = 14 está confirmado) y la salida habitual del resto de clínicas |
 | Baja | Captura de Odoo con las columnas Bultos y Salida (en esta revisión se comprobó leyendo la página) |

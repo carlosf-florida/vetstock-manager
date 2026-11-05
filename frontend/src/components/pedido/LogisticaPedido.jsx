@@ -134,6 +134,15 @@ export default function LogisticaPedido({ pedido, onCambio }) {
         </p>
       )}
 
+      {pedido.productosSobreLimite?.length > 0 && (
+        <p className="caja-aviso">
+          <span>
+            <strong>Revisar:</strong> una unidad de {pedido.productosSobreLimite.join(', ')} pesa más de 25 kg y no cabe en un bulto.
+            El número calculado es orientativo: estos productos necesitan una regla específica, que aún no está definida.
+          </span>
+        </p>
+      )}
+
       <ErrorBox mensaje={error} onReintentar={cargar} />
       {bultos === null && !error ? (
         <Spinner texto="Cargando bultos…" />
@@ -142,7 +151,7 @@ export default function LogisticaPedido({ pedido, onCambio }) {
           <p>Registros de bultos: <strong>{registrados}</strong></p>
           {faltan > 0 && ['LISTO_PREPARAR', 'EN_PREPARACION'].includes(pedido.estado) && (
             <p className="texto-suave">
-              Al marcar el pedido como preparado se crearán {faltan === 1 ? 'el bulto que falta' : `los ${faltan} bultos que faltan`} (VSM-{pedido.id}-B1…).
+              Al marcar el pedido como preparado se {faltan === 1 ? 'creará el bulto que falta' : `crearán los ${faltan} bultos que faltan`} (VSM-{pedido.id}-B1…).
             </p>
           )}
           {faltan > 0 && pedido.estado === 'PREPARADO' && (

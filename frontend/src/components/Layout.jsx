@@ -51,7 +51,7 @@ export default function Layout() {
 
   return (
     <div className="layout">
-      <header className="cabecera">
+      <header className={'cabecera' + (esAdmin ? ' cabecera-admin' : '')}>
         <div className="cabecera-interior">
           <NavLink to="/" className="marca" onClick={cerrar}>
             <span aria-hidden="true">🐾</span> VetStock <span className="marca-suave">Manager</span>

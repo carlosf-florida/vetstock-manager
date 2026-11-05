@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../../api.js'
+import { useNotificaciones } from '../../components/Notificaciones.jsx'
 import { NOMBRE_ESTADO_PEDIDO } from '../../format.js'
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox, Spinner } from '../../components/Spinner.jsx'
@@ -11,7 +12,7 @@ export default function AdminBultos() {
   const [pedidos, setPedidos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
-  const [ok, setOk] = useState(null)
+  const { notificar } = useNotificaciones()
 
   // Desde el detalle de un pedido se llega con ?pedidoId=… y el pedido ya viene elegido
   const [paramsUrl] = useSearchParams()
@@ -43,9 +44,13 @@ export default function AdminBultos() {
 
   useEffect(() => { cargar() }, [])
 
+  // Solo se ofrecen palets abiertos de la salida del pedido (el backend lo vuelve a comprobar)
+  const paletsCompatibles = (b) => palets.filter((p) => p.id === b.paletId
+    || (!p.fechaExpedicion && b.salidaPedido && p.destinoEtiqueta === b.salidaPedido))
+  const pedidoCerrado = (b) => ['EXPEDIDO', 'CANCELADO'].includes(pedidos.find((p) => p.id === b.pedidoId)?.estado)
+
   function avisar(texto) {
-    setOk(texto)
-    setTimeout(() => setOk(null), 3500)
+    notificar({ texto })
   }
 
   async function crear(e) {
@@ -109,7 +114,6 @@ export default function AdminBultos() {
       <h1>Bultos</h1>
       <p className="texto-suave">Registra los bultos de cada pedido y asígnalos a un palet de expedición.</p>
 
-      {ok && <div className="caja-ok"><span aria-hidden="true">✔️</span> {ok}</div>}
       <ErrorBox mensaje={error} onReintentar={cargar} />
 
       <div className="tarjeta">
@@ -157,7 +161,7 @@ export default function AdminBultos() {
             { key: 'palet', label: 'Palet asignado', render: (b) => b.paletId
               ? <>
                   {b.paletIdentificador || `#${b.paletId}`}{b.paletSalida ? ` · ${b.paletSalida}` : ''}{' '}
-                  <button type="button" className="btn btn-mini btn-secundario" onClick={() => sacarDePalet(b)} disabled={asignando === b.id}>Sacar</button>
+                  {!pedidoCerrado(b) && <button type="button" className="btn btn-mini btn-secundario" onClick={() => sacarDePalet(b)} disabled={asignando === b.id}>Sacar</button>}
                 </>
               : <span className="etiqueta est-pago-pendiente"><span aria-hidden="true">⏳</span> Sin palet</span> },
             {
@@ -168,11 +172,11 @@ export default function AdminBultos() {
                   className="input input-compacto"
                   value={b.paletId || ''}
                   onChange={(e) => asignarPalet(b, e.target.value)}
-                  disabled={asignando === b.id}
+                  disabled={asignando === b.id || !b.salidaPedido || pedidoCerrado(b)}
                   aria-label={`Asignar el bulto ${b.identificador} a un palet`}
                 >
-                  <option value="">— Elige palet —</option>
-                  {palets.map((p) => <option key={p.id} value={p.id}>{p.identificador} ({p.destinoEtiqueta || p.destinoNombre || 'sin salida'})</option>)}
+                  <option value="">{b.salidaPedido ? '— Elige palet —' : 'Falta la salida del pedido'}</option>
+                  {paletsCompatibles(b).map((p) => <option key={p.id} value={p.id}>{p.identificador} ({p.destinoEtiqueta || p.destinoNombre || 'sin salida'})</option>)}
                 </select>
               ),
             },

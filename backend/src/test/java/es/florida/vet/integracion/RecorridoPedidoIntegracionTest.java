@@ -267,4 +267,22 @@ class RecorridoPedidoIntegracionTest extends IntegracionBase {
         assertTrue(pedido.get("motivoCancelacion").asText().startsWith("Reserva caducada"));
         assertEquals(reservadoInicial, producto(10).get("stockReservado").asInt());
     }
+
+    @Test
+    @DisplayName("varias reservas vencidas en la misma pasada: se cancelan todas y se libera su stock")
+    void caducidadDeVariasReservas() throws Exception {
+        MockHttpSession aux = auxSanRoque();
+        int reservadoInicial = producto(9).get("stockReservado").asInt();
+        long primero = crearPedido(aux, 9, 2);
+        long segundo = crearPedido(aux, 9, 3);
+        patchJson(aux, "/api/pedidos/" + primero + "/enviar-firma", null).andExpect(status().isOk());
+        patchJson(aux, "/api/pedidos/" + segundo + "/enviar-firma", null).andExpect(status().isOk());
+        jdbc.update("UPDATE pedidos SET fecha_envio_firma = NOW() - INTERVAL 73 HOUR WHERE id IN (?, ?)", primero, segundo);
+
+        caducidad.revisar();
+
+        assertEquals("CANCELADO", json(getJson(aux, "/api/pedidos/" + primero)).get("estado").asText());
+        assertEquals("CANCELADO", json(getJson(aux, "/api/pedidos/" + segundo)).get("estado").asText());
+        assertEquals(reservadoInicial, producto(9).get("stockReservado").asInt());
+    }
 }

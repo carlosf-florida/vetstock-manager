@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { Spinner, ErrorBox } from '../components/Spinner.jsx'
@@ -21,6 +21,7 @@ import {
 export default function PedidoDetalle() {
   const { id } = useParams()
   const { usuario } = useAuth()
+  const location = useLocation()
   const [paramsBusqueda, setParamsBusqueda] = useSearchParams()
   const [pedido, setPedido] = useState(null)
   const [error, setError] = useState(null)
@@ -113,14 +114,14 @@ export default function PedidoDetalle() {
   if (error) return (
     <section>
       <ErrorBox mensaje={error} onReintentar={cargar} />
-      <p><Link className="btn btn-secundario" to="/mis-pedidos">← Volver a mis pedidos</Link></p>
+      <p><Link className="btn btn-secundario" to={'/mis-pedidos' + (location.state?.volver || '')}>← Volver a mis pedidos</Link></p>
     </section>
   )
   if (!pedido) return null
 
   return (
     <section>
-      <p><Link to="/mis-pedidos" className="enlace-volver">← Volver a mis pedidos</Link></p>
+      <p><Link to={'/mis-pedidos' + (location.state?.volver || '')} className="enlace-volver">← Volver a mis pedidos</Link></p>
       <div className="cabecera-pedido">
         <h1>Pedido #{pedido.id}</h1>
         <BadgeEstadoPedido estado={estado} />

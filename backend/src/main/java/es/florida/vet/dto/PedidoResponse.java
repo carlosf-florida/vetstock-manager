@@ -29,7 +29,7 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                              String salidaAsignadaPor, LocalDateTime fechaAsignacionSalida,
                              String salidaHabitualClinica, Long bultos,
                              BigDecimal pesoTotalKg, Integer bultosCalculados,
-                             List<String> productosSinPeso) {
+                             List<String> productosSinPeso, List<String> productosSobreLimite) {
 
     /** Sin el cálculo de firma y pago (listados del panel y del dashboard). */
     public static PedidoResponse desde(Pedido p) {
@@ -67,20 +67,20 @@ public record PedidoResponse(Long id, Long clinicaId, String clinicaNombre,
                 p.getDestinoAsignadoPor() == null ? null : p.getDestinoAsignadoPor().getNombreCompleto(),
                 p.getFechaAsignacionDestino(),
                 habitual == null ? null : habitual.getEtiqueta(), bultos,
-                peso.pesoTotalKg(), peso.bultosCalculados(), peso.productosSinPeso());
+                peso.pesoTotalKg(), peso.bultosCalculados(), peso.productosSinPeso(), peso.productosSobreLimite());
     }
 
-    /** Copia sin la logística interna (salida, quién la asignó, peso y bultos): la clínica no la ve. */
+    /** Copia sin datos internos (salida, peso, bultos y sincronización con Odoo): la clínica no los ve. */
     public PedidoResponse sinLogisticaInterna() {
         return new PedidoResponse(id, clinicaId, clinicaNombre, veterinarioId, veterinarioNombre,
                 creadoPorNombre, creadoPorUsername, estado, observaciones, total,
                 fechaCreacion, fechaEnvioFirma, fechaFirma, fechaPago,
                 fechaListoPreparar, fechaInicioPreparacion, fechaPreparacion, fechaExpedicion,
                 fechaCancelacion, lineas, estadoFirma, estadoPago, firmanteNombre, firmanteRol,
-                veterinarioUsername, numeroColegiadoResponsable, odooId,
-                odooSincronizacionPendiente, odooUltimoError, baseImponible, ivaPorcentaje,
+                veterinarioUsername, numeroColegiadoResponsable, null,
+                false, null, baseImponible, ivaPorcentaje,
                 importeIva, moneda, modificadoPorNombre, fechaModificacion, motivoCancelacion,
                 devolucionPendiente, autorizacion,
-                null, null, false, null, null, null, null, null, null, null);
+                null, null, false, null, null, null, null, null, null, null, null);
     }
 }

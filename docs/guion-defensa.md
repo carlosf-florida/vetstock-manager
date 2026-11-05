@@ -52,8 +52,8 @@ cuando un pedido está pagado y con firma válida, Odoo lo pasa solo de presupue
 
 ## 4. Calidad (1 min)
 
-- `mvnw.cmd test` → **86 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo y los límites de los bultos (25 kg → 1; 25,01 kg → 2).
-- Las pruebas encontraron errores reales, ya corregidos: el script SQL no se podía repetir, editar líneas fallaba y editar un producto desde su pantalla daba error.
+- `mvnw.cmd test` → **88 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo y los límites de los bultos (25 kg → 1; 25,01 kg → 2).
+- Las pruebas encontraron errores reales, ya corregidos: el script SQL no se podía repetir, editar líneas fallaba y editar un producto desde su pantalla daba error. Revisar los registros de la aplicación descubrió otro: con dos o más reservas vencidas, la caducidad fallaba; ahora hay una prueba que lo cubre.
 
 ## 5. Límites honestos (1 min)
 

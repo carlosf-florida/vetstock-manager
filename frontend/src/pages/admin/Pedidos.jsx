@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { api } from '../../api.js'
 import { dinero, fechaCorta, kg, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO, totalPedido } from '../../format.js'
 import Tabla from '../../components/Tabla.jsx'
@@ -11,24 +11,48 @@ function Etiqueta({ info }) {
   return <span className={`etiqueta ${info.clase}`}>{info.texto}</span>
 }
 
+// Bultos que exige el peso; los registros solo se mencionan si ya hay alguno y no coinciden
+function CeldaBultos({ pedido: p }) {
+  if (p.estado === 'CANCELADO') return <span className="texto-suave">—</span>
+  if (p.bultosCalculados == null) {
+    return <>{Number(p.pesoTotalKg) > 0 && <span>≥ {kg(p.pesoTotalKg)} kg</span>}<small className="error-campo">Faltan pesos</small></>
+  }
+  const registrados = p.bultos ?? 0
+  return (
+    <>
+      <strong>{p.bultosCalculados}</strong>
+      <small className="texto-suave">{kg(p.pesoTotalKg)} kg</small>
+      {registrados > 0 && registrados !== p.bultosCalculados && <small className="error-campo">{registrados} registrados</small>}
+    </>
+  )
+}
+
 export default function AdminPedidos() {
-  const [paramsUrl] = useSearchParams()
+  const [paramsUrl, setParamsUrl] = useSearchParams()
+  const location = useLocation()
   const [pedidos, setPedidos] = useState(null)
   const [clinicas, setClinicas] = useState([])
   const [error, setError] = useState(null)
   const [cargando, setCargando] = useState(true)
-  const [busqueda, setBusqueda] = useState('')
+  const [busqueda, setBusqueda] = useState(paramsUrl.get('q') || '')
   const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
   // Vista por firma y pago: la clasificación la calcula el backend (pedido.autorizacion)
   const [vista, setVista] = useState(paramsUrl.get('vista') || '')
   // Desde las tarjetas del resumen: ?situacion=FIRMA | PAGO | LISTO (misma regla que el contador)
   const [situacion, setSituacion] = useState(paramsUrl.get('situacion') || '')
-  const [clinicaId, setClinicaId] = useState('')
+  const [clinicaId, setClinicaId] = useState(paramsUrl.get('clinicaId') || '')
   const [salidas, setSalidas] = useState([])
   // Filtro por salida: id de la salida, 'SIN' = sin asignar, '' = todas
   const [salidaFiltro, setSalidaFiltro] = useState(paramsUrl.get('salida') || '')
-  const [desde, setDesde] = useState('')
-  const [hasta, setHasta] = useState('')
+  const [desde, setDesde] = useState(paramsUrl.get('desde') || '')
+  const [hasta, setHasta] = useState(paramsUrl.get('hasta') || '')
+
+  // Los filtros viven en la URL: al volver del detalle (o recargar) siguen aplicados
+  useEffect(() => {
+    const valores = { estado, vista, situacion, clinicaId, salida: salidaFiltro, desde, hasta, q: busqueda }
+    setParamsUrl(Object.fromEntries(Object.entries(valores).filter(([, v]) => v)), { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estado, vista, situacion, clinicaId, salidaFiltro, desde, hasta, busqueda])
 
   async function cargar() {
     setCargando(true)
@@ -98,17 +122,12 @@ export default function AdminPedidos() {
       <div className="filtros-panel">
         <label className="campo">
           <span>Creado desde</span>
-          <input type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} />
+          <input className="input" type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} />
         </label>
         <label className="campo">
           <span>Hasta</span>
-          <input type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} />
+          <input className="input" type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} />
         </label>
-        {(desde || hasta) && (
-          <button type="button" className="btn btn-secundario btn-mini" onClick={() => { setDesde(''); setHasta('') }}>
-            Quitar fechas
-          </button>
-        )}
       </div>
 
       <ErrorBox mensaje={error} onReintentar={cargar} />
@@ -116,10 +135,16 @@ export default function AdminPedidos() {
       {!error && (
         <Tabla
           columns={[
-            { key: 'id', label: 'Nº', render: (p) => <Link to={`/admin/pedidos/${p.id}`}>#{p.id}</Link> },
-            { key: 'clinicaNombre', label: 'Clínica' },
-            { key: 'veterinarioNombre', label: 'Veterinario', soloEscritorio: true },
-            { key: 'creadoPorNombre', label: 'Creado por', soloEscritorio: true },
+            { key: 'id', label: 'Nº', render: (p) => <Link to={`/admin/pedidos/${p.id}`} state={{ volver: location.search }}>#{p.id}</Link> },
+            {
+              key: 'clinicaNombre', label: 'Clínica', render: (p) => (
+                <>
+                  {p.clinicaNombre}
+                  <small className="texto-suave">Responsable: {p.veterinarioNombre}</small>
+                  <small className="texto-suave">Creado por: {p.creadoPorNombre}</small>
+                </>
+              ),
+            },
             { key: 'fechaCreacion', label: 'Fecha', render: (p) => fechaCorta(p.fechaCreacion) },
             { key: 'estado', label: 'Estado', render: (p) => <BadgeEstadoPedido estado={p.estado} /> },
             {
@@ -139,20 +164,11 @@ export default function AdminPedidos() {
                 </>
               ),
             },
-            { key: 'salida', label: 'Salida', render: (p) => p.salida || <span className="texto-suave">Sin asignar</span> },
+            { key: 'salida', label: 'Salida', render: (p) => p.salida || <span className="texto-suave">{p.estado === 'CANCELADO' ? '—' : 'Sin asignar'}</span> },
             // Peso y bultos los calcula el servidor (máx. 25 kg por bulto); aquí solo se muestran
-            {
-              key: 'peso', label: 'Peso', render: (p) => (p.bultosCalculados == null
-                ? <>{Number(p.pesoTotalKg) > 0 && <span>≥ {kg(p.pesoTotalKg)} kg</span>}<small className="error-campo">Faltan pesos</small></>
-                : `${kg(p.pesoTotalKg)} kg`),
-            },
-            {
-              key: 'bultos', label: 'Bultos', render: (p) => (p.bultosCalculados == null
-                ? <span className="texto-suave">Sin calcular</span>
-                : <>{p.bultosCalculados}{(p.bultos ?? 0) !== p.bultosCalculados && <small className="texto-suave">{p.bultos ?? 0} registrados</small>}</>),
-            },
+            { key: 'bultos', label: 'Bultos', render: (p) => <CeldaBultos pedido={p} /> },
             { key: 'total', label: 'Total', render: (p) => (totalPedido(p) != null ? dinero(totalPedido(p)) : '—') },
-            { key: 'gestion', label: '', render: (p) => <Link className="btn btn-mini btn-secundario" to={`/admin/pedidos/${p.id}`}>Gestionar</Link> },
+            { key: 'gestion', label: '', render: (p) => <Link className="btn btn-mini btn-secundario" to={`/admin/pedidos/${p.id}`} state={{ volver: location.search }}>Gestionar</Link> },
           ]}
           filas={filasFiltradas}
           claveFila={(p) => p.id}
@@ -181,7 +197,9 @@ export default function AdminPedidos() {
               cumple: (p, v) => String(p.clinicaId) === v,
             },
           ]}
-          textoVacio="No hay pedidos que coincidan con la búsqueda."
+          textoVacio="Todavía no hay pedidos."
+          filtrosExternosActivos={Boolean(vista || situacion || desde || hasta)}
+          onLimpiarExternos={() => { setVista(''); setSituacion(''); setDesde(''); setHasta('') }}
           cargando={cargando}
         />
       )}

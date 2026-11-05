@@ -19,8 +19,11 @@ import java.util.List;
  * @param pesoTotalKg       suma de las líneas con peso conocido (si está incompleto es un mínimo)
  * @param bultosCalculados  bultos que exige la regla; null si el cálculo está incompleto
  * @param productosSinPeso  nombres de los productos del pedido que no tienen peso
+ * @param productosSobreLimite productos cuya UNIDAD pesa más de 25 kg: no caben en un bulto y no
+ *                          hay regla para dividirlos, así que solo se avisa (no se improvisa)
  */
-public record PesoPedido(BigDecimal pesoTotalKg, Integer bultosCalculados, List<String> productosSinPeso) {
+public record PesoPedido(BigDecimal pesoTotalKg, Integer bultosCalculados, List<String> productosSinPeso,
+                         List<String> productosSobreLimite) {
 
     /** Peso máximo que admite un bulto. */
     public static final BigDecimal KG_POR_BULTO = new BigDecimal("25");
@@ -28,6 +31,7 @@ public record PesoPedido(BigDecimal pesoTotalKg, Integer bultosCalculados, List<
     public static PesoPedido de(Pedido pedido) {
         BigDecimal total = BigDecimal.ZERO;
         List<String> sinPeso = new ArrayList<>();
+        List<String> sobreLimite = new ArrayList<>();
         for (LineaPedido linea : pedido.getLineas()) {
             BigDecimal pesoUnidad = linea.getProducto().getPesoUnitarioKg();
             if (pesoUnidad == null) {
@@ -35,10 +39,13 @@ public record PesoPedido(BigDecimal pesoTotalKg, Integer bultosCalculados, List<
             } else {
                 // Peso de la línea = peso por UNIDAD × cantidad (no se confunde con el de la línea)
                 total = total.add(pesoUnidad.multiply(BigDecimal.valueOf(linea.getCantidad())));
+                if (pesoUnidad.compareTo(KG_POR_BULTO) > 0) {
+                    sobreLimite.add(linea.getProducto().getNombre());
+                }
             }
         }
         Integer bultos = sinPeso.isEmpty() ? bultosParaPeso(total) : null;
-        return new PesoPedido(total.setScale(3, RoundingMode.UNNECESSARY), bultos, List.copyOf(sinPeso));
+        return new PesoPedido(total.setScale(3, RoundingMode.UNNECESSARY), bultos, List.copyOf(sinPeso), List.copyOf(sobreLimite));
     }
 
     /** Bultos para un peso conocido: techo(peso / 25), mínimo 1. */

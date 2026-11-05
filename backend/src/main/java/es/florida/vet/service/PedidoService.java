@@ -455,9 +455,13 @@ public class PedidoService {
     @Transactional
     public int caducarReservasVencidas(LocalDateTime limite, java.util.function.Predicate<Pedido> tienePagoEnCurso) {
         int cancelados = 0;
-        List<Pedido> candidatos = pedidoRepository.findByEstadoInAndFechaPagoIsNullAndFechaEnvioFirmaBefore(
-                List.of(EstadoPedido.PENDIENTE_FIRMA, EstadoPedido.FIRMADO), limite);
-        for (Pedido pedido : candidatos) {
+        List<Long> candidatos = pedidoRepository.findByEstadoInAndFechaPagoIsNullAndFechaEnvioFirmaBefore(
+                List.of(EstadoPedido.PENDIENTE_FIRMA, EstadoPedido.FIRMADO), limite)
+                .stream().map(Pedido::getId).toList();
+        // Se recarga cada pedido: liberar la reserva limpia el contexto de Hibernate (clearAutomatically)
+        // y los pedidos leídos antes quedarían desconectados, sin poder cargar sus líneas.
+        for (Long id : candidatos) {
+            Pedido pedido = buscarPedido(id);
             if (tienePagoEnCurso.test(pedido)) continue;
             cancelarYLiberar(pedido, "Reserva caducada: sin pago confirmado en el plazo establecido");
             pedidoRepository.save(pedido);

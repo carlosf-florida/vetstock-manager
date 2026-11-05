@@ -19,8 +19,8 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 
 ### Última ejecución registrada
 
-- Fecha: 3 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
-- Resultado: **86 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
+- Fecha: 5 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
+- Resultado: **88 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
 - La prueba de concurrencia se repitió 3 veces seguidas con el mismo resultado.
 
 ### Correspondencia con las pruebas pedidas
@@ -64,6 +64,9 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 | Sin errores de coma flotante (24,999 + 0,001; 8,333 × 3) | `PesoPedidoTest.sinErroresDeComaFlotante` |
 | Producto sin peso: incompleto, sin bultos, no cuenta como 0 | `PesoPedidoTest.productoSinPeso` y `LogisticaSalidasIntegracionTest.bultosPorPeso` |
 | Al preparar se crean los bultos que faltan; repetir no duplica; no se registra por encima de lo calculado | `…salidaHabitualYRecuentoDeBultos` y `…bultosPorPeso` |
+| Varias reservas vencidas en la misma pasada: se cancelan todas y se libera su stock | `RecorridoPedidoIntegracionTest.caducidadDeVariasReservas` |
+| Una unidad de más de 25 kg se señala | `PesoPedidoTest.unidadSobreElLimite` |
+| La clínica no recibe datos internos, tampoco en el resumen; cantidad máxima por línea | `LogisticaSalidasIntegracionTest.salidaHabitualYRecuentoDeBultos` |
 | Sobran registros en un palet: no se prepara ni se borra solo; se saca del palet (no la clínica) y se elimina | `…bultosSobrantes` |
 | No se saca del palet un bulto de un pedido expedido | `…cambioDeSalidaConReglas` |
 | Editar un producto sin enviar stockInicial (como el formulario) | `…bultosPorPeso` (ayudante `pesoProducto`) |
@@ -212,6 +215,30 @@ Tras aplicar `011` y los pesos ficticios de la demo (copia previa:
 Errores encontrados y corregidos en esta prueba: editar un producto desde la pantalla fallaba
 siempre («no debe ser nulo») porque el formulario no envía `stockInicial` (error antiguo, del
 primer frontend); y la validación del peso en el formulario tenía mal escrita la expresión regular.
+
+## 2f. Recorrido completo por la pantalla y primer lote de mejoras (5 de noviembre de 2026)
+
+Docker con Odoo real. Pedido de prueba #24 (3 sacos de pienso y 1 caja de guantes):
+
+| Paso | Cuenta | Resultado |
+|---|---|---|
+| Catálogo → carrito → enviar a firma | aux.sanroque | Pedido #24, 144,20 €, stock reservado |
+| Revisar, dibujar firma y firmar | dr.garcia | Firmado · pendiente de pago |
+| Pago fallido, reintento con otra referencia y pago correcto | dr.garcia | Dos intentos: FALLADO y CONFIRMADO; pedido listo para preparar |
+| Iniciar preparación y marcar como preparado | admin | 38,1 kg → VSM-24-B1 y B2; salida 14 - Regional |
+| Asignar a palet | admin | El selector solo ofrece PALET-REG-01; aviso de éxito en cada asignación |
+| Expedir | admin | Stock físico del pienso de 15 a 12; Odoo S00015: EXPEDIDO, 2 bultos, 38,1 kg |
+
+También comprobado: un usuario de otra clínica recibe 403 en pedido, firma, documentos, pago, cancelar y rechazar;
+filtros conservados al volver del detalle y tras iniciar sesión de nuevo; «Limpiar filtros»; «Ningún registro coincide» frente a «Todavía no hay pedidos»;
+aviso de sesión caducada; sin desbordamiento a 375 px en pedidos, bultos, productos, clínicas, mis pedidos, stock y palets; horas correctas con `TZ`.
+
+Automatizado solo para esta prueba: los clics del navegador se hicieron en parte por código y el diálogo de confirmación de «Expedir» se aceptó automáticamente.
+No comprobado: móvil o tableta real, y lectores de pantalla.
+
+Caducidad desplegada (copia previa: `_respaldos-vetstock/antes-caducidad-20261105.sql`): en la primera pasada
+se cancelaron #6 y #8, ambos sin pago desde el 31/10, con el motivo guardado. La reserva de MED-001 bajó de 11 a 9 y su stock físico
+no cambió (119). Sin errores en el registro.
 
 ## 3. Guía de comprobación manual (para repetirla)
 

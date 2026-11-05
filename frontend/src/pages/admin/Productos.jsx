@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api } from '../../api.js'
+import { useNotificaciones } from '../../components/Notificaciones.jsx'
 import { dinero, kg } from '../../format.js'
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox, Spinner } from '../../components/Spinner.jsx'
@@ -21,7 +22,7 @@ export default function AdminProductos() {
   const [editando, setEditando] = useState(null) // producto en edición
   const [errores, setErrores] = useState({})
   const [errorForm, setErrorForm] = useState(null)
-  const [ok, setOk] = useState(null)
+  const { notificar } = useNotificaciones()
   const [guardando, setGuardando] = useState(false)
 
   async function cargar() {
@@ -47,8 +48,7 @@ export default function AdminProductos() {
   }, [busqueda, soloBajo])
 
   function avisar(texto) {
-    setOk(texto)
-    setTimeout(() => setOk(null), 3500)
+    notificar({ texto })
   }
 
   function validar(datos) {
@@ -145,7 +145,6 @@ export default function AdminProductos() {
       <p className="texto-suave">Alta, edición, activación y seguimiento del stock mínimo de los productos del catálogo.</p>
 
       <ErrorBox mensaje={error} onReintentar={cargar} />
-      {ok && <div className="caja-ok"><span aria-hidden="true">✔️</span> {ok}</div>}
 
       <div className="tarjeta formulario-producto">
         <h2>{editando ? `Editar producto #${editando.id}` : 'Nuevo producto'}</h2>

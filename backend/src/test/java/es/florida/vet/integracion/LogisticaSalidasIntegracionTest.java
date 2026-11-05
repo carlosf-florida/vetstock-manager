@@ -83,7 +83,11 @@ class LogisticaSalidasIntegracionTest extends IntegracionBase {
         // La clínica no ve la logística interna de su pedido
         getJson(drGarcia(), "/api/pedidos/" + id).andExpect(status().isOk())
                 .andExpect(jsonPath("$.salida").doesNotExist()).andExpect(jsonPath("$.bultos").doesNotExist())
-                .andExpect(jsonPath("$.salidaAsignadaPor").doesNotExist());
+                .andExpect(jsonPath("$.salidaAsignadaPor").doesNotExist())
+                .andExpect(jsonPath("$.odooId").doesNotExist()).andExpect(jsonPath("$.odooUltimoError").doesNotExist());
+        JsonNode resumenClinica = json(getJson(auxSanRoque(), "/api/dashboard"));
+        resumenClinica.get("ultimosPedidos").forEach(p -> assertTrue(!p.hasNonNull("odooId") && !p.hasNonNull("salida") && !p.hasNonNull("bultos"), "el resumen de la clínica muestra datos internos"));
+        postJson(auxSanRoque(), "/api/pedidos", "{\"lineas\":[{\"productoId\":1,\"cantidad\":10000}]}").andExpect(status().isBadRequest());
         JsonNode listaClinica = json(getJson(auxSanRoque(), "/api/pedidos"));
         listaClinica.forEach(p -> assertTrue(!p.hasNonNull("salida") && !p.hasNonNull("bultos"), "la clínica ve la salida o los bultos"));
 

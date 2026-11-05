@@ -18,6 +18,9 @@ function mensajeError(status, texto) {
   return texto || porEstado[status] || `Error ${status} al contactar con el servidor.`
 }
 
+// Aviso al resto de la aplicación (auth.jsx) de que la sesión ya no es válida
+export const EVENTO_SESION_CADUCADA = 'vetstock:sesion-caducada'
+
 export async function apiFetch(url, options = {}) {
   const opts = { credentials: 'include', ...options }
   if (opts.body && !(opts.body instanceof FormData) && typeof opts.body !== 'string') {
@@ -33,6 +36,10 @@ export async function apiFetch(url, options = {}) {
   if (res.status === 204) return null
   const tipo = res.headers.get('content-type') || ''
   if (!res.ok) {
+    // /api/auth/* queda fuera: ahí un 401 significa «contraseña incorrecta» o «aún sin sesión»
+    if (res.status === 401 && !url.startsWith('/api/auth/')) {
+      window.dispatchEvent(new Event(EVENTO_SESION_CADUCADA))
+    }
     let texto = null
     try {
       const cuerpo = await res.text()

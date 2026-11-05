@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../../api.js'
+import { useNotificaciones } from '../../components/Notificaciones.jsx'
 import { ErrorBox, Spinner, SinDatos } from '../../components/Spinner.jsx'
 
 export default function AdminPalets() {
@@ -7,7 +8,7 @@ export default function AdminPalets() {
   const [destinos, setDestinos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
-  const [ok, setOk] = useState(null)
+  const { notificar } = useNotificaciones()
 
   const [form, setForm] = useState({ identificador: '', destinoId: '' })
   const [errores, setErrores] = useState({})
@@ -33,8 +34,7 @@ export default function AdminPalets() {
   useEffect(() => { cargar() }, [])
 
   function avisar(texto) {
-    setOk(texto)
-    setTimeout(() => setOk(null), 3500)
+    notificar({ texto })
   }
 
   async function crear(e) {
@@ -82,7 +82,6 @@ export default function AdminPalets() {
       <h1>Palets de expedición</h1>
       <p className="texto-suave">Crea palets con destino y consulta los bultos y pedidos que contiene cada uno.</p>
 
-      {ok && <div className="caja-ok"><span aria-hidden="true">✔️</span> {ok}</div>}
       <ErrorBox mensaje={error} onReintentar={cargar} />
 
       <div className="tarjeta">

@@ -372,6 +372,8 @@ class PedidoFirmaPagoTest {
         vencido.pedido().agregarLinea(producto, 3);
         when(pedidoRepository.findByEstadoInAndFechaPagoIsNullAndFechaEnvioFirmaBefore(any(), any()))
                 .thenReturn(java.util.List.of(vencido.pedido(), conPagoEnCurso.pedido()));
+        when(pedidoRepository.findById(401L)).thenReturn(java.util.Optional.of(vencido.pedido()));
+        when(pedidoRepository.findById(402L)).thenReturn(java.util.Optional.of(conPagoEnCurso.pedido()));
 
         int cancelados = pedidoService.caducarReservasVencidas(LocalDateTime.now().minusHours(72),
                 p -> p.getId().equals(402L));

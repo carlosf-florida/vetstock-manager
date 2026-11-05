@@ -27,6 +27,8 @@ export function firmaValida(pedido) {
 
 export function infoEstadoFirma(pedido) {
   if (firmaValida(pedido)) return { texto: 'Firma válida', clase: 'est-firmado' }
+  // Un pedido cancelado ya no espera nada: «pendiente» sería contradictorio
+  if (pedido?.estado === 'CANCELADO' && !pedido?.fechaFirma) return { texto: 'Sin firma', clase: 'est-neutro' }
   if (pedido?.fechaFirma) return { texto: 'Firma no válida', clase: 'est-pago-fallado' }
   return { texto: 'Pendiente de firma', clase: 'est-pendiente-firma' }
 }
@@ -63,6 +65,7 @@ export const CLASIFICACIONES = {
 export function infoEstadoPago(pedido) {
   const estado = estadoPagoPedido(pedido)
   if (estado === 'PAGADO') return { texto: 'Pagado', clase: 'est-pago-confirmado' }
+  if (pedido?.estado === 'CANCELADO') return { texto: 'Sin pago', clase: 'est-neutro' }
   if (estado === 'FALLADO') return { texto: 'Pago fallido', clase: 'est-pago-fallado' }
   return { texto: 'Pendiente', clase: 'est-pago-pendiente' }
 }

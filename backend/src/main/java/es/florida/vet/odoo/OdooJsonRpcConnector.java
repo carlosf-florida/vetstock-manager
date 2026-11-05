@@ -216,8 +216,8 @@ public class OdooJsonRpcConnector implements OdooConnector {
         int vista = asegurarVistaClasificacion();
         asegurarMenu(FILTRO_PENDIENTES_FIRMA, pendientes, vista, 90, "{'create': False}");
         asegurarMenu(FILTRO_FIRMADOS_PAGADOS, firmados, vista, 91, "{'create': False}");
-        // Listado para el almacén: los pedidos con salida asignada, agrupados por salida
-        asegurarMenu(LISTADO_POR_SALIDA, "[('x_vetstock_salida', '!=', False), " + abiertos + "]",
+        // Listado para el almacén: los pedidos firmados y pagados, agrupados por su salida
+        asegurarMenu(LISTADO_POR_SALIDA, "[('x_vetstock_salida', '!=', False), ('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', True), " + abiertos + "]",
                 asegurarVistaPorSalida(), 92, "{'create': False, 'group_by': ['x_vetstock_salida']}");
         asegurarFichaLogistica();
         clasificacionPreparada = true;

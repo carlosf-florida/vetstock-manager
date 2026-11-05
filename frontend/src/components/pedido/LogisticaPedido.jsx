@@ -85,7 +85,7 @@ export default function LogisticaPedido({ pedido, onCambio }) {
     <div className="tarjeta">
       <h2>Salida de expedición</h2>
       <p>
-        <strong>Salida del pedido:</strong> {pedido.salida || <span className="texto-suave">Sin asignar</span>}
+        <strong>{!pedido.salida && pedido.salidaHabitualClinica ? 'Salida prevista:' : 'Salida del pedido:'}</strong> {pedido.salida || pedido.salidaHabitualClinica || <span className="texto-suave">Sin asignar</span>}
         {pedido.salida && pedido.salidaAsignadaPor && (
           <small className="texto-suave">
             {' '}· {pedido.salidaManual ? 'elegida' : 'asignada al preparar'} por {pedido.salidaAsignadaPor}
@@ -95,7 +95,7 @@ export default function LogisticaPedido({ pedido, onCambio }) {
       </p>
       <p className="texto-suave">
         Salida habitual de la clínica: {pedido.salidaHabitualClinica || 'ninguna configurada'}.
-        {!pedido.salida && pedido.salidaHabitualClinica && ' Al marcar el pedido como preparado se le asignará la salida habitual, salvo que elijas otra aquí.'}
+        {!pedido.salida && pedido.salidaHabitualClinica && ' Quedará fijada al marcar el pedido como preparado, salvo que elijas otra aquí.'}
       </p>
       {faltaSalida && (
         <p className="caja-aviso">

@@ -20,7 +20,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 ### Última ejecución registrada
 
 - Fecha: 5 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
-- Resultado: **89 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
+- Resultado: **90 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
 - La prueba de concurrencia se repitió 3 veces seguidas con el mismo resultado.
 
 ### Correspondencia con las pruebas pedidas
@@ -66,6 +66,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 | Al preparar se crean los bultos que faltan; repetir no duplica; no se registra por encima de lo calculado | `…salidaHabitualYRecuentoDeBultos` y `…bultosPorPeso` |
 | Varias reservas vencidas en la misma pasada: se cancelan todas y se libera su stock | `RecorridoPedidoIntegracionTest.caducidadDeVariasReservas` |
 | Odoo: dos listas de firma y pago y un apartado más por salida | `OdooJsonRpcConnectorTest.apartadoPorSalida` |
+| Salida prevista: la asignada manda y prever no asigna nada | `PesoPedidoTest.salidaPrevista` |
 | Una unidad de más de 25 kg se señala | `PesoPedidoTest.unidadSobreElLimite` |
 | La clínica no recibe datos internos, tampoco en el resumen; cantidad máxima por línea | `LogisticaSalidasIntegracionTest.salidaHabitualYRecuentoDeBultos` |
 | Sobran registros en un palet: no se prepara ni se borra solo; se saca del palet (no la clínica) y se elimina | `…bultosSobrantes` |
@@ -254,6 +255,8 @@ no cambió (119). Sin errores en el registro.
 Después se borraron todos los pedidos en VetStock y en Odoo para empezar las pruebas de cero (copias previas en `_respaldos-vetstock/`:
 `antes-borrar-todos-los-pedidos-20261105.sql` y `odoo-antes-borrar-pedidos-20261105.sql`). Se devolvió al stock físico lo que habían restado las
 expediciones y las reservas quedaron a 0. Se conservan productos, clínicas, cuentas, salidas, los 2 palets vacíos y los movimientos de stock manuales.
+
+Las copias de seguridad citadas en este documento (`_respaldos-vetstock/`) se retiraron el 5 de noviembre de 2026 a petición del alumno: ya no están disponibles.
 
 ## 3. Guía de comprobación manual (para repetirla)
 

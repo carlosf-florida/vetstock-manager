@@ -231,6 +231,8 @@ public class Pedido {
     public String getMotivoCancelacion() { return motivoCancelacion; }
     public void setMotivoCancelacion(String motivo) { this.motivoCancelacion = motivo; }
     public Destino getDestino() { return destino; }
+    /** La salida asignada o, mientras no la haya, la habitual de la clínica. No guarda nada: la definitiva se fija al preparar. */
+    public Destino getSalidaPrevista() { return destino != null ? destino : clinica.getDestinoHabitual(); }
     public boolean isDestinoManual() { return destinoManual; }
     public Usuario getDestinoAsignadoPor() { return destinoAsignadoPor; }
     public LocalDateTime getFechaAsignacionDestino() { return fechaAsignacionDestino; }

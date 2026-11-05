@@ -127,6 +127,11 @@ lleva cada uno.
 `x_vetstock_peso_kg` («Peso total (kg)», 3 decimales, solo lectura) en la ficha del pedido y en
 la lista VetStock. Odoo no mantiene ningún contador propio.
 
+### Salida prevista
+
+Desde que se realiza el pedido se ve la salida habitual de su clínica como **prevista**, en VetStock y en Odoo. No se guarda en el pedido: la
+definitiva se fija al prepararlo o al elegirla administración. Si cambia la habitual de la clínica, lo previsto cambia, y Odoo lo recibe en la siguiente sincronización del pedido.
+
 ## Odoo
 
 VetStock crea (si no existen) dos campos más en `sale.order`, en **solo lectura**:

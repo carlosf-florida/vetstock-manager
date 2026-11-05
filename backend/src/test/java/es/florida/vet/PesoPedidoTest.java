@@ -69,6 +69,23 @@ class PesoPedidoTest {
     }
 
     @Test
+    @DisplayName("salida prevista: la asignada manda; si no hay, la habitual de la clínica; sin ninguna, vacía")
+    void salidaPrevista() {
+        es.florida.vet.entity.Clinica clinica = new es.florida.vet.entity.Clinica("Clínica", "Calle 1", "600");
+        Pedido pedido = new Pedido(clinica, null, null);
+        assertNull(pedido.getSalidaPrevista());
+
+        es.florida.vet.entity.Destino habitual = new es.florida.vet.entity.Destino();
+        clinica.setDestinoHabitual(habitual);
+        assertEquals(habitual, pedido.getSalidaPrevista());
+        assertNull(pedido.getDestino()); // prever no asigna nada
+
+        es.florida.vet.entity.Destino elegida = new es.florida.vet.entity.Destino();
+        pedido.asignarDestino(elegida, null, true);
+        assertEquals(elegida, pedido.getSalidaPrevista());
+    }
+
+    @Test
     @DisplayName("una unidad de más de 25 kg se señala, pero el cálculo no se inventa nada más")
     void unidadSobreElLimite() {
         Pedido pedido = new Pedido();

@@ -28,6 +28,14 @@ function CeldaBultos({ pedido: p }) {
   )
 }
 
+// La salida es definitiva al preparar; hasta entonces se muestra la habitual de la clínica como prevista
+function CeldaSalida({ pedido: p }) {
+  if (p.salida) return p.salida
+  if (p.estado === 'CANCELADO') return <span className="texto-suave">—</span>
+  if (!p.salidaHabitualClinica) return <span className="texto-suave">Sin asignar</span>
+  return <>{p.salidaHabitualClinica}<small className="texto-suave">Prevista</small></>
+}
+
 export default function AdminPedidos() {
   const [paramsUrl, setParamsUrl] = useSearchParams()
   const location = useLocation()
@@ -175,7 +183,7 @@ export default function AdminPedidos() {
                 </>
               ),
             },
-            { key: 'salida', label: 'Salida', render: (p) => p.salida || <span className="texto-suave">{p.estado === 'CANCELADO' ? '—' : 'Sin asignar'}</span> },
+            { key: 'salida', label: 'Salida', render: (p) => <CeldaSalida pedido={p} /> },
             // Peso y bultos los calcula el servidor (máx. 25 kg por bulto); aquí solo se muestran
             { key: 'bultos', label: 'Bultos', render: (p) => <CeldaBultos pedido={p} /> },
             { key: 'total', label: 'Total', render: (p) => (totalPedido(p) != null ? dinero(totalPedido(p)) : '—') },
@@ -198,7 +206,11 @@ export default function AdminPedidos() {
                 { value: 'SIN', label: 'Sin asignar' },
                 ...salidas.map((d) => ({ value: String(d.id), label: d.etiqueta })),
               ],
-              cumple: (p, v) => (v === 'SIN' ? !p.salidaId : String(p.salidaId) === v),
+              // También cuenta la salida prevista, para que el filtro coincida con lo que se ve en la tabla
+              cumple: (p, v) => {
+                const salida = p.salida || p.salidaHabitualClinica
+                return v === 'SIN' ? !salida : salidas.find((d) => String(d.id) === v)?.etiqueta === salida
+              },
             },
             {
               etiqueta: 'Clínica',

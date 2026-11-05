@@ -4,19 +4,20 @@ import { fechaCorta, kg, NOMBRE_ESTADO_PEDIDO } from '../../format.js'
 import { SinDatos } from '../Spinner.jsx'
 
 /**
- * Listado para el almacén: pedidos con salida asignada, separados por salida, para imprimirlo
+ * Listado para el almacén: pedidos firmados y pagados, separados por su salida (asignada o prevista), para imprimirlo
  * y comprobar en papel que están todos. Solo muestra datos; no cambia ningún estado.
  */
 export default function ListadoPorSalida({ pedidos, cargando }) {
   const [salida, setSalida] = useState('')
 
-  const conSalida = pedidos.filter((p) => p.salida && !['CANCELADO', 'BORRADOR'].includes(p.estado))
-  const salidas = [...new Set(conSalida.map((p) => p.salida))].sort()
+  const salidaDe = (p) => p.salida || p.salidaHabitualClinica
+  const conSalida = pedidos.filter((p) => salidaDe(p) && p.autorizacion?.clasificacion === 'FIRMADO_Y_PAGADO')
+  const salidas = [...new Set(conSalida.map(salidaDe))].sort()
   const visibles = salidas.filter((s) => !salida || s === salida)
 
   if (cargando) return <p className="cargando-tabla">Cargando datos…</p>
   if (conSalida.length === 0) {
-    return <SinDatos mensaje="Todavía no hay pedidos con salida. La salida se asigna al marcar el pedido como preparado." />
+    return <SinDatos mensaje="Todavía no hay pedidos firmados y pagados con salida." />
   }
 
   return (
@@ -35,8 +36,8 @@ export default function ListadoPorSalida({ pedidos, cargando }) {
       <p className="solo-imprimir">Listado de pedidos por salida · {fechaCorta(new Date().toISOString())}</p>
 
       {visibles.map((s) => {
-        const deLaSalida = conSalida.filter((p) => p.salida === s).sort((a, b) => a.id - b.id)
-        const bultos = deLaSalida.reduce((suma, p) => suma + (p.bultos ?? 0), 0)
+        const deLaSalida = conSalida.filter((p) => salidaDe(p) === s).sort((a, b) => a.id - b.id)
+        const bultos = deLaSalida.reduce((suma, p) => suma + (p.bultosCalculados ?? 0), 0)
         return (
           <section key={s} className="tarjeta listado-salida">
             <h2>Salida {s}</h2>
@@ -53,7 +54,7 @@ export default function ListadoPorSalida({ pedidos, cargando }) {
                       <td>{p.clinicaNombre}</td>
                       <td>{p.direccionEntrega || '—'}</td>
                       <td>{NOMBRE_ESTADO_PEDIDO(p.estado)}</td>
-                      <td>{p.bultos ?? 0}</td>
+                      <td>{p.bultosCalculados ?? '—'}</td>
                       <td>{p.bultosCalculados == null ? 'Faltan pesos' : `${kg(p.pesoTotalKg)} kg`}</td>
                       <td><span className="casilla-papel" role="img" aria-label="Casilla para marcar en papel" /></td>
                     </tr>

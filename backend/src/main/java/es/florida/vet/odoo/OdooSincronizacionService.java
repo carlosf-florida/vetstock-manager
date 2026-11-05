@@ -245,9 +245,9 @@ public class OdooSincronizacionService {
                 pedido.getTotal(), pedido.getMoneda(), autorizacion.pagoCompleto(), autorizacion.firmaValida(),
                 pedido.getCreadoPor() == null ? null : pedido.getCreadoPor().getNombreCompleto(),
                 // VetStock es la fuente: bultos calculados por peso (vacío si faltan pesos),
-                // salida asignada (o vacía) y peso total (solo si está completo)
+                // salida asignada o prevista (o vacía) y peso total (solo si está completo)
                 peso.bultosCalculados(),
-                pedido.getDestino() == null ? null : pedido.getDestino().getEtiqueta(),
+                pedido.getSalidaPrevista() == null ? null : pedido.getSalidaPrevista().getEtiqueta(),
                 peso.completo() ? peso.pesoTotalKg() : null,
                 pedido.getClinica().getDireccion());
     }

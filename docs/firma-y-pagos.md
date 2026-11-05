@@ -89,7 +89,7 @@ Por eso VetStock **copia** su clasificación en tres campos propios de `sale.ord
 | `x_vetstock_responsable_firma` | Veterinario responsable que debe firmarlo (siempre el asignado) |
 | `x_vetstock_bultos` | Bultos calculados por peso, máx. 25 kg por bulto (solo lectura) |
 | `x_vetstock_peso_kg` | Peso total del pedido en kg (solo lectura) |
-| `x_vetstock_salida` | Salida de expedición, p. ej. «14 - Regional» (solo lectura) |
+| `x_vetstock_salida` | Salida asignada o, hasta preparar el pedido, la habitual de la clínica, p. ej. «14 - Regional» (solo lectura) |
 | `x_vetstock_direccion` | Dirección de entrega: la de la clínica (solo lectura) |
 
 Y crea **dos entradas de menú** en **Sales → Orders** (Ventas → Pedidos): «Pagados pendientes
@@ -97,7 +97,7 @@ de firma (VetStock)» y «Firmados y pagados (VetStock)», con una lista propia 
 *Pedido VetStock*, *Realizado por*, *Responsable de firma*, *Bultos*, *Salida*, *Pagado*, *Firma válida* y *Estado VetStock*. El formulario del pedido enseña también *Bultos* y *Salida* (ver [logistica-salidas-bultos.md](logistica-salidas-bultos.md)). También deja las mismas
 listas como **filtros favoritos compartidos** (flecha ▼ del buscador → Favoritos).
 
-Hay un apartado más, **«Pedidos por salida (VetStock)»**: los pedidos con salida asignada (no cancelados), agrupados por salida, con dirección de
+Hay un apartado más, **«Pedidos por salida (VetStock)»**: los pedidos firmados y pagados, agrupados por su salida (asignada o prevista), con dirección de
 entrega, estado, bultos y peso. Para imprimir el listado se usa la pestaña «Por salida» de Administración en VetStock (botón «Imprimir listado»).
 
 > Ojo: el menú estándar **Sales → Orders → Orders** solo enseña pedidos *confirmados*. Los

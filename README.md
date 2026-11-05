@@ -79,7 +79,7 @@ cd backend
 .\mvnw.cmd test
 ```
 
-89 pruebas automáticas (unitarias + integración contra MySQL real en la base
+90 pruebas automáticas (unitarias + integración contra MySQL real en la base
 `vetstock_test`). Resultados y guía manual: [docs/pruebas.md](docs/pruebas.md).
 
 ## Documentación

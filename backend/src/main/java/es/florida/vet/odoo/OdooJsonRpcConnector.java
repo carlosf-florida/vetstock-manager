@@ -174,14 +174,25 @@ public class OdooJsonRpcConnector implements OdooConnector {
             {"x_vetstock_bultos", "integer", "Bultos"},
             {"x_vetstock_salida", "char", "Salida"},
             {"x_vetstock_peso_kg", "float", "Peso total (kg)"},
+            {"x_vetstock_direccion", "char", "Dirección de entrega"},
+            {"x_vetstock_fecha_expedicion", "date", "Fecha de expedición"},
     };
-    private static final String FILTRO_PENDIENTES_FIRMA = "Pagados pendientes de firma (VetStock)";
-    private static final String FILTRO_FIRMADOS_PAGADOS = "Firmados y pagados (VetStock)";
+    /** Un apartado por paso del trabajo del almacén: cada pedido está en uno solo y cada lista tiene un solo estado. */
+    private record Apartado(String nombre, String dominio, boolean porSalida) { }
+    private static final List<Apartado> APARTADOS = List.of(
+            new Apartado("1. Pagados pendientes de firma (VetStock)", "[('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', False), ('x_vetstock_estado', 'not in', ['CANCELADO', 'BORRADOR'])]", false),
+            new Apartado("2. Listos para preparar (VetStock)", "[('x_vetstock_estado', '=', 'LISTO_PREPARAR'), ('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', True)]", false),
+            new Apartado("3. En preparación (VetStock)", "[('x_vetstock_estado', '=', 'EN_PREPARACION')]", false),
+            new Apartado("4. Preparados por salida (VetStock)", "[('x_vetstock_estado', '=', 'PREPARADO')]", true),
+            new Apartado("5. Expedidos por salida (VetStock)", "[('x_vetstock_estado', '=', 'EXPEDIDO')]", true));
+    /** Apartados anteriores, que mezclaban estados: se desactivan (no se borran) para que no confundan. */
+    private static final List<String> APARTADOS_RETIRADOS = List.of(
+            "Pagados pendientes de firma (VetStock)", "Firmados y pagados (VetStock)");
     private boolean clasificacionPreparada = false;
 
     /**
-     * Crea (solo si no existen) los campos x_ en sale.order y dos filtros favoritos
-     * compartidos en Ventas. No cambia vistas, permisos ni el estado comercial.
+     * Crea (solo si no existen) los campos x_ en sale.order y los apartados de Ventas, también
+     * como filtros favoritos compartidos. No cambia permisos ni el estado comercial.
      */
     private void asegurarClasificacionVentas() {
         if (clasificacionPreparada) return;
@@ -204,21 +215,46 @@ public class OdooJsonRpcConnector implements OdooConnector {
                 escribir("ir.model.fields", existente.get(0).asInt(), json.createObjectNode().put("readonly", true));
             }
         }
-        String abiertos = "('x_vetstock_estado', 'not in', ['CANCELADO', 'BORRADOR'])";
-        String pendientes = "[('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', False), " + abiertos + "]";
-        String firmados = "[('x_vetstock_pagado', '=', True), ('x_vetstock_firma_valida', '=', True), " + abiertos + "]";
-        asegurarFiltro(FILTRO_PENDIENTES_FIRMA, pendientes);
-        asegurarFiltro(FILTRO_FIRMADOS_PAGADOS, firmados);
+        retirarApartadosAnteriores();
         // Accesos directos en Ventas → Pedidos. El menú «Pedidos» estándar oculta los presupuestos
         // (estado borrador), que es como llegan los pedidos de VetStock: por eso tienen su propia acción.
-        int vista = asegurarVistaClasificacion();
-        asegurarMenu(FILTRO_PENDIENTES_FIRMA, pendientes, vista, 90);
-        asegurarMenu(FILTRO_FIRMADOS_PAGADOS, firmados, vista, 91);
+        int vista = asegurarVistaLista(NOMBRE_VISTA, ARCH_VISTA_TRABAJO);
+        int vistaExpedidos = asegurarVistaLista(NOMBRE_VISTA_EXPEDIDOS, ARCH_VISTA_EXPEDIDOS);
+        int secuencia = 90;
+        for (Apartado apartado : APARTADOS) {
+            asegurarFiltro(apartado.nombre(), apartado.dominio());
+            boolean expedidos = apartado.nombre().startsWith("5.");
+            asegurarMenu(apartado, expedidos ? vistaExpedidos : vista, secuencia++);
+        }
         asegurarFichaLogistica();
         clasificacionPreparada = true;
     }
 
     private static final String NOMBRE_VISTA = "vetstock.sale.order.clasificacion.list";
+    private static final String NOMBRE_VISTA_EXPEDIDOS = "vetstock.sale.order.expedidos.list";
+
+    /** Sin columnas de estado: el apartado ya indica en qué paso está el pedido. */
+    private static final String ARCH_VISTA_TRABAJO = "<list string=\"Pedidos VetStock\" create=\"0\" expand=\"1\">"
+            + "<field name=\"name\"/><field name=\"client_order_ref\" string=\"Pedido VetStock\"/>"
+            + "<field name=\"partner_id\"/><field name=\"date_order\"/>"
+            + "<field name=\"x_vetstock_realizado_por\" string=\"Realizado por\"/>"
+            + "<field name=\"x_vetstock_responsable_firma\" string=\"Responsable de firma\"/>"
+            + "<field name=\"amount_total\" sum=\"Total\"/>"
+            + "<field name=\"x_vetstock_bultos\" string=\"Bultos\" sum=\"Bultos\"/>"
+            + "<field name=\"x_vetstock_salida\" string=\"Salida\" optional=\"show\"/>"
+            + "<field name=\"x_vetstock_peso_kg\" string=\"Peso (kg)\" digits=\"[16,3]\" optional=\"show\"/>"
+            + "<field name=\"state\" widget=\"badge\" optional=\"hide\"/></list>";
+
+    /** Lo que interesa de un pedido que ya ha salido: por dónde sale y a dónde va. */
+    private static final String ARCH_VISTA_EXPEDIDOS = "<list string=\"Expedidos VetStock\" create=\"0\" expand=\"1\" default_order=\"x_vetstock_fecha_expedicion desc\">"
+            + "<field name=\"x_vetstock_salida\" string=\"Salida\"/>"
+            + "<field name=\"client_order_ref\" string=\"Pedido VetStock\"/><field name=\"name\"/>"
+            + "<field name=\"partner_id\"/>"
+            + "<field name=\"x_vetstock_direccion\" string=\"Dirección de entrega\"/>"
+            + "<field name=\"x_vetstock_fecha_expedicion\" string=\"Fecha de expedición\"/>"
+            + "<field name=\"x_vetstock_bultos\" string=\"Bultos\" sum=\"Bultos\"/>"
+            + "<field name=\"x_vetstock_peso_kg\" string=\"Peso (kg)\" digits=\"[16,3]\" sum=\"Peso\"/>"
+            + "<field name=\"amount_total\" sum=\"Total\" optional=\"show\"/></list>";
 
     private static final String NOMBRE_VISTA_FICHA = "vetstock.sale.order.form.logistica";
 
@@ -247,34 +283,22 @@ public class OdooJsonRpcConnector implements OdooConnector {
     }
 
     /** Lista propia con las columnas de VetStock (no modifica las vistas estándar de Ventas). */
-    private int asegurarVistaClasificacion() {
-        JsonNode existentes = buscar("ir.ui.view", array().add(array().add("name").add("=").add(NOMBRE_VISTA)));
-        String arch = "<list string=\"Pedidos VetStock\" create=\"0\">"
-                + "<field name=\"name\"/><field name=\"client_order_ref\" string=\"Pedido VetStock\"/>"
-                + "<field name=\"partner_id\"/><field name=\"date_order\"/>"
-                + "<field name=\"x_vetstock_realizado_por\" string=\"Realizado por\"/>"
-                + "<field name=\"x_vetstock_responsable_firma\" string=\"Responsable de firma\"/>"
-                + "<field name=\"amount_total\" sum=\"Total\"/>"
-                + "<field name=\"x_vetstock_bultos\" string=\"Bultos\" sum=\"Bultos\"/>"
-                + "<field name=\"x_vetstock_salida\" string=\"Salida\" optional=\"show\"/>"
-                + "<field name=\"x_vetstock_peso_kg\" string=\"Peso (kg)\" digits=\"[16,3]\" optional=\"show\"/>"
-                + "<field name=\"x_vetstock_pagado\" string=\"Pagado\"/>"
-                + "<field name=\"x_vetstock_firma_valida\" string=\"Firma válida\"/>"
-                + "<field name=\"x_vetstock_estado\" string=\"Estado VetStock\"/>"
-                + "<field name=\"state\" widget=\"badge\"/></list>";
+    private int asegurarVistaLista(String nombre, String arch) {
+        JsonNode existentes = buscar("ir.ui.view", array().add(array().add("name").add("=").add(nombre)));
         if (!existentes.isEmpty()) {
             // La vista ya existe (versión anterior): se actualizan sus columnas
             int id = existentes.get(0).asInt();
             escribir("ir.ui.view", id, json.createObjectNode().put("arch", arch));
             return id;
         }
-        ObjectNode valores = json.createObjectNode().put("name", NOMBRE_VISTA).put("model", "sale.order")
+        ObjectNode valores = json.createObjectNode().put("name", nombre).put("model", "sale.order")
                 .put("type", "list").put("arch", arch);
         return crear("ir.ui.view", valores);
     }
 
     /** Acción + entrada de menú bajo Ventas → Pedidos con el mismo dominio que el favorito. */
-    private void asegurarMenu(String nombre, String dominioTexto, int vistaId, int secuencia) {
+    private void asegurarMenu(Apartado apartado, int vistaId, int secuencia) {
+        String nombre = apartado.nombre();
         if (!buscar("ir.ui.menu", array().add(array().add("name").add("=").add(nombre))).isEmpty()) return;
         JsonNode padre = buscar("ir.model.data", array()
                 .add(array().add("module").add("=").add("sale"))
@@ -283,11 +307,25 @@ public class OdooJsonRpcConnector implements OdooConnector {
         int idPadre = leerRegistro("ir.model.data", padre.get(0).asInt(), "res_id").path("res_id").asInt();
         ObjectNode accion = json.createObjectNode().put("name", nombre).put("type", "ir.actions.act_window")
                 .put("res_model", "sale.order").put("view_mode", "list,form").put("view_id", vistaId)
-                .put("domain", dominioTexto).put("context", "{'create': False}");
+                .put("domain", apartado.dominio())
+                .put("context", apartado.porSalida() ? "{'create': False, 'group_by': ['x_vetstock_salida']}" : "{'create': False}");
         int idAccion = crear("ir.actions.act_window", accion);
         ObjectNode menu = json.createObjectNode().put("name", nombre).put("parent_id", idPadre)
                 .put("action", "ir.actions.act_window," + idAccion).put("sequence", secuencia);
         crear("ir.ui.menu", menu);
+    }
+
+    private void retirarApartadosAnteriores() {
+        for (String nombre : APARTADOS_RETIRADOS) {
+            ObjectNode inactivo = json.createObjectNode().put("active", false);
+            for (JsonNode id : buscar("ir.ui.menu", array().add(array().add("name").add("=").add(nombre)))) {
+                escribir("ir.ui.menu", id.asInt(), inactivo);
+            }
+            for (JsonNode id : buscar("ir.filters", array().add(array().add("model_id").add("=").add("sale.order"))
+                    .add(array().add("name").add("=").add(nombre)))) {
+                escribir("ir.filters", id.asInt(), inactivo);
+            }
+        }
     }
 
     /** Filtro favorito COMPARTIDO (sin usuario): lo ven todos los usuarios de Ventas. */
@@ -317,6 +355,10 @@ public class OdooJsonRpcConnector implements OdooConnector {
         else valores.put("x_vetstock_peso_kg", false);
         if (ficha.salida() != null) valores.put("x_vetstock_salida", ficha.salida());
         else valores.put("x_vetstock_salida", false); // sin salida: el campo queda vacío
+        if (ficha.direccionEntrega() != null) valores.put("x_vetstock_direccion", ficha.direccionEntrega());
+        else valores.put("x_vetstock_direccion", false);
+        if (ficha.fechaExpedicion() != null) valores.put("x_vetstock_fecha_expedicion", ficha.fechaExpedicion().toString());
+        else valores.put("x_vetstock_fecha_expedicion", false);
     }
 
     @Override

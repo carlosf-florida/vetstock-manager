@@ -20,7 +20,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 ### Última ejecución registrada
 
 - Fecha: 5 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
-- Resultado: **88 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
+- Resultado: **89 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
 - La prueba de concurrencia se repitió 3 veces seguidas con el mismo resultado.
 
 ### Correspondencia con las pruebas pedidas
@@ -65,6 +65,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 | Producto sin peso: incompleto, sin bultos, no cuenta como 0 | `PesoPedidoTest.productoSinPeso` y `LogisticaSalidasIntegracionTest.bultosPorPeso` |
 | Al preparar se crean los bultos que faltan; repetir no duplica; no se registra por encima de lo calculado | `…salidaHabitualYRecuentoDeBultos` y `…bultosPorPeso` |
 | Varias reservas vencidas en la misma pasada: se cancelan todas y se libera su stock | `RecorridoPedidoIntegracionTest.caducidadDeVariasReservas` |
+| Odoo: un apartado por estado, expedidos por salida; los antiguos se desactivan sin borrarlos | `OdooJsonRpcConnectorTest.apartadosPorEstado` |
 | Una unidad de más de 25 kg se señala | `PesoPedidoTest.unidadSobreElLimite` |
 | La clínica no recibe datos internos, tampoco en el resumen; cantidad máxima por línea | `LogisticaSalidasIntegracionTest.salidaHabitualYRecuentoDeBultos` |
 | Sobran registros en un palet: no se prepara ni se borra solo; se saca del palet (no la clínica) y se elimina | `…bultosSobrantes` |
@@ -239,6 +240,14 @@ No comprobado: móvil o tableta real, y lectores de pantalla.
 Caducidad desplegada (copia previa: `_respaldos-vetstock/antes-caducidad-20261105.sql`): en la primera pasada
 se cancelaron #6 y #8, ambos sin pago desde el 31/10, con el motivo guardado. La reserva de MED-001 bajó de 11 a 9 y su stock físico
 no cambió (119). Sin errores en el registro.
+
+## 2g. Un apartado por estado (en vivo, 5 de noviembre de 2026)
+
+Con Odoo real, tras reexportar los 10 pedidos vinculados: 1 pagado pendiente de firma (VSM-11), 3 listos, 1 en preparación,
+3 preparados (14 - Regional: 2; Valencia: 1) y 2 expedidos (14 - Regional: 2, con dirección y fecha de expedición). Coincide con las pestañas de VetStock.
+Los menús y favoritos antiguos quedan inactivos. Capturas: [Preparados](capturas/mejoras/odoo-preparados-por-salida.jpg) y [Expedidos](capturas/mejoras/odoo-expedidos-por-salida.jpg).
+
+Limpieza de datos de práctica (copia previa: `_respaldos-vetstock/antes-borrar-pedidos-6-7-23-20261105.sql`): se borraron #6, #7 y #23, todos cancelados y sin copia en Odoo. Quedan 12 pedidos; el stock no cambia.
 
 ## 3. Guía de comprobación manual (para repetirla)
 

@@ -35,11 +35,11 @@ integración opcional.
 
 ## 2b. Firma y pago separados (1 min)
 
-Admin → Pedidos: «Pagados pendientes de firma», «Firmados y pagados» y «Otros pendientes».
+Admin → Pedidos: una pestaña por paso del trabajo («Pagados pendientes de firma», «Listos para preparar», «En preparación», «Preparados» y «Expedidos», además de «Otros»).
 Explicar: «Se puede pagar antes o después de firmar, pero pagado no basta: hace falta la firma
 VÁLIDA del veterinario asignado sobre el contenido actual. Lo decide una regla fija en el backend
 (`AutorizacionPedido`), no una IA.»
-En Odoo → Sales → Orders aparecen las mismas dos listas, con *Bultos*, *Salida* y *Peso (kg)*;
+En Odoo → Sales → Orders aparecen los mismos cinco apartados numerados, cada uno con un solo estado; preparados y expedidos salen agrupados por salida, y expedidos muestra la dirección de entrega;
 cuando un pedido está pagado y con firma válida, Odoo lo pasa solo de presupuesto a pedido de venta.
 
 ## 3. Seguridad y reglas (2 min)
@@ -52,7 +52,7 @@ cuando un pedido está pagado y con firma válida, Odoo lo pasa solo de presupue
 
 ## 4. Calidad (1 min)
 
-- `mvnw.cmd test` → **88 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo y los límites de los bultos (25 kg → 1; 25,01 kg → 2).
+- `mvnw.cmd test` → **89 pruebas**, incluidas las de integración contra MySQL real que recorren todo el flujo y los límites de los bultos (25 kg → 1; 25,01 kg → 2).
 - Las pruebas encontraron errores reales, ya corregidos: el script SQL no se podía repetir, editar líneas fallaba y editar un producto desde su pantalla daba error. Revisar los registros de la aplicación descubrió otro: con dos o más reservas vencidas, la caducidad fallaba; ahora hay una prueba que lo cubre.
 
 ## 5. Límites honestos (1 min)

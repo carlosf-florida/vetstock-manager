@@ -206,7 +206,8 @@ class OdooJsonRpcConnectorTest {
         return new OdooConnector.FichaPedido("VSM-15", 7,
                 List.of(new OdooConnector.LineaPedido("CLI-001", 2, new BigDecimal("9.95"))),
                 99, firmaValida ? "FIRMADO" : "PENDIENTE", "Dr. Antonio García", null, null, null, estado,
-                null, null, null, null, null, pagado, firmaValida, "Sonia Ruiz (Auxiliar)", 2, "14 - Regional", new BigDecimal("37.500"));
+                null, null, null, null, null, pagado, firmaValida, "Sonia Ruiz (Auxiliar)", 2, "14 - Regional", new BigDecimal("37.500"),
+                "Calle Larios 10, Málaga", estado.equals("EXPEDIDO") ? java.time.LocalDate.of(2026, 11, 5) : null);
     }
 
     @Test
@@ -232,6 +233,33 @@ class OdooJsonRpcConnectorTest {
         stub.estadoPedidoOdoo = "cancel";
         assertTrue(odoo.crearPedido(fichaClasificada(true, true, "LISTO_PREPARAR")).exito());
         assertFalse(stub.hayEjecucion("sale.order", "action_confirm"));
+    }
+
+    @Test
+    @DisplayName("Odoo tiene un apartado por estado, expedidos por salida, y se retiran los que mezclaban estados")
+    void apartadosPorEstado() {
+        stub.apartadosNuevos = true;
+        assertTrue(odoo.crearPedido(fichaClasificada(true, true, "EXPEDIDO")).exito());
+
+        List<String> menus = stub.llamadas.stream().filter(l -> l.esEjecucion("ir.ui.menu", "create"))
+                .map(l -> l.argumentosPosicionales().toString()).toList();
+        assertEquals(5, menus.size());
+        assertTrue(menus.get(4).contains("5. Expedidos por salida"));
+        assertTrue(menus.stream().noneMatch(m -> m.contains("Firmados y pagados")));
+
+        List<String> acciones = stub.llamadas.stream().filter(l -> l.esEjecucion("ir.actions.act_window", "create"))
+                .map(l -> l.argumentosPosicionales().toString()).toList();
+        assertTrue(acciones.get(4).contains("'EXPEDIDO'") && acciones.get(4).contains("group_by"));
+        assertTrue(acciones.get(1).contains("'LISTO_PREPARAR'") && !acciones.get(1).contains("group_by"));
+        // El menú antiguo se desactiva, no se borra
+        assertTrue(stub.llamadas.stream().anyMatch(l -> l.esEjecucion("ir.ui.menu", "write")
+                && l.argumentosPosicionales().toString().contains("\"active\":false")));
+        assertFalse(stub.hayEjecucion("ir.ui.menu", "unlink"));
+
+        RpcCall escritura = stub.primeraEjecucion("sale.order", "write");
+        String valores = escritura != null ? escritura.argumentosPosicionales().toString()
+                : stub.primeraEjecucion("sale.order", "create").argumentosPosicionales().toString();
+        assertTrue(valores.contains("Calle Larios 10") && valores.contains("2026-11-05"));
     }
 
     private static final class OdooStub {
@@ -317,14 +345,28 @@ class OdooJsonRpcConnectorTest {
                     case "read" -> pedidoLeidoConEstado();
                     default -> JSON.getNodeFactory().booleanNode(true);
                 };
-                // Campos x_, filtros, vista y menús de la clasificación: ya existen en este Odoo de prueba
-                case "ir.model", "ir.model.fields", "ir.filters", "ir.ui.view", "ir.ui.menu" ->
+                case "ir.ui.menu" -> {
+                    if (!"search".equals(operacion)) yield "create".equals(operacion) ? arrayConEntero(6) : JSON.getNodeFactory().booleanNode(true);
+                    // Con apartadosNuevos solo existe el menú antiguo que hay que retirar
+                    boolean antiguo = llamada.argumentosPosicionales().toString().contains("\"Firmados y pagados (VetStock)\"");
+                    yield !apartadosNuevos || antiguo ? arrayConEntero(5) : ARRAY_VACIO.deepCopy();
+                }
+                case "ir.actions.act_window" -> arrayConEntero(8);
+                case "ir.model.data" -> {
+                    if ("search".equals(operacion)) yield arrayConEntero(5);
+                    ArrayNode datos = JSON.createArrayNode();
+                    datos.addObject().put("id", 5).put("res_id", 7);
+                    yield datos;
+                }
+                // Campos x_, filtros y vista de la clasificación: ya existen en este Odoo de prueba
+                case "ir.model", "ir.model.fields", "ir.filters", "ir.ui.view" ->
                         "search".equals(operacion) ? arrayConEntero(5) : JSON.getNodeFactory().booleanNode(true);
                 default -> JSON.getNodeFactory().booleanNode(true);
             };
         }
 
         private String estadoPedidoOdoo = "draft";
+        private boolean apartadosNuevos = false;
 
         private JsonNode pedidoLeidoConEstado() {
             ArrayNode lista = JSON.createArrayNode();

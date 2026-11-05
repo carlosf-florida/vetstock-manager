@@ -5,7 +5,7 @@ import { dinero, fechaCorta, kg, ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO, totalPedi
 import Tabla from '../../components/Tabla.jsx'
 import { ErrorBox } from '../../components/Spinner.jsx'
 import { BadgeEstadoPedido } from '../../components/Badges.jsx'
-import { CLASIFICACIONES, SITUACIONES, infoEstadoFirma, infoEstadoPago } from '../../pedidoEstado.js'
+import { APARTADOS_PEDIDOS, SITUACIONES, infoEstadoFirma, infoEstadoPago } from '../../pedidoEstado.js'
 
 function Etiqueta({ info }) {
   return <span className={`etiqueta ${info.clase}`}>{info.texto}</span>
@@ -36,7 +36,7 @@ export default function AdminPedidos() {
   const [cargando, setCargando] = useState(true)
   const [busqueda, setBusqueda] = useState(paramsUrl.get('q') || '')
   const [estado, setEstado] = useState(paramsUrl.get('estado') || '')
-  // Vista por firma y pago: la clasificación la calcula el backend (pedido.autorizacion)
+  // Pestaña activa: una por paso del trabajo (ver APARTADOS_PEDIDOS)
   const [vista, setVista] = useState(paramsUrl.get('vista') || '')
   // Desde las tarjetas del resumen: ?situacion=FIRMA | PAGO | LISTO (misma regla que el contador)
   const [situacion, setSituacion] = useState(paramsUrl.get('situacion') || '')
@@ -78,9 +78,9 @@ export default function AdminPedidos() {
   }, [])
 
   // Filtro por fecha de creación: las fechas llegan en ISO y se compara el día (AAAA-MM-DD)
-  const contar = (clave) => (pedidos || []).filter((p) => p.autorizacion?.clasificacion === clave).length
+  const contar = (clave) => (pedidos || []).filter(APARTADOS_PEDIDOS[clave].cumple).length
 
-  const filasFiltradas = (pedidos || []).filter((p) => !vista || p.autorizacion?.clasificacion === vista)
+  const filasFiltradas = (pedidos || []).filter((p) => !vista || (APARTADOS_PEDIDOS[vista]?.cumple(p) ?? true))
     .filter((p) => !situacion || (SITUACIONES[situacion]?.cumple(p) ?? true)).filter((p) => {
     const dia = (p.fechaCreacion || '').slice(0, 10)
     return (!desde || dia >= desde) && (!hasta || dia <= hasta)
@@ -95,11 +95,11 @@ export default function AdminPedidos() {
     <section>
       <h1>Pedidos (administración)</h1>
 
-      <div className="vistas-pedidos" role="group" aria-label="Separar pedidos por firma y pago">
+      <div className="vistas-pedidos" role="group" aria-label="Separar pedidos por paso del trabajo">
         <button type="button" className={'btn ' + (vista === '' ? 'btn-primario' : 'btn-secundario')} aria-pressed={vista === ''} onClick={() => setVista('')}>
           Todos ({(pedidos || []).length})
         </button>
-        {Object.entries(CLASIFICACIONES).map(([clave, texto]) => (
+        {Object.entries(APARTADOS_PEDIDOS).map(([clave, { texto }]) => (
           <button key={clave} type="button" className={'btn ' + (vista === clave ? 'btn-primario' : 'btn-secundario')}
             aria-pressed={vista === clave} onClick={() => setVista(clave)}>
             {texto} ({contar(clave)})
@@ -112,11 +112,7 @@ export default function AdminPedidos() {
           <button type="button" className="btn btn-mini btn-secundario" onClick={() => setSituacion('')}>Quitar filtro</button>
         </p>
       )}
-      <p className="texto-suave">
-        {vista === 'PAGADO_PENDIENTE_FIRMA' && 'Pago completo confirmado, pero falta la firma válida del veterinario asignado: no se pueden preparar. La columna «Firma» indica qué falta.'}
-        {vista === 'FIRMADO_Y_PAGADO' && 'Firma válida del veterinario asignado y pago completo. Solo los marcados «Listo para preparar» pueden empezar la preparación.'}
-        {vista === 'OTROS' && 'Borradores, pedidos sin pago completo y cancelados.'}
-      </p>
+      {APARTADOS_PEDIDOS[vista] && <p className="texto-suave">{APARTADOS_PEDIDOS[vista].ayuda}</p>}
       <p className="texto-suave">Busca pedidos por número, clínica, fecha y estado; consulta su firma y su pago y entra a gestionarlos.</p>
 
       <div className="filtros-panel">

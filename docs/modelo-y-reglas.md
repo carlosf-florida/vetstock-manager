@@ -65,7 +65,7 @@ guardados (no se almacenan, así nunca se desincronizan):
 | **Firma válida** | Hay fila en `firmas`, su `usuario_id` es el del veterinario asignado (`pedidos.veterinario_id`) y la copia `contenido_pedido` coincide con las líneas, cantidades, precios y total actuales |
 | **Pago completo** | `pedidos.fecha_pago` y un pago `CONFIRMADO` en `pagos` por el **total exacto**. Una factura, un pago pendiente o uno por menos importe no cuentan |
 | **Pagados pendientes de firma** | Pago completo, sin firma válida, no cancelado. Se muestra el motivo («Falta la firma de…», «Firmado por X, que no es el veterinario asignado», «contenido anterior») |
-| **Firmados y pagados** | Firma válida y pago completo. «Listo para preparar» solo si el estado es `LISTO_PREPARAR` (no cuenta si ya está en preparación, preparado o expedido) |
+| **Firmados y pagados** (clasificación interna; en pantalla se separa en listos, en preparación, preparados y expedidos) | Firma válida y pago completo. «Listo para preparar» solo si el estado es `LISTO_PREPARAR` (no cuenta si ya está en preparación, preparado o expedido) |
 | **Otros pendientes** | Todo lo demás: borradores, sin pago completo, cancelados |
 
 El veterinario ve en **Mis pedidos → Firma: «Falta la firma del veterinario»** todos los pedidos de

@@ -50,9 +50,9 @@ implementado y comprobado a mano en el navegador; **Parcial**; **Pendiente**.
 | RF-07 | Firma del veterinario asignado (dibujo o PNG/JPG ≤ 5 MB) tras revisar el contenido; copia inmutable | Hecho |
 | RF-08 | Bloqueo de productos y cantidades desde el envío a firma | Hecho |
 | RF-09 | Pago obligatorio (antes o después de la firma), por pasarela **de demostración** | Hecho |
-| RF-25 | Separación «Pagados pendientes de firma» / «Firmados y pagados» / «Otros» con reglas fijas (firma válida + pago completo) | Hecho |
+| RF-25 | Separación de pedidos por paso del trabajo (pagados pendientes de firma, listos, en preparación, preparados, expedidos y otros) con reglas fijas (firma válida + pago completo) | Hecho |
 | RF-26 | Rechazo del veterinario asignado con motivo; devolución pendiente si estaba pagado | Hecho (la devolución es manual, fuera de la app) |
-| RF-27 | Mismas listas en Odoo Ventas (campos x_vetstock_* y favoritos compartidos) | Hecho (solo pedidos pagados, que son los que se exportan) |
+| RF-27 | Mismas listas en Odoo Ventas, una por estado, con preparados y expedidos agrupados por salida (campos x_vetstock_*, menús y favoritos) | Hecho (solo pedidos pagados, que son los que se exportan) |
 | RF-10 | Confirmación del pago solo por notificación autenticada (HMAC), con validación de importe y moneda e idempotencia | Hecho |
 | RF-11 | Reintento de pagos fallidos sin duplicar cobros | Hecho |
 | RF-12 | Preparación solo con firma y pago | Hecho |

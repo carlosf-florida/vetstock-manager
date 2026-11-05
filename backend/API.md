@@ -57,7 +57,7 @@ También devuelve `baseImponible`, `ivaPorcentaje`, `importeIva` y `moneda` (EUR
 
 ```text
 BORRADOR → PENDIENTE_FIRMA → firma y pago en cualquier orden → LISTO_PREPARAR
-LISTO_PREPARAR → EN_PREPARACION → PREPARADO (≥1 bulto) → EXPEDIDO (bultos en palet)
+LISTO_PREPARAR → EN_PREPARACION → PREPARADO (peso completo; crea los bultos calculados que falten) → EXPEDIDO (registros = calculados, todos en palet)
 BORRADOR / PENDIENTE_FIRMA / FIRMADO sin pago → CANCELADO (manual o caducidad de 72 h)
 Sin firma válida → CANCELADO por rechazo del veterinario asignado (pagado: devolucionPendiente = true)
 ```

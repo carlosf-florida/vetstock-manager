@@ -43,7 +43,7 @@ BORRADOR ──enviar a firma (reserva stock)──► PENDIENTE_FIRMA
 Firma y pago en cualquier orden:
   PENDIENTE_FIRMA ──firma──► FIRMADO (pendiente de pago) ──pago confirmado──► LISTO_PREPARAR
   PENDIENTE_FIRMA ──pago confirmado──► PENDIENTE_FIRMA (pagado) ──firma──► LISTO_PREPARAR
-LISTO_PREPARAR ──► EN_PREPARACION ──(≥1 bulto)──► PREPARADO ──(bultos en palet)──► EXPEDIDO
+LISTO_PREPARAR ──► EN_PREPARACION ──(peso completo; crea los bultos que falten)──► PREPARADO ──(registros = calculados, en palet)──► EXPEDIDO
 Sin pago: BORRADOR / PENDIENTE_FIRMA / FIRMADO ──cancelar o caducar──► CANCELADO (libera la reserva)
 Sin firma válida: el veterinario asignado ──rechaza──► CANCELADO (si estaba pagado: devolución pendiente)
 ```

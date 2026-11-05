@@ -162,7 +162,7 @@ no altera impuestos ni registra cobros reales. También envía los **bultos** y 
 
 ```
 BORRADOR → PENDIENTE_FIRMA → firma del veterinario asignado y pago confirmado (en cualquier orden) → LISTO_PREPARAR
-LISTO_PREPARAR → EN_PREPARACION → PREPARADO (≥1 bulto) → EXPEDIDO (bultos en palet)
+LISTO_PREPARAR → EN_PREPARACION → PREPARADO (peso completo; crea los bultos calculados que falten) → EXPEDIDO (registros = calculados, todos en palet)
 sin pago: BORRADOR / PENDIENTE_FIRMA / FIRMADO → CANCELADO (manual o caducidad 72 h)
 ```
 

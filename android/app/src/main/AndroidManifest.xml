@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:theme="@style/Tema">
+
+        <activity android:name=".ui.LoginActivity" android:exported="true" android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".ui.CatalogoActivity" android:label="@string/catalogo" />
+        <activity android:name=".ui.ProductoActivity" android:label="@string/producto" />
+        <activity android:name=".ui.CarritoActivity" android:label="@string/carrito" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.PedidosActivity" android:label="@string/pedidos" />
+        <activity android:name=".ui.PedidoActivity" android:label="@string/pedido" />
+        <!-- Vertical fija: al girar se perdería el dibujo de la firma -->
+        <activity android:name=".ui.FirmaActivity" android:label="@string/firmar_pedido" android:screenOrientation="portrait" />
+    </application>
+</manifest>

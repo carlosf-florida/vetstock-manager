@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center" android:padding="24dp">
+        <TextView style="@style/Titulo" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="24dp" android:text="@string/app_name" android:textSize="28sp" />
+        <EditText android:id="@+id/usuario" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/usuario" android:autofillHints="username" android:inputType="text" android:maxLines="1" android:imeOptions="actionNext" android:minHeight="48dp" />
+        <EditText android:id="@+id/contrasena" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/contrasena" android:autofillHints="password" android:inputType="textPassword" android:maxLines="1" android:imeOptions="actionDone" android:minHeight="48dp" />
+        <TextView android:id="@+id/error" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/peligro" android:visibility="gone" />
+        <Button android:id="@+id/entrar" style="@style/BotonPrincipal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/entrar" />
+        <ProgressBar android:id="@+id/cargando" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

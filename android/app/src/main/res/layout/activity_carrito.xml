@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+    <TextView android:id="@+id/vacio" style="@style/Suave" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:padding="24dp" android:text="@string/carrito_vacio" android:visibility="gone" />
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/lista" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false" android:padding="8dp" />
+    <LinearLayout android:id="@+id/resumen" style="@style/Tarjeta" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView android:id="@+id/subtotal" style="@style/Texto" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold" />
+        <TextView style="@style/Suave" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/iva_servidor" />
+        <EditText android:id="@+id/observaciones" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/observaciones_opcional" android:importantForAutofill="no" android:inputType="textMultiLine" android:maxLength="255" android:maxLines="2" android:minHeight="48dp" />
+        <TextView android:id="@+id/error" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/peligro" android:visibility="gone" />
+        <ProgressBar android:id="@+id/cargando" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/guardar" style="@style/BotonSecundario" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/guardar_borrador" />
+            <Button android:id="@+id/enviar" style="@style/BotonPrincipal" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/enviar_firma" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

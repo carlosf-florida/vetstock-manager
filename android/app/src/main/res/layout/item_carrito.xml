@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" style="@style/Tarjeta" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="8dp" android:orientation="vertical">
+    <TextView android:id="@+id/nombre" style="@style/Texto" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold" />
+    <TextView android:id="@+id/importe" style="@style/Suave" android:layout_width="match_parent" android:layout_height="wrap_content" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <Button android:id="@+id/restar" style="@style/BotonSecundario" android:layout_width="48dp" android:layout_height="48dp" android:text="−" android:contentDescription="@string/restar" />
+        <TextView android:id="@+id/cantidad" style="@style/Texto" android:layout_width="56dp" android:layout_height="wrap_content" android:gravity="center" />
+        <Button android:id="@+id/sumar" style="@style/BotonSecundario" android:layout_width="48dp" android:layout_height="48dp" android:text="+" android:contentDescription="@string/sumar" />
+        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+        <Button android:id="@+id/eliminar" style="@style/BotonSecundario" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/eliminar" />
+    </LinearLayout>
+</LinearLayout>

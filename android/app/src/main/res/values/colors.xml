@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="azul">#0F3A5F</color>
+    <color name="verde">#1F7A4D</color>
+    <color name="fondo">#F4F6F8</color>
+    <color name="blanco">#FFFFFF</color>
+    <color name="borde">#D9E0E6</color>
+    <color name="texto">#1F2933</color>
+    <color name="texto_suave">#52606D</color>
+    <color name="peligro">#B42318</color>
+    <color name="aviso_fondo">#FFF8E6</color>
+</resources>

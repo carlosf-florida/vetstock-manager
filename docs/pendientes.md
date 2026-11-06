@@ -31,6 +31,8 @@ Actualizado el 5 de noviembre de 2026. Entrega: finales de febrero de 2027.
 
 ## Para producción (no se ha hecho)
 
+- App Android: pago (depende de elegir un proveedor real), prueba en un móvil físico, versión release firmada y HTTPS. Ver `android/README.md`.
+
 - Web pública y solicitudes: responsable del tratamiento, base legal, plazo de conservación y aviso legal, además de HTTPS y límite de envíos detrás de proxy. Ver `solicitudes-alta.md`.
 
 1. **Pasarela real** (Redsys/Bizum): contrato, credenciales, adaptador y backend

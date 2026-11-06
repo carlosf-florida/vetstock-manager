@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+    <CheckBox android:id="@+id/solo_firma" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_margin="8dp" android:minHeight="48dp" android:text="@string/solo_pendientes_firma" android:visibility="gone" />
+    <ProgressBar android:id="@+id/cargando" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+    <LinearLayout android:id="@+id/zona_error" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:gravity="center" android:visibility="gone">
+        <TextView android:id="@+id/texto_error" style="@style/Texto" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="@color/peligro" />
+        <Button android:id="@+id/boton_reintentar" style="@style/BotonSecundario" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/reintentar" />
+    </LinearLayout>
+    <TextView android:id="@+id/vacio" style="@style/Suave" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:padding="24dp" android:text="@string/sin_pedidos" android:visibility="gone" />
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/lista" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:clipToPadding="false" android:padding="8dp" />
+</LinearLayout>

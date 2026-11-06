@@ -94,6 +94,7 @@ cd backend
 | [Firma y pagos](docs/firma-y-pagos.md) | Qué es real, qué es simulado y qué falta para producción |
 | [Salidas y bultos](docs/logistica-salidas-bultos.md) | Salida de expedición por clínica y pedido, bultos por pedido y su paso a Odoo |
 | [Web pública y solicitudes de alta](docs/solicitudes-alta.md) | Formulario, revisión en Odoo, alta, activación y requisitos antes de publicar |
+| [App Android](android/README.md) | Alcance, requisitos, cómo abrirla y configurar el servidor |
 | [Pruebas](docs/pruebas.md) | Pruebas ejecutadas, guía manual y pendientes |
 | [Power BI](docs/power-bi.md) | Vistas preparadas y cómo conectarse sin publicar datos |
 | [Pendientes](docs/pendientes.md) | Lo que falta y lo necesario para producción |

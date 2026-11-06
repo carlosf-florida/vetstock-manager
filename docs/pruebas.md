@@ -280,6 +280,26 @@ Con Docker, MySQL y Odoo reales y datos ficticios. Automatizadas en `Solicitudes
 Fallo parcial de Odoo durante la aprobación, duplicados y firmas no válidas: solo en las pruebas automáticas, con el conector simulado.
 El módulo de Odoo no tiene pruebas automáticas propias: se comprobó en vivo como indica la tabla.
 
+## 2i. App Android (en vivo, 6 de noviembre de 2026)
+
+En el emulador Pixel 6 (Android 37) contra el backend de Docker, con cuentas de demostración.
+
+| Prueba | Resultado |
+|---|---|
+| Compilación `assembleDebug` | Correcta |
+| Contraseña incorrecta | Mensaje del servidor, sin entrar |
+| Catálogo, búsqueda y detalle | Correctos; la búsqueda se envía al servidor |
+| Añadir al carrito y crear pedido enviado a firma | Pedido #28 con base, IVA y total calculados por el servidor |
+| Cerrar sesión y entrar como veterinario asignado | Ve el pedido en "pendientes de mi firma" |
+| Firmar sin dibujar | Aviso, no se envía |
+| Firmar con dibujo y confirmación | Firma válida; el pedido desaparece de pendientes |
+| Otra veterinaria de la clínica | No ve pendientes ni el botón de firmar |
+| Backend parado | Mensaje de conexión; al volver, entra |
+| Sesión perdida al reiniciar el backend | Vuelve al inicio de sesión con aviso |
+| Cuenta de administración | No entra; remite al portal web |
+
+**No probado:** móvil físico, versión release, guardar borrador y su fallo parcial desde la app, doble pulsación real al crear el pedido, y giro de pantalla. Sin pruebas automáticas propias.
+
 ## 3. Guía de comprobación manual (para repetirla)
 
 Reinicia los datos (ver [instalacion-windows.md](instalacion-windows.md), apartado 4) y sigue el

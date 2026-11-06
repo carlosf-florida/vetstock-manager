@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
+    <ProgressBar android:id="@+id/cargando" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+    <LinearLayout android:id="@+id/zona_error" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:gravity="center" android:visibility="gone">
+        <TextView android:id="@+id/texto_error" style="@style/Texto" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="@color/peligro" />
+        <Button android:id="@+id/boton_reintentar" style="@style/BotonSecundario" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/reintentar" />
+    </LinearLayout>
+    <ScrollView android:id="@+id/contenido" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="12dp">
+            <TextView android:id="@+id/numero" style="@style/Titulo" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <TextView android:id="@+id/clinica" style="@style/Suave" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <TextView android:id="@+id/aviso" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@color/aviso_fondo" android:padding="10dp" android:textColor="@color/texto" android:visibility="gone" />
+            <LinearLayout style="@style/Tarjeta" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical">
+                <TextView android:id="@+id/estado" style="@style/Texto" android:layout_width="match_parent" android:layout_height="wrap_content" android:textStyle="bold" />
+                <TextView android:id="@+id/firma" style="@style/Texto" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <TextView android:id="@+id/pago" style="@style/Texto" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <TextView android:id="@+id/veterinario" style="@style/Suave" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/lineas" style="@style/Tarjeta" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical" />
+            <LinearLayout style="@style/Tarjeta" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="vertical">
+                <TextView android:id="@+id/base" style="@style/Texto" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <TextView android:id="@+id/iva" style="@style/Texto" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <TextView android:id="@+id/total" style="@style/Titulo" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <TextView android:id="@+id/observaciones" style="@style/Suave" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" />
+            <TextView android:id="@+id/nota_pago" style="@style/Suave" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/pago_en_web" android:visibility="gone" />
+            <TextView android:id="@+id/error" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/peligro" android:visibility="gone" />
+            <Button android:id="@+id/enviar_firma" style="@style/BotonPrincipal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/enviar_borrador_firma" android:visibility="gone" />
+            <Button android:id="@+id/firmar" style="@style/BotonPrincipal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/firmar" android:visibility="gone" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

@@ -93,6 +93,7 @@ cd backend
 | [Instalación en Windows](docs/instalacion-windows.md) | JDK, MySQL, variables de entorno, arranque, IntelliJ |
 | [Firma y pagos](docs/firma-y-pagos.md) | Qué es real, qué es simulado y qué falta para producción |
 | [Salidas y bultos](docs/logistica-salidas-bultos.md) | Salida de expedición por clínica y pedido, bultos por pedido y su paso a Odoo |
+| [Web pública y solicitudes de alta](docs/solicitudes-alta.md) | Formulario, revisión en Odoo, alta, activación y requisitos antes de publicar |
 | [Pruebas](docs/pruebas.md) | Pruebas ejecutadas, guía manual y pendientes |
 | [Power BI](docs/power-bi.md) | Vistas preparadas y cómo conectarse sin publicar datos |
 | [Pendientes](docs/pendientes.md) | Lo que falta y lo necesario para producción |

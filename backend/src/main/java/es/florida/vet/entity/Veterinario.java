@@ -34,9 +34,16 @@ public class Veterinario {
     private String numeroColegiado;
 
     private String telefono;
+    private String email;
+    private Integer odooContactoId;   // persona en Odoo, relacionada con la clínica
 
     public Veterinario() {
     }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public Integer getOdooContactoId() { return odooContactoId; }
+    public void setOdooContactoId(Integer odooContactoId) { this.odooContactoId = odooContactoId; }
 
     public Veterinario(Usuario usuario, Clinica clinica, String numeroColegiado, String telefono) {
         this.usuario = usuario;

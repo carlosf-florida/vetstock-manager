@@ -77,6 +77,20 @@ public interface OdooConnector {
         }
     }
 
+    /** Persona (no usuario interno de Odoo) relacionada con el contacto de la clínica. */
+    record FichaContactoVeterinario(String nombre, String email, String telefono, String numeroColegiado,
+                                    Integer odooClinicaId, Integer odooId) {
+    }
+
+    /**
+     * Crea la solicitud en Odoo o, si ya existe por su referencia, actualiza solo datosDeIntegracion.
+     * Así un reintento no duplica ni pisa la revisión hecha en Odoo.
+     */
+    Resultado guardarSolicitudAlta(String referencia, Integer odooId, java.util.Map<String, Object> datosIniciales,
+                                   java.util.Map<String, Object> datosDeIntegracion);
+
+    Resultado guardarContactoVeterinario(FichaContactoVeterinario ficha);
+
     /** Comprueba que hay conexión y credenciales válidas. */
     Resultado probarConexion();
 

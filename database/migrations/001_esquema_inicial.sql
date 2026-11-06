@@ -26,6 +26,8 @@ USE vetstock;
 -- La relación circular clinicas <-> veterinarios impide borrar en orden: se
 -- desactivan las claves foráneas solo durante el borrado para poder recargar.
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS activaciones_cuenta;
+DROP TABLE IF EXISTS solicitudes_alta;
 DROP TABLE IF EXISTS documentos;
 DROP TABLE IF EXISTS odoo_log;
 DROP TABLE IF EXISTS bultos;
@@ -67,6 +69,9 @@ CREATE TABLE clinicas (
     odoo_id   INT NULL,                             -- id del cliente (res.partner) en Odoo
     odoo_sincronizado DATETIME NULL,
     veterinario_responsable_id BIGINT NULL,
+    identificador_fiscal VARCHAR(20) NULL UNIQUE,
+    email     VARCHAR(120) NULL,
+    solicitud_referencia VARCHAR(20) NULL,  -- solicitud de la que procede, si no es un alta manual
     destino_habitual_id BIGINT NULL        -- salida de expedición habitual (FK más abajo, tras crear destinos)
 ) ENGINE=InnoDB;
 
@@ -77,8 +82,58 @@ CREATE TABLE veterinarios (
     clinica_id       BIGINT NOT NULL,
     numero_colegiado VARCHAR(20) NOT NULL UNIQUE,
     telefono         VARCHAR(20),
+    email            VARCHAR(120),
+    odoo_contacto_id INT NULL,               -- persona (res.partner) relacionada con la clínica
     CONSTRAINT fk_vet_usuario  FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
     CONSTRAINT fk_vet_clinica  FOREIGN KEY (clinica_id) REFERENCES clinicas(id)
+) ENGINE=InnoDB;
+
+-- Solicitudes de alta y activación de cuentas (ver migración 012)
+CREATE TABLE solicitudes_alta (
+    id                  BIGINT AUTO_INCREMENT PRIMARY KEY,
+    referencia          VARCHAR(20)  NOT NULL UNIQUE,
+    clinica_nombre      VARCHAR(100) NOT NULL,
+    razon_social        VARCHAR(120),
+    identificador_fiscal VARCHAR(20),
+    email               VARCHAR(120) NOT NULL,
+    telefono            VARCHAR(20)  NOT NULL,
+    direccion           VARCHAR(70)  NOT NULL,
+    codigo_postal       VARCHAR(10)  NOT NULL,
+    localidad           VARCHAR(30)  NOT NULL,
+    provincia           VARCHAR(30)  NOT NULL,
+    pais                VARCHAR(40)  NOT NULL,
+    vet_nombre          VARCHAR(100) NOT NULL,
+    vet_colegiado       VARCHAR(20)  NOT NULL,
+    vet_colegio         VARCHAR(60)  NOT NULL,
+    vet_email           VARCHAR(120) NOT NULL,
+    vet_telefono        VARCHAR(20),
+    observaciones       VARCHAR(500),
+    fecha_privacidad    DATETIME     NOT NULL,   -- cuándo confirmó haber leído la información de privacidad
+    huella              CHAR(64)     NOT NULL,   -- detecta el mismo envío repetido (doble clic)
+    fecha_creacion      DATETIME     NOT NULL,
+    estado_revision     VARCHAR(25)  NOT NULL,   -- PENDIENTE, REQUIERE_INFORMACION, APROBADA, RECHAZADA
+    revisado_por        VARCHAR(100),
+    fecha_revision      DATETIME,
+    observaciones_revision VARCHAR(500),
+    estado_alta         VARCHAR(25)  NOT NULL,   -- NO_INICIADA, EN_PROCESO, REQUIERE_REVISION, FALLIDA, COMPLETADA
+    mensaje_alta        VARCHAR(255),
+    clinica_id          BIGINT,
+    veterinario_id      BIGINT,
+    odoo_id             INT,                     -- registro de la solicitud en Odoo
+    odoo_pendiente      BOOLEAN      NOT NULL DEFAULT TRUE,
+    odoo_ultimo_error   VARCHAR(255),
+    CONSTRAINT fk_sol_clinica FOREIGN KEY (clinica_id) REFERENCES clinicas(id),
+    CONSTRAINT fk_sol_veterinario FOREIGN KEY (veterinario_id) REFERENCES veterinarios(id)
+) ENGINE=InnoDB;
+
+CREATE TABLE activaciones_cuenta (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id  BIGINT   NOT NULL,
+    token_hash  CHAR(64) NOT NULL UNIQUE,
+    caduca      DATETIME NOT NULL,
+    usada       DATETIME,
+    creada      DATETIME NOT NULL,
+    CONSTRAINT fk_act_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 ) ENGINE=InnoDB;
 
 ALTER TABLE clinicas

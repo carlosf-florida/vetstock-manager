@@ -40,5 +40,21 @@ then
   odoo "${ODOO_ARGS[@]}" -d "$DB_NAME" -i web,sale_management --without-demo=all --stop-after-init
 fi
 
+# Módulo propio: se instala la primera vez y se actualiza en cada arranque.
+if PGHOST="$PG_HOST" PGUSER="$PG_USER" PGPASSWORD="$PG_PASSWORD" python3 - "$DB_NAME" <<'PY'
+import os, sys, psycopg2
+conn = psycopg2.connect(host=os.environ['PGHOST'], user=os.environ['PGUSER'], password=os.environ['PGPASSWORD'], dbname=sys.argv[1])
+cur = conn.cursor()
+cur.execute("SELECT 1 FROM ir_module_module WHERE name = 'vetstock_solicitudes' AND state = 'installed'")
+found = cur.fetchone() is not None
+cur.close(); conn.close()
+sys.exit(0 if found else 1)
+PY
+then
+  odoo "${ODOO_ARGS[@]}" -d "$DB_NAME" -u vetstock_solicitudes --stop-after-init
+else
+  odoo "${ODOO_ARGS[@]}" -d "$DB_NAME" -i vetstock_solicitudes --without-demo=all --stop-after-init
+fi
+
 echo "Odoo disponible en http://localhost:8069 (base $DB_NAME)"
 exec odoo "${ODOO_ARGS[@]}" --database "$DB_NAME" --http-port 8069

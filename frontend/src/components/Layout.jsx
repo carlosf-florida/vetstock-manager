@@ -53,7 +53,7 @@ export default function Layout() {
     <div className="layout">
       <header className={'cabecera' + (esAdmin ? ' cabecera-admin' : '')}>
         <div className="cabecera-interior">
-          <NavLink to="/" className="marca" onClick={cerrar}>
+          <NavLink to="/portal" className="marca" onClick={cerrar}>
             <span aria-hidden="true">🐾</span> VetStock <span className="marca-suave">Manager</span>
           </NavLink>
 
@@ -71,6 +71,7 @@ export default function Layout() {
                     <Item to="/admin/productos" onClick={cerrar}>Productos</Item>
                     <Item to="/admin/stock" onClick={cerrar}>Stock</Item>
                     <Item to="/admin/clinicas" onClick={cerrar}>Clínicas</Item>
+                    <Item to="/admin/solicitudes" onClick={cerrar}>Solicitudes</Item>
                     <Item to="/admin/pedidos" onClick={cerrar}>Pedidos</Item>
                     <Item to="/admin/bultos" onClick={cerrar}>Bultos</Item>
                     <Item to="/admin/palets" onClick={cerrar}>Palets</Item>

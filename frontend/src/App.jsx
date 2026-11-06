@@ -3,6 +3,7 @@ import { useAuth } from './auth.jsx'
 import { Spinner } from './components/Spinner.jsx'
 import Layout from './components/Layout.jsx'
 import Login from './pages/Login.jsx'
+import Presentacion from './pages/publico/Presentacion.jsx'
 import AccesoNoPermitido from './pages/AccesoNoPermitido.jsx'
 import Inicio from './pages/Inicio.jsx'
 import Catalogo from './pages/Catalogo.jsx'
@@ -21,6 +22,8 @@ import AdminPalets from './pages/admin/Palets.jsx'
 import AdminDestinos from './pages/admin/Destinos.jsx'
 import AdminInformes from './pages/admin/Informes.jsx'
 import AdminOdoo from './pages/admin/Odoo.jsx'
+import AdminSolicitudes from './pages/admin/Solicitudes.jsx'
+import ActivarCuenta from './pages/publico/ActivarCuenta.jsx'
 
 function RedirigirSegunRol() {
   const { usuario } = useAuth()
@@ -49,10 +52,12 @@ function RequiereAdmin({ children }) {
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<Presentacion />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/activar/:token" element={<ActivarCuenta />} />
       <Route path="/pago-simulado/:referencia" element={<PasarelaPago />} />
       <Route element={<Layout />}>
-        <Route path="/" element={<RedirigirSegunRol />} />
+        <Route path="/portal" element={<RequiereSesion><RedirigirSegunRol /></RequiereSesion>} />
 
         {/* Portal del cliente (también accesible a ADMIN) */}
         <Route path="/inicio" element={<RequiereSesion><Inicio /></RequiereSesion>} />
@@ -66,6 +71,7 @@ export default function App() {
         <Route path="/admin/productos" element={<RequiereAdmin><AdminProductos /></RequiereAdmin>} />
         <Route path="/admin/stock" element={<RequiereAdmin><AdminStock /></RequiereAdmin>} />
         <Route path="/admin/clinicas" element={<RequiereAdmin><AdminClinicas /></RequiereAdmin>} />
+        <Route path="/admin/solicitudes" element={<RequiereAdmin><AdminSolicitudes /></RequiereAdmin>} />
         <Route path="/admin/pedidos" element={<RequiereAdmin><AdminPedidos /></RequiereAdmin>} />
         <Route path="/admin/pedidos/:id" element={<RequiereAdmin><AdminPedidoDetalle /></RequiereAdmin>} />
         <Route path="/admin/bultos" element={<RequiereAdmin><AdminBultos /></RequiereAdmin>} />

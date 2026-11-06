@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="categoria_vetstock" model="ir.module.category">
+        <field name="name">VetStock</field>
+    </record>
+
+    <!-- Personal autorizado expresamente a revisar. Se asigna en Ajustes > Usuarios. -->
+    <record id="grupo_revisor" model="res.groups">
+        <field name="name">Revisor de solicitudes de alta</field>
+        <field name="category_id" ref="categoria_vetstock"/>
+        <field name="users" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+
+    <!-- Usuario con el que el backend de VetStock crea y actualiza las solicitudes. -->
+    <record id="grupo_integracion" model="res.groups">
+        <field name="name">Integración con VetStock</field>
+        <field name="category_id" ref="categoria_vetstock"/>
+        <field name="users" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+</odoo>

@@ -14,7 +14,7 @@ export default function Login() {
   const [entrando, setEntrando] = useState(false)
 
   if (!cargando && usuario) {
-    return <Navigate to={location.state?.desde || '/'} replace />
+    return <Navigate to={location.state?.desde || '/portal'} replace />
   }
 
   async function enviar(e) {
@@ -28,8 +28,8 @@ export default function Login() {
     setEntrando(true)
     try {
       await login(username.trim(), password)
-      // '/' decide según el rol: administración → /admin, clínicas → /inicio
-      navigate(location.state?.desde || '/', { replace: true })
+      // /portal decide según el rol: administración → /admin, clínicas → /inicio
+      navigate(location.state?.desde || '/portal', { replace: true })
     } catch (err) {
       setError(err.message || 'No se ha podido iniciar sesión.')
     } finally {

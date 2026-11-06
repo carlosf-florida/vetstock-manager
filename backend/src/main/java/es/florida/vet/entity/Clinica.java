@@ -23,6 +23,9 @@ public class Clinica {
     private String direccion;
     private String telefono;
     private boolean activa = true;
+    private String identificadorFiscal;         // opcional; identifica la clínica para detectar duplicados
+    private String email;
+    private String solicitudReferencia;         // solicitud de origen; null en un alta manual
     private Integer odooId;                     // id en Odoo (res.partner)
     private LocalDateTime odooSincronizado;
 
@@ -46,6 +49,12 @@ public class Clinica {
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
+    public void completarDesdeSolicitud(String identificadorFiscal, String email, String referencia) {
+        this.identificadorFiscal = identificadorFiscal;
+        this.email = email;
+        this.solicitudReferencia = referencia;
+    }
+    public String getSolicitudReferencia() { return solicitudReferencia; }
     public String getDireccion() { return direccion; }
     public void setDireccion(String direccion) { this.direccion = direccion; }
     public String getTelefono() { return telefono; }

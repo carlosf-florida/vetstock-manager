@@ -31,6 +31,20 @@ public class OdooSimuladoConnector implements OdooConnector {
         return Resultado.ok(null, "Modo SIMULADO: no hay servidor Odoo conectado");
     }
 
+    private final java.util.Map<String, Integer> solicitudes = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, Integer> contactos = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Override
+    public Resultado guardarSolicitudAlta(String referencia, Integer odooId, java.util.Map<String, Object> datosIniciales,
+                                          java.util.Map<String, Object> datosDeIntegracion) {
+        return Resultado.ok(solicitudes.computeIfAbsent(referencia, r -> 9000 + solicitudes.size()), "Solicitud recibida en Odoo (SIMULADO)");
+    }
+
+    @Override
+    public Resultado guardarContactoVeterinario(FichaContactoVeterinario ficha) {
+        return Resultado.ok(contactos.computeIfAbsent(ficha.numeroColegiado(), c -> 8000 + contactos.size()), "Contacto creado en Odoo (SIMULADO)");
+    }
+
     @Override
     public Resultado crearProducto(FichaProducto ficha) {
         if (ficha.codigo() == null || ficha.codigo().isBlank()) {

@@ -111,3 +111,16 @@ El pago confirmado, la firma posterior y las transiciones de logística solicita
 - ADMIN o su clínica: `GET /api/pedidos/{id}/documentos`, `GET /api/documentos/{id}/descargar`.
 - ADMIN: `GET /api/informes/productos-top?limite=10`, `/pedidos-por-mes`, `/stock-bajo`, `/pendientes`, `/tiempos`, `/destinos`.
 - Sesión: `GET /api/dashboard`, datos según rol.
+
+## Solicitudes de alta
+
+Detalle en `docs/solicitudes-alta.md`.
+
+| Método y ruta | Acceso | Qué hace |
+|---|---|---|
+| `POST /api/publico/solicitudes-alta` | Público, con límite por IP | Guarda la solicitud y devuelve `{referencia}` |
+| `POST /api/publico/activacion` | Público, con límite por IP | `{token, contrasena}`: activa la cuenta y devuelve `{usuario}` |
+| `POST /api/integracion/odoo/solicitudes/decision` | Firma HMAC en `X-Firma-Odoo` | `{referencia, decision, revisor, observaciones, marcaTiempo}`. `decision`: `APROBAR`, `RECHAZAR` o `REQUIERE_INFORMACION` |
+| `GET /api/solicitudes-alta` | ADMIN | Lista las solicitudes |
+| `POST /api/solicitudes-alta/{id}/reintentar` | ADMIN | Reenvía a Odoo y continúa el alta pendiente, sin duplicar |
+| `POST /api/solicitudes-alta/{id}/activacion` | ADMIN | Genera el enlace; el token solo se devuelve en esta respuesta |

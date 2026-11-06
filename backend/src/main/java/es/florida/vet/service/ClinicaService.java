@@ -63,10 +63,16 @@ public class ClinicaService {
 
     @Transactional
     public ClinicaResponse crearClinica(ClinicaRequest datos) {
-        if (clinicaRepository.findAll().stream().anyMatch(c -> c.getNombre().equalsIgnoreCase(datos.nombre()))) {
+        return ClinicaResponse.desde(registrarClinica(datos.nombre(), datos.direccion(), datos.telefono()));
+    }
+
+    /** Misma regla para el alta manual y para el alta desde una solicitud. */
+    @Transactional
+    public Clinica registrarClinica(String nombre, String direccion, String telefono) {
+        if (clinicaRepository.findFirstByNombreIgnoreCase(nombre).isPresent()) {
             throw new ReglaNegocioException("Ya existe una clínica con ese nombre");
         }
-        return ClinicaResponse.desde(clinicaRepository.save(new Clinica(datos.nombre(), datos.direccion(), datos.telefono())));
+        return clinicaRepository.save(new Clinica(nombre, direccion, telefono));
     }
 
     @Transactional
@@ -120,21 +126,51 @@ public class ClinicaService {
         if (usuarioRepository.existsByUsername(datos.username())) {
             throw new ReglaNegocioException("El nombre de usuario ya existe");
         }
-        if (veterinarioRepository.existsByNumeroColegiado(datos.numeroColegiado())) {
-            throw new ReglaNegocioException("Ya existe un veterinario con ese número de colegiado");
-        }
         Clinica clinica = clinicaRepository.findById(datos.clinicaId())
                 .orElseThrow(() -> new RecursoNoEncontradoException("La clínica no existe"));
+        return VeterinarioResponse.desde(registrarVeterinario(datos.username(), datos.password(), datos.nombreCompleto(),
+                clinica, datos.numeroColegiado(), datos.telefono(), true));
+    }
 
+    /**
+     * Veterinario de una solicitud aprobada: la cuenta existe pero no puede entrar (inactiva y con una
+     * contraseña al azar que nadie conoce) hasta que use su enlace de activación.
+     */
+    @Transactional
+    public Veterinario registrarVeterinarioSinAcceso(String nombre, Clinica clinica, String numeroColegiado,
+                                                     String telefono, String email) {
+        byte[] azar = new byte[32];
+        new java.security.SecureRandom().nextBytes(azar);
+        Veterinario veterinario = registrarVeterinario(usuarioDesdeEmail(email), java.util.Base64.getEncoder().encodeToString(azar),
+                nombre, clinica, numeroColegiado, telefono, false);
+        veterinario.setEmail(email);
+        return veterinario;
+    }
+
+    private Veterinario registrarVeterinario(String username, String contrasena, String nombre, Clinica clinica,
+                                             String numeroColegiado, String telefono, boolean activo) {
+        if (veterinarioRepository.existsByNumeroColegiado(numeroColegiado)) {
+            throw new ReglaNegocioException("Ya existe un veterinario con ese número de colegiado");
+        }
         Usuario usuario = new Usuario();
-        usuario.setUsername(datos.username());
-        usuario.setPassword(passwordEncoder.encode(datos.password()));
-        usuario.setNombreCompleto(datos.nombreCompleto());
+        usuario.setUsername(username);
+        usuario.setPassword(passwordEncoder.encode(contrasena));
+        usuario.setNombreCompleto(nombre);
         usuario.setRol(Rol.VETERINARIO);
+        usuario.setActivo(activo);
         usuarioRepository.save(usuario);
+        return veterinarioRepository.save(new Veterinario(usuario, clinica, numeroColegiado, telefono));
+    }
 
-        Veterinario veterinario = new Veterinario(usuario, clinica, datos.numeroColegiado(), datos.telefono());
-        return VeterinarioResponse.desde(veterinarioRepository.save(veterinario));
+    /** Nombre de usuario a partir del email; si ya existe, se le añade un número. */
+    private String usuarioDesdeEmail(String email) {
+        String base = email.substring(0, email.indexOf('@')).toLowerCase().replaceAll("[^a-z0-9._-]", "");
+        base = base.isEmpty() ? "veterinario" : base.substring(0, Math.min(base.length(), 40));
+        String candidato = base;
+        for (int n = 2; usuarioRepository.existsByUsername(candidato); n++) {
+            candidato = base + n;
+        }
+        return candidato;
     }
 
     // ----- Auxiliares -----

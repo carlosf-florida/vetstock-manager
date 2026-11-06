@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="vista_solicitud_lista" model="ir.ui.view">
+        <field name="name">vetstock.solicitud.alta.lista</field>
+        <field name="model">vetstock.solicitud.alta</field>
+        <field name="arch" type="xml">
+            <list string="Solicitudes de alta de clínicas" create="false" delete="false"
+                  decoration-muted="estado_revision == 'rechazada'"
+                  decoration-danger="estado_alta in ('fallida', 'requiere_revision')">
+                <field name="referencia"/>
+                <field name="fecha_solicitud"/>
+                <field name="clinica_nombre"/>
+                <field name="vet_nombre"/>
+                <field name="localidad" optional="show"/>
+                <field name="estado_revision" widget="badge"
+                       decoration-info="estado_revision == 'pendiente'"
+                       decoration-warning="estado_revision == 'requiere_informacion'"
+                       decoration-success="estado_revision == 'aprobada'"
+                       decoration-danger="estado_revision == 'rechazada'"/>
+                <field name="estado_alta" widget="badge"
+                       decoration-success="estado_alta == 'completada'"
+                       decoration-danger="estado_alta in ('fallida', 'requiere_revision')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="vista_solicitud_formulario" model="ir.ui.view">
+        <field name="name">vetstock.solicitud.alta.formulario</field>
+        <field name="model">vetstock.solicitud.alta</field>
+        <field name="arch" type="xml">
+            <form string="Solicitud de alta" create="false" delete="false">
+                <header>
+                    <button name="action_aprobar" type="object" string="Aprobar" class="btn-primary"
+                            groups="vetstock_solicitudes.grupo_revisor"
+                            invisible="estado_revision in ('aprobada', 'rechazada')"
+                            confirm="Se dará de alta la clínica y su veterinario en VetStock y en Odoo. ¿Has comprobado los datos?"/>
+                    <button name="action_requiere_informacion" type="object" string="Requiere información adicional"
+                            groups="vetstock_solicitudes.grupo_revisor"
+                            invisible="estado_revision in ('rechazada', 'requiere_informacion') or clinica_vetstock_id"/>
+                    <button name="action_rechazar" type="object" string="Rechazar"
+                            groups="vetstock_solicitudes.grupo_revisor"
+                            invisible="estado_revision == 'rechazada' or clinica_vetstock_id"
+                            confirm="La solicitud quedará rechazada de forma definitiva. ¿Continuar?"/>
+                    <button name="action_reintentar_alta" type="object" string="Reintentar alta" class="btn-primary"
+                            groups="vetstock_solicitudes.grupo_revisor"
+                            invisible="estado_revision != 'aprobada' or estado_alta == 'completada'"/>
+                    <field name="estado_revision" widget="statusbar" statusbar_visible="pendiente,aprobada"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="referencia"/></h1>
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="estado_alta != 'requiere_revision'">
+                        Hay una posible coincidencia con datos existentes. No se ha creado ni modificado nada.
+                        Compruébalo en VetStock y decide si reintentar o rechazar.
+                    </div>
+                    <div class="alert alert-danger" role="alert" invisible="estado_alta != 'fallida'">
+                        El alta quedó a medias. Lo ya creado se conserva; "Reintentar alta" continúa sin duplicar.
+                    </div>
+                    <group>
+                        <group string="Clínica">
+                            <field name="clinica_nombre"/>
+                            <field name="razon_social"/>
+                            <field name="identificador_fiscal"/>
+                            <field name="email"/>
+                            <field name="telefono"/>
+                            <field name="direccion"/>
+                            <field name="codigo_postal"/>
+                            <field name="localidad"/>
+                            <field name="provincia"/>
+                            <field name="pais"/>
+                        </group>
+                        <group string="Veterinario propuesto">
+                            <field name="vet_nombre"/>
+                            <field name="vet_colegiado"/>
+                            <field name="vet_colegio"/>
+                            <field name="vet_email"/>
+                            <field name="vet_telefono"/>
+                            <field name="fecha_solicitud"/>
+                        </group>
+                    </group>
+                    <group string="Observaciones de la clínica">
+                        <field name="observaciones" nolabel="1" colspan="2"/>
+                    </group>
+                    <group>
+                        <group string="Revisión">
+                            <field name="estado_revision"/>
+                            <field name="revisado_por"/>
+                            <field name="fecha_revision"/>
+                        </group>
+                        <group string="Integración">
+                            <field name="estado_alta"/>
+                            <field name="mensaje_alta"/>
+                            <field name="clinica_vetstock_id"/>
+                            <field name="veterinario_vetstock_id"/>
+                            <field name="partner_id"/>
+                        </group>
+                    </group>
+                    <group string="Observaciones internas">
+                        <field name="observaciones_internas" nolabel="1" colspan="2"
+                               placeholder="Comprobaciones realizadas por el personal. Se registran con la decisión."/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="vista_solicitud_busqueda" model="ir.ui.view">
+        <field name="name">vetstock.solicitud.alta.busqueda</field>
+        <field name="model">vetstock.solicitud.alta</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="referencia"/>
+                <field name="clinica_nombre"/>
+                <field name="vet_nombre"/>
+                <filter name="por_revisar" string="Por revisar" domain="[('estado_revision', 'in', ('pendiente', 'requiere_informacion'))]"/>
+                <filter name="con_incidencia" string="Alta con incidencia" domain="[('estado_alta', 'in', ('fallida', 'requiere_revision'))]"/>
+                <filter name="agrupar_revision" string="Revisión" context="{'group_by': 'estado_revision'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="accion_solicitudes" model="ir.actions.act_window">
+        <field name="name">Solicitudes de alta de clínicas</field>
+        <field name="res_model">vetstock.solicitud.alta</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_por_revisar': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Sin solicitudes por revisar</p>
+            <p>Aquí aparecen las solicitudes enviadas desde la web de VetStock Manager.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_solicitudes" name="Solicitudes de alta de clínicas" parent="sale.sale_menu_root"
+              action="accion_solicitudes" groups="vetstock_solicitudes.grupo_revisor" sequence="90"/>
+</odoo>

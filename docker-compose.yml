@@ -51,6 +51,8 @@ services:
       USER: odoo
       PASSWORD: odoo
       ODOO_DB_NAME: vetstock_erp
+      VETSTOCK_BACKEND_URL: http://backend:8080
+      ODOO_SECRETO_SOLICITUDES: ${ODOO_SECRETO_SOLICITUDES:-solo-para-desarrollo-local}
     ports:
       - "8069:8069"
     volumes:
@@ -74,6 +76,7 @@ services:
         condition: service_started
     environment:
       TZ: Europe/Madrid
+      ODOO_SECRETO_SOLICITUDES: ${ODOO_SECRETO_SOLICITUDES:-solo-para-desarrollo-local}
       DB_URL: jdbc:mysql://db-mysql:3306/vetstock?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Europe/Madrid
       DB_USER: root
       DB_PASSWORD: root

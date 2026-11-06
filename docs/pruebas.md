@@ -20,7 +20,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 ### Última ejecución registrada
 
 - Fecha: 5 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
-- Resultado: **90 pruebas, 0 fallos, 0 errores, 0 omitidas** (`BUILD SUCCESS`).
+- Resultado: **112 pruebas, 0 fallos, 0 errores, 0 omitidas** (6 de noviembre de 2026).
 - La prueba de concurrencia se repitió 3 veces seguidas con el mismo resultado.
 
 ### Correspondencia con las pruebas pedidas
@@ -257,6 +257,28 @@ Después se borraron todos los pedidos en VetStock y en Odoo para empezar las pr
 expediciones y las reservas quedaron a 0. Se conservan productos, clínicas, cuentas, salidas, los 2 palets vacíos y los movimientos de stock manuales.
 
 Las copias de seguridad citadas en este documento (`_respaldos-vetstock/`) se retiraron el 5 de noviembre de 2026 a petición del alumno: ya no están disponibles.
+
+## 2h. Web pública y solicitudes de alta (en vivo, 6 de noviembre de 2026)
+
+Con Docker, MySQL y Odoo reales y datos ficticios. Automatizadas en `SolicitudesAltaIntegracionTest`: 22 pruebas.
+
+| Prueba | Resultado |
+|---|---|
+| Web a 360, 390, 768 y 1366 px | Sin desplazamiento horizontal |
+| Formulario vacío | 13 errores y foco en el primer campo |
+| Email mal escrito | Error y datos conservados |
+| Dos envíos simultáneos | **Fallo encontrado:** creó dos solicitudes. Corregido en navegador y servidor, con prueba concurrente añadida. La comprobación final es esa prueba automática, no se repitió el clic en el navegador |
+| Llegada a Odoo y texto con HTML | Aparece en la sección, y `<b>` se muestra como texto |
+| Rechazar en Odoo | No crea clínica ni contacto |
+| Aprobar en Odoo | Clínica y veterinario creados, cuenta inactiva, empresa y persona en Odoo, sin usuario interno |
+| Aprobar dos veces | Una sola clínica |
+| Odoo parado al enviar | Referencia entregada y error registrado; se envió sola al volver Odoo, un único registro |
+| Usuario de Odoo sin el grupo | No lee, no aprueba, no ve el menú |
+| Revisor | Lee y escribe observaciones; no crea, no borra, no cambia estados a mano |
+| Activación | Sin activar da 401; activada entra con rol VETERINARIO; el enlace no sirve dos veces; un veterinario recibe 403 en el listado |
+
+Fallo parcial de Odoo durante la aprobación, duplicados y firmas no válidas: solo en las pruebas automáticas, con el conector simulado.
+El módulo de Odoo no tiene pruebas automáticas propias: se comprobó en vivo como indica la tabla.
 
 ## 3. Guía de comprobación manual (para repetirla)
 

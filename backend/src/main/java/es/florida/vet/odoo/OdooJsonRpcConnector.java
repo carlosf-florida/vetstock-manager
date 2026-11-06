@@ -705,6 +705,60 @@ public class OdooJsonRpcConnector implements OdooConnector {
         }
     }
 
+    private static final String MODELO_SOLICITUD = "vetstock.solicitud.alta";
+
+    @Override
+    public Resultado guardarSolicitudAlta(String referencia, Integer odooId, java.util.Map<String, Object> datosIniciales,
+                                          java.util.Map<String, Object> datosDeIntegracion) {
+        try {
+            Integer id = odooId;
+            if (id == null) {
+                JsonNode ids = buscar(MODELO_SOLICITUD, array().add(array().add("referencia").add("=").add(referencia)));
+                if (!ids.isEmpty()) {
+                    id = ids.get(0).asInt();
+                }
+            }
+            ObjectNode integracion = json.valueToTree(datosDeIntegracion);
+            if (id != null) {
+                escribir(MODELO_SOLICITUD, id, integracion);
+                return Resultado.ok(id, "Solicitud actualizada en Odoo");
+            }
+            ObjectNode valores = json.valueToTree(datosIniciales);
+            valores.setAll(integracion);
+            valores.put("referencia", referencia);
+            return Resultado.ok(crear(MODELO_SOLICITUD, valores), "Solicitud recibida en Odoo");
+        } catch (Exception e) {
+            return Resultado.fallo(e.getMessage());
+        }
+    }
+
+    @Override
+    public Resultado guardarContactoVeterinario(FichaContactoVeterinario ficha) {
+        try {
+            String referencia = "VET-" + ficha.numeroColegiado();
+            Integer id = ficha.odooId();
+            if (id == null) {
+                JsonNode ids = buscar("res.partner", array().add(array().add("parent_id").add("=").add(ficha.odooClinicaId()))
+                        .add(array().add("ref").add("=").add(referencia)));
+                if (!ids.isEmpty()) {
+                    id = ids.get(0).asInt();
+                }
+            }
+            ObjectNode valores = json.createObjectNode().put("name", ficha.nombre()).put("is_company", false)
+                    .put("type", "contact").put("parent_id", ficha.odooClinicaId()).put("ref", referencia)
+                    .put("function", "Veterinario responsable");
+            if (ficha.email() != null) valores.put("email", ficha.email());
+            if (ficha.telefono() != null) valores.put("phone", ficha.telefono());
+            if (id != null) {
+                escribir("res.partner", id, valores);
+                return Resultado.ok(id, "Contacto del veterinario actualizado en Odoo");
+            }
+            return Resultado.ok(crear("res.partner", valores), "Contacto del veterinario creado en Odoo");
+        } catch (Exception e) {
+            return Resultado.fallo(e.getMessage());
+        }
+    }
+
     private Set<String> variantesNombre(String nombre) {
         Set<String> nombres = new LinkedHashSet<>();
         nombres.add(nombre);

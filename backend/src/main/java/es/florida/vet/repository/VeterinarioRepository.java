@@ -11,4 +11,5 @@ public interface VeterinarioRepository extends JpaRepository<Veterinario, Long> 
     List<Veterinario> findAllByOrderByIdAsc();
     List<Veterinario> findByClinicaId(Long clinicaId);
     boolean existsByNumeroColegiado(String numeroColegiado);
+    Optional<Veterinario> findByNumeroColegiado(String numeroColegiado);
 }

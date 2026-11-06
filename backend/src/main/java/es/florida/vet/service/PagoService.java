@@ -18,14 +18,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 
@@ -217,13 +213,7 @@ public class PagoService {
 
     /** Firma que calcularía el proveedor: Base64(HMAC-SHA256(secreto, cuerpo)). */
     public String firmarCuerpo(String cuerpo) {
-        try {
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secretoWebhook.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            return Base64.getEncoder().encodeToString(mac.doFinal(cuerpo.getBytes(StandardCharsets.UTF_8)));
-        } catch (GeneralSecurityException e) {
-            throw new IllegalStateException("No se pudo calcular la firma HMAC", e);
-        }
+        return FirmaHmac.calcular(secretoWebhook, cuerpo);
     }
 
     private boolean firmaValida(String cuerpo, String firmaRecibida) {

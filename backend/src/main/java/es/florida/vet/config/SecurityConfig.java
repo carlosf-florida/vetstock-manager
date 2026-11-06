@@ -51,6 +51,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/login").permitAll()
                 // Webhook del proveedor de pagos: sin sesión, autenticado con firma HMAC en el servicio
                 .requestMatchers(HttpMethod.POST, "/api/pagos/notificacion").permitAll()
+                // Formularios públicos: solicitud de alta y activación con enlace de un solo uso
+                .requestMatchers(HttpMethod.POST, "/api/publico/solicitudes-alta", "/api/publico/activacion").permitAll()
+                // Decisión tomada en Odoo: sin sesión, autenticada con firma HMAC en el servicio
+                .requestMatchers(HttpMethod.POST, "/api/integracion/odoo/solicitudes/decision").permitAll()
+                .requestMatchers("/api/solicitudes-alta/**").hasRole("ADMIN")
                 // Escritura de productos, stock, clínicas y cuentas: solo el almacén
                 .requestMatchers(HttpMethod.POST, "/api/productos").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/productos/**").hasRole("ADMIN")

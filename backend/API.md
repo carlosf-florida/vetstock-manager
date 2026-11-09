@@ -118,9 +118,11 @@ Detalle en `docs/solicitudes-alta.md`.
 
 | Método y ruta | Acceso | Qué hace |
 |---|---|---|
-| `POST /api/publico/solicitudes-alta` | Público, con límite por IP | Guarda la solicitud y devuelve `{referencia}` |
+| `POST /api/publico/solicitudes-alta` | Público, con límite por IP | multipart: `datos` (JSON) y `documento` (JPG o PNG, hasta 5 MB). Guarda las dos cosas en una transacción y devuelve `{referencia}` |
 | `POST /api/publico/activacion` | Público, con límite por IP | `{token, contrasena}`: activa la cuenta y devuelve `{usuario}` |
-| `POST /api/integracion/odoo/solicitudes/decision` | Firma HMAC en `X-Firma-Odoo` | `{referencia, decision, revisor, observaciones, marcaTiempo}`. `decision`: `APROBAR`, `RECHAZAR` o `REQUIERE_INFORMACION` |
+| `POST /api/integracion/odoo/solicitudes/decision` | Firma HMAC en `X-Firma-Odoo` | `{referencia, decision, revisor, observaciones, marcaTiempo}`. `decision`: `ACEPTAR_DOCUMENTO` (con `documentoId`), `AUTORIZAR_EXCEPCION` (con motivo), `APROBAR` (exige el documento aceptado o una excepción), `RECHAZAR` (con motivo) o `REQUIERE_INFORMACION` |
 | `GET /api/solicitudes-alta` | ADMIN | Lista las solicitudes |
 | `POST /api/solicitudes-alta/{id}/reintentar` | ADMIN | Reenvía a Odoo y continúa el alta pendiente, sin duplicar |
+| `GET /api/solicitudes-alta/{id}/documento` | ADMIN | Imagen del documento vigente (`no-store`, `nosniff`) |
+| `POST /api/solicitudes-alta/{id}/documento` | ADMIN | Sustituye el documento (multipart `documento`); conserva el anterior y reinicia su revisión |
 | `POST /api/solicitudes-alta/{id}/activacion` | ADMIN | Genera el enlace; el token solo se devuelve en esta respuesta |

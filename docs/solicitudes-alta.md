@@ -3,7 +3,7 @@
 ## El recorrido
 
 ```
-Formulario público → backend VetStock → MySQL → Odoo (revisión de una persona)
+Formulario por pasos (datos + imagen acreditativa) → backend VetStock → MySQL → Odoo (revisión de una persona)
                                                    │ decisión firmada
                                                    ▼
                                   backend: alta en MySQL y contactos en Odoo
@@ -23,6 +23,60 @@ Reparto de responsabilidades, para que un dato no tenga dos dueños:
 | Decisión de revisión | Odoo (la persona que revisa) |
 | Clínicas y veterinarios (MySQL) | VetStock; Odoo nunca escribe en MySQL |
 | Contactos en Odoo | VetStock los crea mediante la integración |
+
+## El formulario por pasos
+
+Es un único formulario dividido en tres pasos, con un indicador de tres círculos y el texto "Paso N de 3":
+
+1. **Clínica.** Los mismos campos y reglas de siempre.
+2. **Veterinario responsable y acreditación.** Los datos del veterinario y la imagen obligatoria.
+3. **Revisión y envío.** Un resumen con botones "Editar", las observaciones y la confirmación de privacidad.
+
+- "Siguiente" solo valida el paso actual, muestra los errores junto a cada campo y lleva el foco al primero. No envía nada.
+- La solicitud solo se envía con "Enviar solicitud" en el paso 3. Pulsar Enter en un paso intermedio equivale a "Siguiente".
+- Los datos y la imagen se conservan al ir y volver entre pasos, mientras la página siga abierta. No se guardan en el navegador (localStorage), así que si se recarga la página hay que volver a adjuntar la imagen.
+
+## Documento acreditativo
+
+Es una imagen JPG o PNG de un documento que identifique a la clínica y al veterinario y acredite su relación. No es una fotografía del veterinario ni una firma, y no se pide el DNI.
+
+**Comprobaciones en el servidor (`ValidadorImagen`).** No se fía de la extensión, del tipo declarado ni del atributo `accept` del navegador:
+
+- Tamaño máximo de 5 MB (`SOLICITUDES_DOCUMENTO_MAX_MB`).
+- Los primeros bytes deben ser de PNG o JPG y coincidir con la extensión y el tipo declarado. Un SVG, un ejecutable o un texto renombrado se rechazan.
+- Las dimensiones se leen de la cabecera **antes** de decodificar la imagen: entre 200 y 8000 píxeles por lado y como máximo 40 megapíxeles. Así una imagen desproporcionada no agota la memoria.
+- La imagen se decodifica entera para descartar archivos dañados.
+
+**Dónde se guarda.** En MySQL (`solicitud_documentos`, columna `MEDIUMBLOB`), igual que las firmas y los PDF de los pedidos. No hay carpeta pública ni nombres de archivo en disco: el nombre original solo se muestra.
+
+La solicitud y la imagen se guardan en la misma transacción. Si algo falla, no queda una solicitud sin documento presentada como recibida ni una imagen huérfana.
+
+**Quién la ve.**
+
+- En VetStock, solo administración, en `GET /api/solicitudes-alta/{id}/documento`, con `no-store` y `nosniff`.
+- En Odoo, como adjunto privado del registro (`public: false`), con los mismos permisos que la solicitud: revisores e integración.
+
+No se hace OCR, reconocimiento facial ni verificación con IA.
+
+## Revisión manual del documento en Odoo
+
+El documento tiene su propio estado:
+
+| Estado | Significado |
+|---|---|
+| Pendiente de revisión | Hay imagen y nadie la ha aceptado |
+| Revisado y aceptado | Una persona pulsó "Aceptar documento"; se guardan quién, cuándo y la nota |
+| Anterior, sin acreditación | Solicitud creada antes de esta función |
+| Excepción autorizada | Solicitud anterior aprobable sin documento, con el motivo registrado |
+
+- **Aprobar** solo aparece, y el backend solo lo admite, con el documento aceptado o con una excepción autorizada. Tener una imagen no basta.
+- **Aceptar documento** envía el id del documento que se ha visto. Si administración lo ha sustituido mientras tanto, el backend lo rechaza y hay que revisar el nuevo.
+- **Rechazar** exige escribir el motivo en las observaciones internas.
+- La imagen se ve en la ficha, se puede ampliar y se descarga desde el enlace "Descargar".
+
+**Si el documento no sirve**, se pulsa "Requiere información adicional". La clínica envía otro por el canal habitual de la distribuidora, ya que no hay enlace público de edición. Administración lo adjunta en **VetStock → Solicitudes de alta → Sustituir**. El anterior se conserva (`vigente = false`), la revisión del documento vuelve a "Pendiente" y en Odoo se añade un adjunto nuevo. Una solicitud aprobada o rechazada no admite sustituciones.
+
+**Solicitudes anteriores.** Quedan como "Anterior, sin acreditación". Se siguen viendo y no se aprueban hasta que administración adjunte un documento o una persona autorice una excepción con su motivo. No se borran ni se dan por verificadas.
 
 ## Estados: tres cosas distintas
 
@@ -65,12 +119,18 @@ Entre MySQL y Odoo no hay transacción común. Por eso cada paso queda guardado 
 4. Comprueba el alta en VetStock (**Administración → Clínicas** y **Solicitudes**) y en Odoo (**Contactos**).
 5. En **Administración → Solicitudes**, pulsa **Generar enlace**, cópialo y ábrelo. Elige una contraseña e inicia sesión con el usuario que indica.
 
+## Actualizar el módulo de Odoo
+
+`docker compose up -d --build odoo`. El contenedor actualiza el módulo al arrancar.
+
+El módulo se copia en `/opt/vetstock-addons`, no en `/mnt/extra-addons`: la imagen oficial declara esta última como volumen y, al recrear el contenedor, Docker conservaba la copia antigua del módulo.
+
 ## Procedimiento manual de revisión
 
 La aplicación no consulta registros oficiales: comprobar la veracidad de los datos es trabajo de la persona que revisa.
 
 1. Comprueba los datos de la clínica y el número de colegiado por los medios que tenga la distribuidora.
-2. Si falta algo, pulsa "Requiere información adicional" y escribe la gestión en las observaciones internas. El contacto con la clínica se hace por teléfono o correo, fuera de la aplicación.
+2. Revisa el documento acreditativo y pulsa "Aceptar documento" si acredita la relación. Si no, pulsa "Requiere información adicional" y escribe la gestión en las observaciones internas. El contacto con la clínica se hace por teléfono o correo, fuera de la aplicación.
 3. Decide. Rechazar es definitivo. Una solicitud con la clínica ya creada no se puede rechazar.
 4. Si el alta pasa a "Requiere revisión", compruébalo en VetStock y rechaza la solicitud o, si procede, resuelve la coincidencia y pulsa "Reintentar alta". Una clínica existente nunca se sobrescribe sola.
 5. Tras el alta, genera el enlace y entrégalo directamente al veterinario. No hay correo configurado.
@@ -108,5 +168,7 @@ No se ha inventado ningún texto legal. Faltan por definir, por quien correspond
 - Identidad y contacto del responsable del tratamiento, base legal y derechos de las personas.
 - Plazo de conservación de las solicitudes. No hay borrado automático.
 - Aviso legal y condiciones.
+- Plazo de conservación de los documentos adjuntos, en VetStock y en Odoo. No se borran solos, tampoco los sustituidos.
+- Si se quiere, eliminar los metadatos de las imágenes (EXIF), que ahora se guardan tal como llegan.
 - HTTPS y un secreto propio en `ODOO_SECRETO_SOLICITUDES`; el valor de `docker-compose.yml` es solo para desarrollo.
 - Envío del enlace de activación por correo, si se quiere dejar de entregar a mano.

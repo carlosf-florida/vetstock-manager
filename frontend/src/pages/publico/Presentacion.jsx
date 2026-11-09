@@ -1,5 +1,7 @@
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth.jsx'
+import MenuLateral from '../../components/MenuLateral.jsx'
 import { DESARROLLADOR, TECNOLOGIAS, emailValido, urlValida } from './datosDesarrollador.js'
 import FormularioSolicitud from './FormularioSolicitud.jsx'
 import '../../publico.css'
@@ -40,25 +42,47 @@ function EnlacesDesarrollador() {
   )
 }
 
+const SECCIONES = [
+  ['funcionalidades', 'Funcionalidades'],
+  ['como-funciona', 'Cómo funciona'],
+  ['desarrollador', 'Desarrollador'],
+  ['solicitud', 'Solicitar alta'],
+]
+
 export default function Presentacion() {
   const { usuario } = useAuth()
   const portal = usuario ? { texto: 'Ir al portal', a: '/portal' } : { texto: 'Acceder', a: '/login' }
+  const [menuAbierto, setMenuAbierto] = useState(false)
+  const boton = useRef(null)
 
   return (
     <div className="publico">
       <a className="pub-saltar" href="#contenido">Saltar al contenido</a>
       <header className="pub-cabecera">
         <div className="pub-ancho pub-cabecera-interior">
+          <button ref={boton} type="button" className="pub-menu-boton" aria-expanded={menuAbierto} aria-controls="menu-publico"
+            onClick={() => setMenuAbierto((v) => !v)}>
+            <span aria-hidden="true">☰</span> Menú
+          </button>
           <Link to="/" className="pub-marca"><span aria-hidden="true">🐾</span> VetStock Manager</Link>
-          <nav aria-label="Secciones de la página" className="pub-nav">
-            <a href="#funcionalidades">Funcionalidades</a>
-            <a href="#como-funciona">Cómo funciona</a>
-            <a href="#desarrollador">Desarrollador</a>
-            <a href="#solicitud">Solicitar alta</a>
-          </nav>
-          <Link className="btn btn-primario" to={portal.a}>{portal.texto}</Link>
+          <Link className="btn btn-primario pub-acceso" to={portal.a}>{portal.texto}</Link>
         </div>
       </header>
+
+      {/* Siempre como panel superpuesto: la página pública es una sola columna */}
+      <MenuLateral id="menu-publico" etiqueta="Menú de la web" abierto={menuAbierto} superpuesto
+        onCerrar={() => setMenuAbierto(false)} botonRef={boton}>
+        <p className="lateral-titulo">En esta página</p>
+        <ul className="lateral-lista">
+          {SECCIONES.map(([ancla, texto]) => (
+            <li key={ancla}><a className="lateral-enlace" href={`#${ancla}`} onClick={() => setMenuAbierto(false)}>{texto}</a></li>
+          ))}
+        </ul>
+        <p className="lateral-titulo">Portal</p>
+        <ul className="lateral-lista">
+          <li><Link className="lateral-enlace" to={portal.a}>{portal.texto === 'Acceder' ? 'Acceder al portal' : portal.texto}</Link></li>
+        </ul>
+      </MenuLateral>
 
       <main id="contenido">
         <section className="pub-hero">
@@ -139,10 +163,12 @@ export default function Presentacion() {
           <h2 id="privacidad" className="pub-pie-titulo">Privacidad del formulario</h2>
           <p>Los datos del formulario se usan para revisar la solicitud y, si se aprueba, dar de alta la clínica y su veterinario
             responsable. Los consulta el personal autorizado de la distribuidora en VetStock Manager y en Odoo. No se usan con fines publicitarios.</p>
+          <p>La imagen que se adjunta solo sirve para que una persona compruebe la relación del veterinario responsable con la clínica.
+            No se publica, no se analiza de forma automática y solo la ve el personal autorizado.</p>
           <h2 className="pub-pie-titulo">Pendiente de completar antes de un despliegue público</h2>
           <p className="texto-suave">Esta es una versión académica, con datos ficticios y pasarela de pago de demostración. Antes de publicarla
             deben añadirse la identidad y el contacto del responsable del tratamiento, la base legal, el plazo de conservación,
-            los derechos de las personas y el aviso legal.</p>
+            los derechos de las personas, el aviso legal y el plazo de conservación de los documentos adjuntos.</p>
         </div>
       </footer>
     </div>

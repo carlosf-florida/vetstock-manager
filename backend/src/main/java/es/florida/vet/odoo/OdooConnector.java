@@ -91,6 +91,12 @@ public interface OdooConnector {
 
     Resultado guardarContactoVeterinario(FichaContactoVeterinario ficha);
 
+    /**
+     * Adjunta el documento acreditativo a la solicitud de Odoo como adjunto privado del registro y lo
+     * marca como el documento que se revisa. Si ya existe un adjunto con ese nombre, lo reutiliza.
+     */
+    Resultado adjuntarDocumentoSolicitud(int solicitudOdooId, long documentoId, String nombre, String tipo, byte[] contenido);
+
     /** Comprueba que hay conexión y credenciales válidas. */
     Resultado probarConexion();
 

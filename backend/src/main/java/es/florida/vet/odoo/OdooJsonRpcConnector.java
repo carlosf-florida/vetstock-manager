@@ -759,6 +759,30 @@ public class OdooJsonRpcConnector implements OdooConnector {
         }
     }
 
+    @Override
+    public Resultado adjuntarDocumentoSolicitud(int solicitudOdooId, long documentoId, String nombre, String tipo, byte[] contenido) {
+        try {
+            JsonNode ids = buscar("ir.attachment", array()
+                    .add(array().add("res_model").add("=").add(MODELO_SOLICITUD))
+                    .add(array().add("res_id").add("=").add(solicitudOdooId))
+                    .add(array().add("name").add("=").add(nombre)));
+            int adjunto;
+            if (!ids.isEmpty()) {
+                adjunto = ids.get(0).asInt();
+            } else {
+                // Ligado al registro: Odoo aplica al adjunto los mismos permisos que a la solicitud
+                adjunto = crear("ir.attachment", json.createObjectNode().put("name", nombre).put("type", "binary")
+                        .put("datas", java.util.Base64.getEncoder().encodeToString(contenido)).put("mimetype", tipo)
+                        .put("res_model", MODELO_SOLICITUD).put("res_id", solicitudOdooId).put("public", false));
+            }
+            escribir(MODELO_SOLICITUD, solicitudOdooId, json.createObjectNode()
+                    .put("documento_adjunto_id", adjunto).put("documento_vetstock_id", documentoId));
+            return Resultado.ok(adjunto, "Documento adjuntado en Odoo");
+        } catch (Exception e) {
+            return Resultado.fallo(e.getMessage());
+        }
+    }
+
     private Set<String> variantesNombre(String nombre) {
         Set<String> nombres = new LinkedHashSet<>();
         nombres.add(nombre);

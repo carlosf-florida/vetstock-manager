@@ -9,9 +9,13 @@
 .pub-cabecera { position: sticky; top: 0; z-index: 20; background: #fff; border-bottom: 1px solid var(--borde); }
 .pub-cabecera-interior { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding-top: 0.6rem; padding-bottom: 0.6rem; }
 .pub-marca { font-weight: 700; color: var(--azul); text-decoration: none; white-space: nowrap; }
-.pub-nav { display: none; gap: 1rem; font-size: 0.92rem; }
-.pub-nav a { color: var(--texto); text-decoration: none; white-space: nowrap; }
-.pub-nav a:hover { color: var(--azul); text-decoration: underline; }
+.pub-marca { flex: 1; }
+.pub-acceso { white-space: nowrap; }
+.pub-menu-boton {
+  display: inline-flex; align-items: center; gap: 0.4rem; font: inherit; font-size: 0.95rem;
+  background: #fff; color: var(--azul); border: 1px solid var(--borde); border-radius: 8px; padding: 0.35rem 0.7rem; cursor: pointer;
+}
+.pub-menu-boton:hover { background: var(--fondo); }
 
 .pub-hero { background: var(--azul); color: #fff; padding: 2.5rem 0; }
 .pub-hero h1 { color: #fff; font-size: 1.8rem; line-height: 1.2; margin: 0 0 0.8rem; max-width: 22em; }
@@ -61,6 +65,52 @@
 .pub-privacidad { display: flex; align-items: flex-start; gap: 0.6rem; margin: 0 0 1rem; }
 .pub-privacidad input { width: 1.2rem; height: 1.2rem; margin: 0.15rem 0 0; flex: none; }
 
+/* Formulario por pasos */
+.pasos { margin: 0 0 0.6rem; }
+.pasos-lista { list-style: none; margin: 0; padding: 0; display: flex; }
+.pasos-item { flex: 1; position: relative; display: flex; justify-content: center; }
+/* Línea que une cada círculo con el anterior */
+.pasos-item + .pasos-item::before {
+  content: ""; position: absolute; top: 1.15rem; right: 50%; width: 100%; height: 3px; background: var(--borde); z-index: 0;
+}
+.pasos-completado + .pasos-item::before, .pasos-completado + .pasos-actual::before { background: var(--verde); }
+.pasos-boton {
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+  background: none; border: none; padding: 0; font: inherit; color: var(--texto-suave);
+}
+button.pasos-boton { cursor: pointer; }
+button.pasos-boton:hover .pasos-texto { text-decoration: underline; }
+.pasos-circulo {
+  width: 2.3rem; height: 2.3rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; background: #fff; border: 3px solid var(--borde); color: var(--texto-suave);
+}
+.pasos-actual .pasos-circulo { border-color: var(--azul); background: var(--azul); color: #fff; }
+.pasos-actual .pasos-texto { color: var(--azul); font-weight: 700; }
+.pasos-completado .pasos-circulo { border-color: var(--verde); background: var(--verde); color: #fff; }
+.pasos-completado .pasos-texto { color: var(--texto); }
+.pasos-texto { font-size: 0.9rem; }
+.pasos-contador { text-align: center; margin: 0.5rem 0 0; font-weight: 600; color: var(--texto-suave); }
+.publico .pub-paso-titulo { font-size: 1.15rem; margin: 0.4rem 0 0.8rem; color: var(--azul); }
+.pub-paso-titulo:focus { outline: none; }
+.pub-paso-titulo:focus-visible { outline: 3px solid #f2b705; outline-offset: 2px; }
+.pub-navegacion { display: flex; justify-content: space-between; gap: 0.7rem; flex-wrap: wrap; margin-top: 1rem; }
+.pub-navegacion .btn-primario { margin-left: auto; }
+
+.pub-documento p { margin: 0 0 0.5rem; }
+.pub-aclaraciones { margin: 0 0 0.8rem; padding-left: 1.2rem; font-size: 0.9rem; }
+.pub-documento-elegido { display: flex; gap: 0.9rem; align-items: flex-start; flex-wrap: wrap; margin-top: 0.4rem; }
+.pub-documento-vista { width: 150px; max-height: 150px; object-fit: contain; border: 1px solid var(--borde); border-radius: 8px; background: #fff; }
+.pub-documento-nombre { word-break: break-all; }
+.pub-acciones-documento { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.pub-resumen { background: #fff; border: 1px solid var(--borde); border-radius: var(--radio); padding: 0.8rem 1rem; margin: 0 0 0.8rem; }
+.pub-resumen-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.publico .pub-resumen h4 { margin: 0; color: var(--azul); font-size: 1rem; }
+.pub-resumen dl { margin: 0.5rem 0 0; display: grid; grid-template-columns: 1fr; gap: 0.2rem 1rem; }
+.pub-resumen dl div { display: grid; grid-template-columns: 10rem 1fr; gap: 0.5rem; }
+.pub-resumen dt { color: var(--texto-suave); font-size: 0.9rem; }
+.pub-resumen dd { margin: 0; overflow-wrap: anywhere; }
+
 .pub-pie { border-top: 1px solid var(--borde); padding: 1.2rem 0; font-size: 0.92rem; }
 .pub-pie p { margin: 0 0 0.3rem; }
 .publico .pub-pie-titulo { font-size: 0.98rem; margin: 0.9rem 0 0.2rem; scroll-margin-top: 4rem; }
@@ -69,9 +119,9 @@
 @media (min-width: 600px) {
   .pub-rejilla { grid-template-columns: repeat(2, 1fr); }
   .pub-campos { grid-template-columns: repeat(2, 1fr); }
+  .pub-resumen dl { grid-template-columns: 1fr 1fr; }
 }
 @media (min-width: 768px) {
-  .pub-nav { display: flex; }
   .pub-hero { padding: 3.5rem 0; }
   .pub-hero h1 { font-size: 2.3rem; }
   .pub-desarrollador { grid-template-columns: 160px 1fr; gap: 2rem; }

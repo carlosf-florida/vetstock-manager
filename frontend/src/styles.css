@@ -11,6 +11,8 @@
   --peligro: #b3362c;
   --radio: 10px;
   --sombra: 0 1px 4px rgba(20, 60, 90, 0.08);
+  --alto-cabecera: 3.5rem;
+  --ancho-lateral: 240px;
 }
 
 * { box-sizing: border-box; }
@@ -40,13 +42,11 @@ code { background: #eef2f5; padding: 0.1em 0.4em; border-radius: 4px; font-size:
   box-shadow: var(--sombra);
 }
 .cabecera-interior {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0.5rem 1rem;
+  min-height: var(--alto-cabecera);
+  padding: 0.4rem 1rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0.8rem;
 }
 .marca {
   color: #fff;
@@ -57,31 +57,76 @@ code { background: #eef2f5; padding: 0.1em 0.4em; border-radius: 4px; font-size:
 }
 .marca-suave { font-weight: 300; opacity: 0.85; }
 
-.menu { display: flex; align-items: center; gap: 0.2rem; flex-wrap: wrap; flex: 1; }
-.menu-enlace {
-  color: #dce8f2;
-  text-decoration: none;
-  padding: 0.4rem 0.7rem;
-  border-radius: 6px;
-  font-size: 0.92rem;
-  white-space: nowrap;
-}
-.menu-enlace:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
-.menu-enlace.activo { background: rgba(255, 255, 255, 0.2); color: #fff; font-weight: 600; }
-.menu-seccion {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  opacity: 0.7;
-  margin: 0 0.4rem;
-  width: 100%;
-}
 
 .cabecera-derecha { display: flex; align-items: center; gap: 0.6rem; margin-left: auto; }
 .usuario-info { display: flex; flex-direction: column; line-height: 1.2; text-align: right; }
 .usuario-info strong { font-size: 0.9rem; }
 .usuario-info small { font-size: 0.75rem; opacity: 0.8; }
-.menu-boton { display: none; background: none; border: 1px solid rgba(255,255,255,0.4); color: #fff; font-size: 1.2rem; border-radius: 6px; padding: 0.2rem 0.6rem; cursor: pointer; }
+.menu-boton {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  background: none; border: 1px solid rgba(255, 255, 255, 0.45); color: #fff;
+  font: inherit; font-size: 0.95rem; border-radius: 8px; padding: 0.3rem 0.7rem; cursor: pointer;
+}
+.menu-boton:hover { background: rgba(255, 255, 255, 0.12); }
+.menu-boton[aria-expanded="true"] { background: rgba(255, 255, 255, 0.18); }
+
+/* Texto solo para lectores de pantalla */
+.solo-lector { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.pub-archivo-oculto { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+
+/* ============ Menú lateral ============ */
+.marco { flex: 1; display: flex; align-items: stretch; min-width: 0; }
+.marco-contenido { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lateral {
+  width: var(--ancho-lateral);
+  flex: none;
+  background: #fff;
+  border-right: 1px solid var(--borde);
+  position: sticky;
+  top: var(--alto-cabecera);
+  align-self: flex-start;
+  height: calc(100vh - var(--alto-cabecera));
+  overflow-y: auto;
+  padding: 0.8rem 0.6rem 2rem;
+}
+.lateral[hidden] { display: none; }
+.lateral-superpuesto {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: min(290px, 85vw);
+  z-index: 45;
+  box-shadow: 4px 0 18px rgba(20, 60, 90, 0.25);
+}
+.lateral-fondo { position: fixed; inset: 0; background: rgba(15, 30, 45, 0.45); z-index: 40; }
+.lateral-cerrar {
+  display: flex; align-items: center; gap: 0.4rem; width: 100%;
+  background: none; border: 1px solid var(--borde); border-radius: 8px;
+  font: inherit; color: var(--texto); padding: 0.5rem 0.7rem; margin-bottom: 0.8rem; cursor: pointer;
+}
+.lateral-titulo, .lateral-grupo-titulo {
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--texto-suave); margin: 0.4rem 0.5rem 0.3rem;
+}
+.lateral-grupo { margin-bottom: 0.6rem; }
+.lateral-grupo-titulo {
+  display: flex; justify-content: space-between; align-items: center; width: calc(100% - 1rem);
+  background: none; border: none; padding: 0.3rem 0; cursor: pointer; font-family: inherit;
+}
+.lateral-lista { list-style: none; margin: 0; padding: 0; }
+.lateral-lista[hidden] { display: none; }
+.lateral-enlace {
+  display: block;
+  color: var(--texto);
+  text-decoration: none;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  border-left: 4px solid transparent;
+  font-size: 0.95rem;
+}
+.lateral-enlace:hover { background: var(--fondo); }
+.lateral-enlace.activo { background: var(--azul-claro); border-left-color: var(--azul); color: var(--azul); font-weight: 600; }
 
 .contenido { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 1.2rem 1rem 3rem; }
 .pie { text-align: center; color: var(--texto-suave); font-size: 0.8rem; padding: 1rem; border-top: 1px solid var(--borde); background: #fff; }
@@ -411,27 +456,11 @@ code { background: #eef2f5; padding: 0.1em 0.4em; border-radius: 4px; font-size:
 
 /* ============ Responsive ============ */
 @media (max-width: 860px) {
-  .menu {
-    display: none;
-    order: 3;
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-    padding-bottom: 0.6rem;
-  }
-  .menu.abierto { display: flex; }
-  .menu-enlace { padding: 0.6rem 0.4rem; font-size: 1rem; }
-  .menu-boton { display: block; }
-  .menu-seccion { width: auto; }
   .usuario-info { display: none; }
   .solo-escritorio { display: none; }
   .contenido { padding: 1rem 0.7rem 3rem; }
   .campo-doble { grid-template-columns: 1fr; }
   .grafico-fila { grid-template-columns: minmax(80px, 120px) 1fr; }
-}
-
-@media (min-width: 861px) {
-  .menu-boton { display: none; }
 }
 
 /* ============ Foco visible (navegación con teclado) ============ */
@@ -448,7 +477,7 @@ input[type="radio"]:focus-visible,
 /* ============ Notificaciones (avisos breves) ============ */
 .notificaciones {
   position: fixed;
-  top: 6.5rem;              /* debajo de la cabecera, también la de dos filas de administración */
+  top: calc(var(--alto-cabecera) + 0.8rem);   /* debajo de la cabecera */
   right: 1rem;
   z-index: 50;
   width: min(380px, calc(100vw - 2rem));
@@ -519,7 +548,8 @@ input[type="radio"]:focus-visible,
 
 @media (max-width: 420px) {
   .marca-suave { display: none; }   /* «VetStock» solo, para que la cabecera quepa en una línea */
-  .cabecera-interior { gap: 0.5rem; padding: 0.5rem 0.7rem; }
+  .cabecera-interior { gap: 0.5rem; padding: 0.4rem 0.7rem; }
+  .menu-boton-texto { display: none; }
 }
 
 /* ============ Portada (login) ============ */
@@ -605,13 +635,6 @@ input[type="radio"]:focus-visible,
 /* ============ Vistas de pedidos por firma y pago (administración) ============ */
 .vistas-pedidos { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; }
 
-/* ============ Cabecera de administración: marca y usuario arriba, menú en una fila debajo ============ */
-@media (min-width: 861px) {
-  .cabecera-admin .menu { order: 3; flex-basis: 100%; }
-  .cabecera-admin .menu-seccion { width: auto; margin: 0 0.2rem 0 0.6rem; }
-  .cabecera-admin .menu-seccion:first-child { margin-left: 0; }
-}
-
 /* ============ Listados en móvil: cada fila es una tarjeta, sin desplazamiento horizontal ============ */
 @media (max-width: 640px) {
   .tabla-tarjetas thead { display: none; }
@@ -645,7 +668,7 @@ input[type="radio"]:focus-visible,
 .solo-imprimir { display: none; }
 
 @media print {
-  .cabecera, .pie, .no-imprimir, .notificaciones { display: none !important; }
+  .cabecera, .pie, .lateral, .lateral-fondo, .no-imprimir, .notificaciones { display: none !important; }
   .solo-imprimir { display: block; font-weight: 600; }
   body { background: #fff; }
   .contenido { padding: 0; max-width: none; }

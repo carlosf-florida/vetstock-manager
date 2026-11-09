@@ -20,7 +20,7 @@ Variables opcionales para la base de pruebas: `TEST_DB_URL`, `TEST_DB_USER`, `TE
 ### Última ejecución registrada
 
 - Fecha: 5 de noviembre de 2026 · Windows 11 · Temurin JDK 21.0.8 · MySQL 8.4 (Docker).
-- Resultado: **112 pruebas, 0 fallos, 0 errores, 0 omitidas** (6 de noviembre de 2026).
+- Resultado: **122 pruebas, 0 fallos, 0 errores, 0 omitidas** (9 de noviembre de 2026).
 - La prueba de concurrencia se repitió 3 veces seguidas con el mismo resultado.
 
 ### Correspondencia con las pruebas pedidas
@@ -299,6 +299,31 @@ En el emulador Pixel 6 (Android 37) contra el backend de Docker, con cuentas de 
 | Cuenta de administración | No entra; remite al portal web |
 
 **No probado:** móvil físico, versión release, guardar borrador y su fallo parcial desde la app, doble pulsación real al crear el pedido, y giro de pantalla. Sin pruebas automáticas propias.
+
+## 2j. Menú lateral, formulario por pasos y documento acreditativo (en vivo, 9 de noviembre de 2026)
+
+Con Docker, MySQL y Odoo reales y con imágenes ficticias generadas en el navegador. Automatizadas: 10 pruebas nuevas en `SolicitudesAltaIntegracionTest` (32 en total).
+
+| Prueba | Resultado |
+|---|---|
+| Menú lateral a 1366 px | Mide 240 px; al cerrarlo, el contenido recupera el espacio; sin desplazamiento horizontal |
+| Menú a 390 px | Panel superpuesto con fondo; Escape, pulsar fuera y elegir una ruta lo cierran; el foco vuelve al botón; lo de detrás queda `inert` |
+| Perfiles | Un cliente solo ve el portal; administración ve los dos grupos plegables; la ruta activa queda marcada (`aria-current`) |
+| Web pública | Panel con "En esta página" y "Portal"; "Acceder" sigue en la cabecera; ninguna opción de administración |
+| Formulario vacío o Enter en el paso 1 | 8 errores, foco en el primero y no se envía nada |
+| Paso 2 sin imagen | No avanza |
+| Texto renombrado, archivo de 6 MB y SVG | Rechazados en el navegador |
+| Imagen válida | Vista previa y nombre; se conserva al ir y volver entre pasos; sustituir y retirar funcionan |
+| Paso 3 | Resumen completo; sin privacidad no se envía; "Editar" vuelve al paso con los datos |
+| Doble clic al enviar | Una sola solicitud con su imagen |
+| Odoo | Adjunto privado; "Aprobar" oculto hasta aceptar el documento; rechazar sin motivo, bloqueado; revisor y fecha registrados |
+| Sustitución desde administración | Revisión reiniciada; el documento anterior se conserva en VetStock y en Odoo |
+| Documento sin sesión / como clínica | 401 / 403 |
+| Odoo parado al enviar | Solicitud guardada y pendiente; al volver Odoo, se envía con su adjunto sin duplicar |
+
+**Solo en las pruebas automáticas:** imagen dañada, dimensiones excesivas o insuficientes, extensión que no coincide, petición sin archivo, fallo al guardar sin dejar datos, excepción de solicitudes anteriores, aceptar un documento ya sustituido, fallo del adjunto en Odoo y reintento.
+
+**No probado en vivo:** aprobar una solicitud con documento, para no crear otra clínica de prueba; está cubierto por las pruebas automáticas.
 
 ## 3. Guía de comprobación manual (para repetirla)
 

@@ -17,6 +17,10 @@
                        decoration-warning="estado_revision == 'requiere_informacion'"
                        decoration-success="estado_revision == 'aprobada'"
                        decoration-danger="estado_revision == 'rechazada'"/>
+                <field name="documento_estado" widget="badge"
+                       decoration-success="documento_estado in ('aceptado', 'excepcion')"
+                       decoration-warning="documento_estado == 'pendiente'"
+                       decoration-muted="documento_estado == 'sin_documento'"/>
                 <field name="estado_alta" widget="badge"
                        decoration-success="estado_alta == 'completada'"
                        decoration-danger="estado_alta in ('fallida', 'requiere_revision')"/>
@@ -30,9 +34,17 @@
         <field name="arch" type="xml">
             <form string="Solicitud de alta" create="false" delete="false">
                 <header>
+                    <button name="action_aceptar_documento" type="object" string="Aceptar documento" class="btn-primary"
+                            groups="vetstock_solicitudes.grupo_revisor"
+                            invisible="estado_revision in ('aprobada', 'rechazada') or documento_estado != 'pendiente' or not documento_adjunto_id"
+                            confirm="Confirmas que has revisado el documento y que acredita la relación del veterinario con la clínica. Es una comprobación manual: no se verifica automáticamente."/>
+                    <button name="action_autorizar_excepcion" type="object" string="Autorizar excepción"
+                            groups="vetstock_solicitudes.grupo_revisor"
+                            invisible="estado_revision in ('aprobada', 'rechazada') or documento_estado != 'sin_documento'"
+                            confirm="La solicitud podrá aprobarse sin documento. El motivo de las observaciones internas quedará registrado. ¿Continuar?"/>
                     <button name="action_aprobar" type="object" string="Aprobar" class="btn-primary"
                             groups="vetstock_solicitudes.grupo_revisor"
-                            invisible="estado_revision in ('aprobada', 'rechazada')"
+                            invisible="estado_revision in ('aprobada', 'rechazada') or documento_estado not in ('aceptado', 'excepcion')"
                             confirm="Se dará de alta la clínica y su veterinario en VetStock y en Odoo. ¿Has comprobado los datos?"/>
                     <button name="action_requiere_informacion" type="object" string="Requiere información adicional"
                             groups="vetstock_solicitudes.grupo_revisor"
@@ -53,6 +65,14 @@
                     <div class="alert alert-warning" role="alert" invisible="estado_alta != 'requiere_revision'">
                         Hay una posible coincidencia con datos existentes. No se ha creado ni modificado nada.
                         Compruébalo en VetStock y decide si reintentar o rechazar.
+                    </div>
+                    <div class="alert alert-info" role="alert" invisible="documento_estado != 'pendiente' or estado_revision in ('aprobada', 'rechazada')">
+                        Revisa el documento acreditativo antes de aprobar. Si no es válido, pide información adicional:
+                        la clínica enviará otro por el canal habitual y administración lo sustituirá en VetStock.
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="documento_estado != 'sin_documento' or estado_revision in ('aprobada', 'rechazada')">
+                        Solicitud anterior, sin documento acreditativo. Para aprobarla, administración debe adjuntar el
+                        documento en VetStock o una persona autorizada debe registrar una excepción con su motivo.
                     </div>
                     <div class="alert alert-danger" role="alert" invisible="estado_alta != 'fallida'">
                         El alta quedó a medias. Lo ya creado se conserva; "Reintentar alta" continúa sin duplicar.
@@ -79,6 +99,24 @@
                             <field name="fecha_solicitud"/>
                         </group>
                     </group>
+                    <group string="Documento acreditativo">
+                        <group>
+                            <field name="documento_imagen" widget="image" options="{'zoom': true, 'size': [360, 360]}"
+                                   nolabel="1" colspan="2" invisible="not documento_adjunto_id"/>
+                            <div colspan="2" invisible="documento_adjunto_id" class="text-muted">
+                                No hay documento en Odoo. Si la solicitud lo tiene, se adjuntará en el próximo envío desde VetStock.
+                            </div>
+                        </group>
+                        <group>
+                            <field name="documento_estado"/>
+                            <field name="documento_imagen" widget="binary" filename="documento_nombre" string="Descargar"
+                                   invisible="not documento_adjunto_id"/>
+                            <field name="documento_nombre" invisible="1"/>
+                            <field name="documento_revisado_por"/>
+                            <field name="documento_fecha_revision"/>
+                            <field name="documento_observaciones"/>
+                        </group>
+                    </group>
                     <group string="Observaciones de la clínica">
                         <field name="observaciones" nolabel="1" colspan="2"/>
                     </group>
@@ -98,7 +136,7 @@
                     </group>
                     <group string="Observaciones internas">
                         <field name="observaciones_internas" nolabel="1" colspan="2"
-                               placeholder="Comprobaciones realizadas por el personal. Se registran con la decisión."/>
+                               placeholder="Comprobaciones realizadas. Obligatorio para rechazar (motivo) y para autorizar una excepción. Se registra con la decisión."/>
                     </group>
                 </sheet>
                 <chatter/>

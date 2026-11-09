@@ -12,6 +12,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import es.florida.vet.util.FechaUtil;
 
@@ -54,6 +56,17 @@ public class GlobalExceptionHandler {
     }
 
     // Parámetro de la URL con tipo incorrecto (por ejemplo, estado=INVENTADO)
+    // Archivo por encima del límite técnico de subida (el de negocio se comprueba antes, en el servicio)
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> archivoGrande(MaxUploadSizeExceededException ex) {
+        return construir(HttpStatus.BAD_REQUEST, "El archivo es demasiado grande");
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<ErrorResponse> faltaParte(MissingServletRequestPartException ex) {
+        return construir(HttpStatus.BAD_REQUEST, "Faltan datos del formulario");
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> parametroNoValido(MethodArgumentTypeMismatchException ex) {
         return construir(HttpStatus.BAD_REQUEST, "El valor del parámetro '" + ex.getName() + "' no es válido");

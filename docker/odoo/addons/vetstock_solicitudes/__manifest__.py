@@ -1,6 +1,6 @@
 {
     "name": "VetStock - Solicitudes de alta de clínicas",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.1.0",
     "summary": "Revisión de las solicitudes de alta recibidas desde la web de VetStock Manager",
     "category": "Sales",
     "license": "LGPL-3",

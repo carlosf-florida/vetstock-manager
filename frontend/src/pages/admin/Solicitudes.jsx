@@ -4,6 +4,7 @@ import { ErrorBox, Spinner } from '../../components/Spinner.jsx'
 import Tabla from '../../components/Tabla.jsx'
 
 const REVISION = { PENDIENTE: 'Pendiente', REQUIERE_INFORMACION: 'Requiere información', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada' }
+const DOCUMENTO = { SIN_DOCUMENTO: 'Anterior, sin documento', PENDIENTE: 'Pendiente de revisión', ACEPTADO: 'Aceptado', EXCEPCION: 'Excepción autorizada' }
 const ALTA = { NO_INICIADA: 'No iniciada', EN_PROCESO: 'En proceso', REQUIERE_REVISION: 'Requiere revisión', FALLIDA: 'Fallida', COMPLETADA: 'Completada' }
 
 function textoAcceso(s) {
@@ -52,6 +53,23 @@ export default function AdminSolicitudes() {
   }
 
   const reintentar = (s) => accion(s, 'reintentar')
+  // La clínica envía el nuevo documento por el canal habitual; aquí lo sube administración
+  async function sustituirDocumento(s, archivo) {
+    if (!archivo) return
+    const cuerpo = new FormData()
+    cuerpo.append('documento', archivo)
+    setOcupada(s.id)
+    setErrorAccion(null)
+    try {
+      await api.postForm(`/api/solicitudes-alta/${s.id}/documento`, cuerpo)
+      await cargar()
+    } catch (err) {
+      setErrorAccion(`${s.referencia}: ${err.message}`)
+    } finally {
+      setOcupada(null)
+    }
+  }
+
   const generarEnlace = (s) => accion(s, 'activacion', (r) => setEnlace({
     referencia: s.referencia, usuario: r.usuario, caduca: r.caduca,
     url: `${window.location.origin}/activar/${r.token}`,
@@ -64,6 +82,27 @@ export default function AdminSolicitudes() {
     { key: 'vetNombre', label: 'Veterinario propuesto' },
     { key: 'estadoRevision', label: 'Revisión', render: (s) => REVISION[s.estadoRevision] },
     { key: 'estadoAlta', label: 'Alta', render: (s) => <span title={s.mensajeAlta || undefined}>{ALTA[s.estadoAlta]}</span> },
+    {
+      key: 'documento', label: 'Documento', render: (s) => {
+        const decidida = ['APROBADA', 'RECHAZADA'].includes(s.estadoRevision)
+        return (
+          <span>
+            {DOCUMENTO[s.documentoEstado]}
+            {s.documentoId && <small>{s.documentoEnOdoo ? 'En Odoo' : 'Pendiente de llegar a Odoo'}</small>}
+            <span className="acciones-fila">
+              {s.documentoId && <a className="btn btn-mini btn-secundario" href={`/api/solicitudes-alta/${s.id}/documento`} target="_blank" rel="noreferrer">Ver</a>}
+              {!decidida && (
+                <label className="btn btn-mini btn-secundario">
+                  {s.documentoId ? 'Sustituir' : 'Adjuntar'}
+                  <input type="file" accept="image/jpeg,image/png" className="pub-archivo-oculto" disabled={ocupada === s.id}
+                    onChange={(e) => { sustituirDocumento(s, e.target.files?.[0]); e.target.value = '' }} />
+                </label>
+              )}
+            </span>
+          </span>
+        )
+      },
+    },
     { key: 'odoo', label: 'Envío a Odoo', render: textoOdoo },
     { key: 'acceso', label: 'Acceso', render: textoAcceso },
     {
@@ -86,7 +125,8 @@ export default function AdminSolicitudes() {
   return (
     <div>
       <h1>Solicitudes de alta</h1>
-      <p className="texto-suave">La revisión (aprobar, rechazar o pedir información) se hace en Odoo, en Ventas → Solicitudes de alta de clínicas.</p>
+      <p className="texto-suave">La revisión (aceptar el documento, aprobar, rechazar o pedir información) se hace en Odoo, en Ventas → Solicitudes de alta de clínicas.
+        Si la clínica envía otro documento por el canal habitual, adjúntalo aquí: la revisión anterior del documento deja de valer.</p>
       {errorAccion && <p className="caja-error" role="alert">{errorAccion}</p>}
       {enlace && (
         <div className="caja-aviso" role="status">

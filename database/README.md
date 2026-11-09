@@ -16,9 +16,10 @@ Todo lo relativo a la base de datos de VetStock Manager vive en esta carpeta.
 - `migrations/010_salidas_expedicion.sql` — salidas de expedición: `destinos.codigo`, `clinicas.destino_habitual_id` y salida del pedido (`pedidos.destino_id`, `destino_manual`, `destino_asignado_por_id`, `fecha_asignacion_destino`). No asigna salida a pedidos existentes. Se puede repetir (ver `docs/logistica-salidas-bultos.md`).
 - `migrations/011_peso_productos.sql` — `productos.peso_unitario_kg` (kg por unidad, 3 decimales; NULL = desconocido) para calcular los bultos. No rellena pesos. Se puede repetir.
 - `migrations/012_solicitudes_alta.sql` — tablas `solicitudes_alta` y `activaciones_cuenta`, y datos de origen en `clinicas` y `veterinarios`. Solo añade estructura y se puede repetir.
+- `migrations/013_documento_solicitud.sql` — tabla `solicitud_documentos` (imagen acreditativa) y columnas `documento_*` en `solicitudes_alta`. Las solicitudes que ya existían quedan como `SIN_DOCUMENTO`. Solo añade estructura y se puede repetir.
 - `demo/pesos_ficticios_demo.sql` — **pesos FICTICIOS** solo para la demo; no pisa pesos ya introducidos.
 
-**Instalaciones existentes:** aplicar en orden las migraciones que falten (002–012) y no volver a ejecutar el esquema inicial si hay datos que conservar. Firma y pago pueden llegar en cualquier orden; solo se prepara con firma válida y pago completo (ver `docs/modelo-y-reglas.md`). Instrucciones para Windows: `docs/instalacion-windows.md`. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
+**Instalaciones existentes:** aplicar en orden las migraciones que falten (002–013) y no volver a ejecutar el esquema inicial si hay datos que conservar. Firma y pago pueden llegar en cualquier orden; solo se prepara con firma válida y pago completo (ver `docs/modelo-y-reglas.md`). Instrucciones para Windows: `docs/instalacion-windows.md`. El total nuevo es base más IVA calculado por línea, con redondeo decimal; ver `docs/iva-pedidos.md`.
 
 ## Cómo cargarla
 
@@ -28,7 +29,7 @@ mysql -u root -p < migrations/001_esquema_inicial.sql
 
 El backend se conecta con las credenciales de `backend/src/main/resources/application.properties` (sobrescribibles con las variables de entorno `DB_URL`, `DB_USER`, `DB_PASSWORD`). Hibernate está en `ddl-auto=none`: **las tablas solo se crean con este script**, nunca por el backend.
 
-## Tablas (17)
+## Tablas (18)
 
 | Tabla | Qué guarda | Relaciones |
 |---|---|---|

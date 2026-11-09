@@ -45,6 +45,13 @@ public class OdooSimuladoConnector implements OdooConnector {
         return Resultado.ok(contactos.computeIfAbsent(ficha.numeroColegiado(), c -> 8000 + contactos.size()), "Contacto creado en Odoo (SIMULADO)");
     }
 
+    private final java.util.Map<String, Integer> adjuntos = new java.util.concurrent.ConcurrentHashMap<>();
+
+    @Override
+    public Resultado adjuntarDocumentoSolicitud(int solicitudOdooId, long documentoId, String nombre, String tipo, byte[] contenido) {
+        return Resultado.ok(adjuntos.computeIfAbsent(solicitudOdooId + "/" + nombre, n -> 7000 + adjuntos.size()), "Documento adjuntado (SIMULADO)");
+    }
+
     @Override
     public Resultado crearProducto(FichaProducto ficha) {
         if (ficha.codigo() == null || ficha.codigo().isBlank()) {

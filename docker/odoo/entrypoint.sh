@@ -7,7 +7,7 @@ PG_USER="${USER:-odoo}"
 PG_PASSWORD="${PASSWORD:-odoo}"
 
 # Parámetros explícitos: no dependemos del entrypoint interno de la imagen.
-ODOO_ARGS=(--db_host "$PG_HOST" --db_port 5432 --db_user "$PG_USER" --db_password "$PG_PASSWORD")
+ODOO_ARGS=(--db_host "$PG_HOST" --db_port 5432 --db_user "$PG_USER" --db_password "$PG_PASSWORD" --addons-path /opt/vetstock-addons)
 
 # La imagen oficial de Odoo ya incluye Python y psycopg2. Esperamos a
 # PostgreSQL sin depender de que tenga instalado el cliente psql.

@@ -6,6 +6,10 @@ import es.florida.vet.odoo.OdooConnector;
 import es.florida.vet.repository.ActivacionCuentaRepository;
 import es.florida.vet.repository.ClinicaRepository;
 import es.florida.vet.repository.SolicitudAltaRepository;
+import es.florida.vet.repository.SolicitudDocumentoRepository;
+import es.florida.vet.service.ValidadorImagen;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import es.florida.vet.repository.VeterinarioRepository;
 import es.florida.vet.service.FirmaHmac;
 import es.florida.vet.service.SolicitudAltaService;
@@ -17,6 +21,9 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.ResultActions;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -27,6 +34,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,6 +56,9 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
     @Autowired private VeterinarioRepository veterinarios;
     @Autowired private ActivacionCuentaRepository activaciones;
     @Autowired private SolicitudAltaService servicio;
+    @Autowired private SolicitudDocumentoRepository documentos;
+    @Autowired private ValidadorImagen validador;
+    @Autowired private JdbcTemplate jdbc;
     @MockitoSpyBean private OdooConnector odoo;
 
     @DynamicPropertySource
@@ -77,8 +93,42 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
         return d;
     }
 
+    /** Imagen de prueba generada en memoria (nunca un documento real). */
+    private static byte[] imagen(String formato, int ancho, int alto) throws Exception {
+        BufferedImage dibujo = new BufferedImage(ancho, alto, BufferedImage.TYPE_INT_RGB);
+        dibujo.getGraphics().fillRect(10, 10, ancho / 2, alto / 2);
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        ImageIO.write(dibujo, formato, salida);
+        return salida.toByteArray();
+    }
+
+    private static byte[] PNG_PRUEBA;
+
+    private static MockMultipartFile documentoPrueba() throws Exception {
+        if (PNG_PRUEBA == null) {
+            PNG_PRUEBA = imagen("png", 400, 300);
+        }
+        return new MockMultipartFile("documento", "acreditacion.png", "image/png", PNG_PRUEBA);
+    }
+
+    private MockMultipartFile parteDatos(ObjectNode datos) {
+        return new MockMultipartFile("datos", "", MediaType.APPLICATION_JSON_VALUE, datos.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     private ResultActions enviar(ObjectNode datos) throws Exception {
-        return mvc.perform(post(URL_FORMULARIO).contentType(MediaType.APPLICATION_JSON).content(datos.toString()));
+        return enviarCon(datos, documentoPrueba());
+    }
+
+    private ResultActions enviarCon(ObjectNode datos, MockMultipartFile documento) throws Exception {
+        var peticion = multipart(URL_FORMULARIO).file(parteDatos(datos));
+        if (documento != null) {
+            peticion.file(documento);
+        }
+        return mvc.perform(peticion);
+    }
+
+    private long idDe(String referencia) {
+        return solicitudes.findByReferencia(referencia).orElseThrow().getId();
     }
 
     private String crearSolicitud(ObjectNode datos) throws Exception {
@@ -95,15 +145,39 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
     }
 
     private String cuerpoDecision(String referencia, String tipo, long marcaTiempo) {
-        return mapper.createObjectNode().put("referencia", referencia).put("decision", tipo)
-                .put("revisor", "Revisora Odoo").put("observaciones", "ok").put("marcaTiempo", marcaTiempo).toString();
+        return cuerpoDecision(referencia, tipo, marcaTiempo, "ok", documentoVigente(referencia));
+    }
+
+    private String cuerpoDecision(String referencia, String tipo, long marcaTiempo, String nota, Long documentoId) {
+        ObjectNode cuerpo = mapper.createObjectNode().put("referencia", referencia).put("decision", tipo)
+                .put("revisor", "Revisora Odoo").put("observaciones", nota).put("marcaTiempo", marcaTiempo);
+        if (documentoId != null) {
+            cuerpo.put("documentoId", documentoId);
+        }
+        return cuerpo.toString();
+    }
+
+    private Long documentoVigente(String referencia) {
+        return solicitudes.findByReferencia(referencia)
+                .flatMap(s -> documentos.resumenVigente(s.getId())).map(SolicitudDocumentoRepository.Resumen::id).orElse(null);
+    }
+
+    private ResultActions firmada(String cuerpo) throws Exception {
+        return decision(cuerpo, FirmaHmac.calcular(SECRETO, cuerpo));
     }
 
     private JsonNode decidir(String referencia, String tipo) throws Exception {
         String cuerpo = cuerpoDecision(referencia, tipo, Instant.now().getEpochSecond());
-        String texto = decision(cuerpo, FirmaHmac.calcular(SECRETO, cuerpo)).andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
+        String texto = firmada(cuerpo).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         return mapper.readTree(texto);
+    }
+
+    /** Como en Odoo: primero se acepta el documento y después se aprueba. */
+    private JsonNode aprobar(String referencia) throws Exception {
+        if ("PENDIENTE".equals(solicitudes.findByReferencia(referencia).orElseThrow().getDocumentoEstado().name())) {
+            decidir(referencia, "ACEPTAR_DOCUMENTO");
+        }
+        return decidir(referencia, "APROBAR");
     }
 
     // ----- Formulario -----
@@ -154,7 +228,8 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
         var datos = mapper.treeToValue(formulario(marca), es.florida.vet.dto.SolicitudAltaRequest.class);
         var hilos = java.util.concurrent.Executors.newFixedThreadPool(4);
         try {
-            var tareas = java.util.Collections.nCopies(4, (java.util.concurrent.Callable<String>) () -> servicio.registrar(datos));
+            var imagen = validador.validar(documentoPrueba());
+            var tareas = java.util.Collections.nCopies(4, (java.util.concurrent.Callable<String>) () -> servicio.registrar(datos, imagen));
             var referencias = new java.util.HashSet<String>();
             for (var resultado : hilos.invokeAll(tareas)) {
                 referencias.add(resultado.get());
@@ -236,14 +311,14 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
         long antes = clinicas.count();
         assertEquals("REQUIERE_INFORMACION", decidir(referencia, "REQUIERE_INFORMACION").get("estadoRevision").asText());
         assertEquals(antes, clinicas.count());
-        assertEquals("COMPLETADA", decidir(referencia, "APROBAR").get("estadoAlta").asText());
+        assertEquals("COMPLETADA", aprobar(referencia).get("estadoAlta").asText());
     }
 
     @Test
     void aprobarCreaClinicaYVeterinarioSinAccesoYRegistraIds() throws Exception {
         String marca = unico();
         String referencia = crearSolicitud(formulario(marca));
-        JsonNode r = decidir(referencia, "APROBAR");
+        JsonNode r = aprobar(referencia);
 
         assertEquals("APROBADA", r.get("estadoRevision").asText());
         assertEquals("COMPLETADA", r.get("estadoAlta").asText());
@@ -267,11 +342,11 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
     void aprobarDosVecesNoDuplicaYConservaLaPrimeraRevision() throws Exception {
         String marca = unico();
         String referencia = crearSolicitud(formulario(marca));
-        JsonNode primera = decidir(referencia, "APROBAR");
+        JsonNode primera = aprobar(referencia);
         long clinicasTrasPrimera = clinicas.count();
         long veterinariosTrasPrimera = veterinarios.count();
 
-        JsonNode segunda = decidir(referencia, "APROBAR");
+        JsonNode segunda = aprobar(referencia);
 
         assertEquals(primera.get("clinicaId").asLong(), segunda.get("clinicaId").asLong());
         assertEquals(primera.get("veterinarioId").asLong(), segunda.get("veterinarioId").asLong());
@@ -283,7 +358,7 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
     @Test
     void laClinicaDadaDeAltaNoSePuedeRechazar() throws Exception {
         String referencia = crearSolicitud(formulario(unico()));
-        decidir(referencia, "APROBAR");
+        aprobar(referencia);
         String cuerpo = cuerpoDecision(referencia, "RECHAZAR", Instant.now().getEpochSecond());
         decision(cuerpo, FirmaHmac.calcular(SECRETO, cuerpo)).andExpect(status().isBadRequest());
         assertEquals("APROBADA", solicitudes.findByReferencia(referencia).orElseThrow().getEstadoRevision().name());
@@ -294,13 +369,13 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
     @Test
     void mismoFiscalConOtroVeterinarioPasaARevisionSinTocarLaClinica() throws Exception {
         String marca = unico();
-        JsonNode original = decidir(crearSolicitud(formulario(marca)), "APROBAR");
+        JsonNode original = aprobar(crearSolicitud(formulario(marca)));
         Long responsable = clinicas.findById(original.get("clinicaId").asLong()).orElseThrow().getVeterinarioResponsable().getId();
 
         ObjectNode otra = formulario(unico());
         otra.put("identificadorFiscal", "F" + marca);
         long antes = clinicas.count();
-        JsonNode r = decidir(crearSolicitud(otra), "APROBAR");
+        JsonNode r = aprobar(crearSolicitud(otra));
 
         assertEquals("REQUIERE_REVISION", r.get("estadoAlta").asText());
         assertTrue(r.get("clinicaId").isNull());
@@ -311,13 +386,13 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
     @Test
     void mismoFiscalYMismoColegiadoSeVinculaSinDuplicar() throws Exception {
         String marca = unico();
-        JsonNode original = decidir(crearSolicitud(formulario(marca)), "APROBAR");
+        JsonNode original = aprobar(crearSolicitud(formulario(marca)));
 
         ObjectNode otra = formulario(marca);
         otra.put("email", "otro" + marca.toLowerCase() + "@ejemplo.test"); // otra huella: no es un doble clic
         otra.put("telefono", "611111111");
         long antes = clinicas.count();
-        JsonNode r = decidir(crearSolicitud(otra), "APROBAR");
+        JsonNode r = aprobar(crearSolicitud(otra));
 
         assertEquals("COMPLETADA", r.get("estadoAlta").asText());
         assertEquals(original.get("clinicaId").asLong(), r.get("clinicaId").asLong());
@@ -328,15 +403,15 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
     @Test
     void colegiadoEnOtraClinicaONombreIgualPasanARevision() throws Exception {
         String marca = unico();
-        decidir(crearSolicitud(formulario(marca)), "APROBAR");
+        aprobar(crearSolicitud(formulario(marca)));
 
         ObjectNode mismoColegiado = formulario(unico());
         mismoColegiado.put("vetColegiado", "C" + marca);
-        assertEquals("REQUIERE_REVISION", decidir(crearSolicitud(mismoColegiado), "APROBAR").get("estadoAlta").asText());
+        assertEquals("REQUIERE_REVISION", aprobar(crearSolicitud(mismoColegiado)).get("estadoAlta").asText());
 
         ObjectNode mismoNombre = formulario(unico());
         mismoNombre.put("clinicaNombre", ("Clínica Prueba " + marca).toUpperCase());
-        assertEquals("REQUIERE_REVISION", decidir(crearSolicitud(mismoNombre), "APROBAR").get("estadoAlta").asText());
+        assertEquals("REQUIERE_REVISION", aprobar(crearSolicitud(mismoNombre)).get("estadoAlta").asText());
     }
 
     // ----- Fallos de Odoo -----
@@ -348,7 +423,7 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
         doReturn(OdooConnector.Resultado.fallo("Odoo no responde")).when(odoo).guardarContactoVeterinario(any());
         JsonNode fallida;
         try {
-            fallida = decidir(referencia, "APROBAR");
+            fallida = aprobar(referencia);
         } finally {
             doCallRealMethod().when(odoo).guardarContactoVeterinario(any());
         }
@@ -406,7 +481,7 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
     @Test
     void elEnlaceActivaLaCuentaUnaSolaVezYNoGuardaElToken() throws Exception {
         String marca = unico();
-        JsonNode alta = decidir(crearSolicitud(formulario(marca)), "APROBAR");
+        JsonNode alta = aprobar(crearSolicitud(formulario(marca)));
         JsonNode enlace = generarEnlace(alta.get("id").asLong());
         String token = enlace.get("token").asText();
         String usuario = enlace.get("usuario").asText();
@@ -424,7 +499,7 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
 
     @Test
     void generarUnEnlaceNuevoAnulaElAnteriorYNoSeGeneraConCuentaActiva() throws Exception {
-        JsonNode alta = decidir(crearSolicitud(formulario(unico())), "APROBAR");
+        JsonNode alta = aprobar(crearSolicitud(formulario(unico())));
         long id = alta.get("id").asLong();
         String primero = generarEnlace(id).get("token").asText();
         String segundo = generarEnlace(id).get("token").asText();
@@ -457,5 +532,177 @@ class SolicitudesAltaIntegracionTest extends IntegracionBase {
 
         mvc.perform(post("/api/clinicas").session(sesion).contentType(MediaType.APPLICATION_JSON).content(clinica.toString()))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ----- Documento acreditativo: archivos -----
+
+    @Test
+    void aceptaJpgYPngYGuardaElDocumentoConLaSolicitud() throws Exception {
+        String png = crearSolicitud(formulario(unico()));
+        String jpg = unico();
+        enviarCon(formulario(jpg), new MockMultipartFile("documento", "acreditacion.JPEG", "image/jpeg", imagen("jpg", 500, 400)))
+                .andExpect(status().isCreated());
+
+        var documentoPng = documentos.resumenVigente(idDe(png)).orElseThrow();
+        assertEquals("image/png", documentoPng.tipo());
+        assertEquals("PENDIENTE", solicitudes.findByReferencia(png).orElseThrow().getDocumentoEstado().name());
+        var porJpg = solicitudes.findAll().stream().filter(s -> s.getVetColegiado().equals("C" + jpg)).findFirst().orElseThrow();
+        assertEquals("image/jpeg", documentos.resumenVigente(porJpg.getId()).orElseThrow().tipo());
+    }
+
+    private void rechazaArchivo(MockMultipartFile documento, String mensaje) throws Exception {
+        long antes = solicitudes.count();
+        String texto = enviarCon(formulario(unico()), documento).andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(texto.contains(mensaje), texto);
+        assertEquals(antes, solicitudes.count());
+    }
+
+    @Test
+    void rechazaArchivosNoValidosSinGuardarNada() throws Exception {
+        byte[] grande = new byte[6 * 1024 * 1024];
+        System.arraycopy(imagen("png", 400, 300), 0, grande, 0, 100);
+        rechazaArchivo(new MockMultipartFile("documento", "grande.png", "image/png", grande), "supera");
+        rechazaArchivo(new MockMultipartFile("documento", "texto.png", "image/png", "no soy una imagen".getBytes()), "JPG o PNG");
+        rechazaArchivo(new MockMultipartFile("documento", "dibujo.svg", "image/svg+xml", "<svg xmlns=\"http://www.w3.org/2000/svg\"/>".getBytes()), "JPG o PNG");
+        rechazaArchivo(new MockMultipartFile("documento", "cambiada.png", "image/png", imagen("jpg", 400, 300)), "no coinciden");
+        byte[] danada = imagen("png", 400, 300);
+        java.util.Arrays.fill(danada, 30, danada.length, (byte) 7);
+        rechazaArchivo(new MockMultipartFile("documento", "danada.png", "image/png", danada), "dañada");
+        rechazaArchivo(new MockMultipartFile("documento", "enorme.png", "image/png", imagen("png", 9000, 300)), "demasiado grande");
+        rechazaArchivo(new MockMultipartFile("documento", "diminuta.png", "image/png", imagen("png", 50, 50)), "demasiado pequeña");
+    }
+
+    @Test
+    void sinArchivoONoMultipartNoSeGuardaNada() throws Exception {
+        long antes = solicitudes.count();
+        enviarCon(formulario(unico()), null).andExpect(status().isBadRequest());
+        mvc.perform(post(URL_FORMULARIO).contentType(MediaType.APPLICATION_JSON).content(formulario(unico()).toString()))
+                .andExpect(status().is4xxClientError());
+        assertEquals(antes, solicitudes.count());
+    }
+
+    @Test
+    void siFallaElGuardadoDelDocumentoNoQuedaLaSolicitud() throws Exception {
+        String marca = unico();
+        var datos = mapper.treeToValue(formulario(marca), es.florida.vet.dto.SolicitudAltaRequest.class);
+        // Imagen sin contenido: la base la rechaza al guardar el documento, después de guardar la solicitud
+        var rota = new es.florida.vet.entity.SolicitudDocumento.ImagenValidada("x.png", "image/png", "png", 400, 300, "0".repeat(64), null);
+        long antes = solicitudes.count();
+        try {
+            servicio.registrar(datos, rota);
+        } catch (RuntimeException esperada) {
+            // El error llega al controlador como 500 y la solicitud no se presenta como recibida
+        }
+        assertEquals(antes, solicitudes.count());
+        assertFalse(veterinarios.existsByNumeroColegiado("C" + marca));
+    }
+
+    @Test
+    void elDocumentoSoloLoVeAdministracion() throws Exception {
+        long id = idDe(crearSolicitud(formulario(unico())));
+        String url = "/api/solicitudes-alta/" + id + "/documento";
+        mvc.perform(get(url)).andExpect(status().isUnauthorized());
+        mvc.perform(get(url).session(auxSanRoque())).andExpect(status().isForbidden());
+        mvc.perform(get(url).session(drGarcia())).andExpect(status().isForbidden());
+        var respuesta = mvc.perform(get(url).session(admin())).andExpect(status().isOk()).andReturn().getResponse();
+        assertEquals("image/png", respuesta.getContentType());
+        assertEquals("nosniff", respuesta.getHeader("X-Content-Type-Options"));
+        assertTrue(respuesta.getHeader("Cache-Control").contains("no-store"));
+        mvc.perform(multipart(url).file(documentoPrueba()).session(drGarcia())).andExpect(status().isForbidden());
+    }
+
+    // ----- Documento acreditativo: revisión manual -----
+
+    @Test
+    void noSeApruebaSinAceptarElDocumentoYSeRegistraLaRevision() throws Exception {
+        String referencia = crearSolicitud(formulario(unico()));
+        firmada(cuerpoDecision(referencia, "APROBAR", Instant.now().getEpochSecond())).andExpect(status().isBadRequest());
+        assertNull(solicitudes.findByReferencia(referencia).orElseThrow().getClinicaId());
+
+        JsonNode aceptada = decidir(referencia, "ACEPTAR_DOCUMENTO");
+        assertEquals("ACEPTADO", aceptada.get("documentoEstado").asText());
+        assertEquals("Revisora Odoo", aceptada.get("documentoRevisadoPor").asText());
+        assertFalse(aceptada.get("documentoFechaRevision").isNull());
+        assertEquals("COMPLETADA", decidir(referencia, "APROBAR").get("estadoAlta").asText());
+    }
+
+    @Test
+    void rechazarExigeMotivo() throws Exception {
+        String referencia = crearSolicitud(formulario(unico()));
+        firmada(cuerpoDecision(referencia, "RECHAZAR", Instant.now().getEpochSecond(), " ", null)).andExpect(status().isBadRequest());
+        assertEquals("PENDIENTE", solicitudes.findByReferencia(referencia).orElseThrow().getEstadoRevision().name());
+    }
+
+    @Test
+    void sustituirElDocumentoAnulaLaRevisionYConservaElAnterior() throws Exception {
+        String referencia = crearSolicitud(formulario(unico()));
+        long id = idDe(referencia);
+        Long primero = documentoVigente(referencia);
+        decidir(referencia, "ACEPTAR_DOCUMENTO");
+
+        String texto = mvc.perform(multipart("/api/solicitudes-alta/" + id + "/documento")
+                        .file(new MockMultipartFile("documento", "nuevo.jpg", "image/jpeg", imagen("jpg", 600, 400))).session(admin()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        JsonNode r = mapper.readTree(texto);
+        assertEquals("PENDIENTE", r.get("documentoEstado").asText());
+        assertTrue(r.get("documentoRevisadoPor").isNull());
+        assertNotEquals(primero, r.get("documentoId").asLong());
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM solicitud_documentos WHERE solicitud_id = ?", Integer.class, id));
+
+        // Aceptar el documento antiguo ya no sirve: hay que revisar el nuevo
+        firmada(cuerpoDecision(referencia, "ACEPTAR_DOCUMENTO", Instant.now().getEpochSecond(), "ok", primero)).andExpect(status().isBadRequest());
+        firmada(cuerpoDecision(referencia, "APROBAR", Instant.now().getEpochSecond())).andExpect(status().isBadRequest());
+
+        aprobar(referencia);
+        mvc.perform(multipart("/api/solicitudes-alta/" + id + "/documento").file(documentoPrueba()).session(admin()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void solicitudAnteriorSinDocumentoNecesitaExcepcionConMotivo() throws Exception {
+        String referencia = crearSolicitud(formulario(unico()));
+        long id = idDe(referencia);
+        // Simula una solicitud creada antes de la migración 013
+        jdbc.update("UPDATE solicitud_documentos SET vigente = FALSE WHERE solicitud_id = ?", id);
+        jdbc.update("UPDATE solicitudes_alta SET documento_estado = 'SIN_DOCUMENTO' WHERE id = ?", id);
+
+        mvc.perform(get("/api/solicitudes-alta").session(admin())).andExpect(status().isOk());
+        firmada(cuerpoDecision(referencia, "APROBAR", Instant.now().getEpochSecond())).andExpect(status().isBadRequest());
+        firmada(cuerpoDecision(referencia, "AUTORIZAR_EXCEPCION", Instant.now().getEpochSecond(), "", null)).andExpect(status().isBadRequest());
+
+        JsonNode excepcion = mapper.readTree(firmada(cuerpoDecision(referencia, "AUTORIZAR_EXCEPCION", Instant.now().getEpochSecond(),
+                "Autorizado por dirección: cliente conocido", null)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertEquals("EXCEPCION", excepcion.get("documentoEstado").asText());
+        assertEquals("Autorizado por dirección: cliente conocido", excepcion.get("documentoObservaciones").asText());
+        assertEquals("COMPLETADA", decidir(referencia, "APROBAR").get("estadoAlta").asText());
+    }
+
+    // ----- Documento acreditativo: Odoo -----
+
+    @Test
+    void elDocumentoLlegaAOdooUnaSolaVezYUnFalloQuedaPendiente() throws Exception {
+        String referencia = crearSolicitud(formulario(unico()));
+        long documentoId = documentoVigente(referencia);
+
+        doReturn(OdooConnector.Resultado.fallo("Odoo no responde")).when(odoo).adjuntarDocumentoSolicitud(anyInt(), eq(documentoId), any(), any(), any());
+        try {
+            servicio.enviarPendientesAOdoo();
+        } finally {
+            doCallRealMethod().when(odoo).adjuntarDocumentoSolicitud(anyInt(), any(Long.class), any(), any(), any());
+        }
+        var conFallo = solicitudes.findByReferencia(referencia).orElseThrow();
+        assertTrue(conFallo.isOdooPendiente());
+        assertNotNull(conFallo.getOdooId());
+        assertTrue(conFallo.getOdooUltimoError().contains("Documento"));
+        assertNull(documentos.resumenVigente(conFallo.getId()).orElseThrow().odooAdjuntoId());
+
+        servicio.enviarPendientesAOdoo();
+        servicio.enviarPendientesAOdoo();
+        var enviada = solicitudes.findByReferencia(referencia).orElseThrow();
+        assertFalse(enviada.isOdooPendiente());
+        assertNotNull(documentos.resumenVigente(enviada.getId()).orElseThrow().odooAdjuntoId());
+        // Una llamada fallida y una correcta: la tercera pasada ya no lo vuelve a enviar
+        verify(odoo, times(2)).adjuntarDocumentoSolicitud(anyInt(), eq(documentoId), any(), any(), any());
     }
 }

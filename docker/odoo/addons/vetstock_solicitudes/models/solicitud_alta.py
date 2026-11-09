@@ -30,6 +30,13 @@ ESTADOS_REVISION = [
     ("aprobada", "Aprobada"),
     ("rechazada", "Rechazada"),
 ]
+# La revisión del documento es MANUAL: ninguna comprobación automática decide si es auténtico
+ESTADOS_DOCUMENTO = [
+    ("sin_documento", "Anterior, sin acreditación"),
+    ("pendiente", "Pendiente de revisión"),
+    ("aceptado", "Revisado y aceptado"),
+    ("excepcion", "Excepción autorizada"),
+]
 ESTADOS_ALTA = [
     ("no_iniciada", "No iniciada"),
     ("en_proceso", "En proceso"),
@@ -84,6 +91,17 @@ class SolicitudAlta(models.Model):
     veterinario_vetstock_id = fields.Integer(string="Id del veterinario en VetStock", readonly=True)
     partner_id = fields.Many2one("res.partner", string="Contacto en Odoo", readonly=True)
 
+    # Documento acreditativo: adjunto privado del registro (mismos permisos que la solicitud)
+    documento_adjunto_id = fields.Many2one("ir.attachment", string="Adjunto", readonly=True)
+    documento_vetstock_id = fields.Integer(string="Id del documento en VetStock", readonly=True)
+    documento_imagen = fields.Binary(related="documento_adjunto_id.datas", string="Documento acreditativo")
+    documento_nombre = fields.Char(related="documento_adjunto_id.name", string="Archivo")
+    documento_estado = fields.Selection(ESTADOS_DOCUMENTO, string="Revisión del documento", default="sin_documento",
+                                        required=True, readonly=True, tracking=True)
+    documento_revisado_por = fields.Char(string="Documento revisado por", readonly=True)
+    documento_fecha_revision = fields.Datetime(string="Fecha de revisión del documento", readonly=True)
+    documento_observaciones = fields.Char(string="Nota de la revisión del documento", readonly=True)
+
     def write(self, vals):
         # Los datos y los estados vienen de VetStock: un revisor solo escribe sus observaciones
         if (not self.env.su and not self.env.user.has_group(GRUPO_INTEGRACION)
@@ -94,6 +112,10 @@ class SolicitudAlta(models.Model):
     def _comprobar_revisor(self):
         if not self.env.user.has_group(GRUPO_REVISOR):
             raise AccessError(_("No tienes permiso para revisar solicitudes de alta."))
+
+    def _exigir_nota(self, texto):
+        if not (self.observaciones_internas or "").strip():
+            raise UserError(texto)
 
     def _enviar_decision(self, decision):
         """Llama al backend. Si no responde, no se cambia nada y se avisa a quien revisa."""
@@ -110,6 +132,7 @@ class SolicitudAlta(models.Model):
             "revisor": self.env.user.name,
             "observaciones": self.observaciones_internas or "",
             "marcaTiempo": int(time.time()),
+            "documentoId": self.documento_vetstock_id or None,
         })
         firma = base64.b64encode(hmac.new(secreto.encode(), cuerpo.encode(), hashlib.sha256).digest()).decode()
         try:
@@ -137,7 +160,12 @@ class SolicitudAlta(models.Model):
             "clinica_vetstock_id": datos.get("clinicaId") or 0,
             "veterinario_vetstock_id": datos.get("veterinarioId") or 0,
             "revisado_por": datos.get("revisadoPor") or False,
+            "documento_estado": (datos.get("documentoEstado") or "SIN_DOCUMENTO").lower(),
+            "documento_revisado_por": datos.get("documentoRevisadoPor") or False,
+            "documento_observaciones": datos.get("documentoObservaciones") or False,
         }
+        if datos.get("documentoRevisadoPor") and self.documento_estado != valores["documento_estado"]:
+            valores["documento_fecha_revision"] = fields.Datetime.now()
         # Repetir una aprobación conserva la fecha de la primera
         if self.estado_revision != estado_revision or not self.fecha_revision:
             valores["fecha_revision"] = fields.Datetime.now()
@@ -147,7 +175,17 @@ class SolicitudAlta(models.Model):
         self._enviar_decision("APROBAR")
 
     def action_rechazar(self):
+        self._exigir_nota(_("Escribe el motivo del rechazo en las observaciones internas y guarda."))
         self._enviar_decision("RECHAZAR")
+
+    def action_aceptar_documento(self):
+        if not self.documento_adjunto_id:
+            raise UserError(_("Todavía no ha llegado el documento a Odoo."))
+        self._enviar_decision("ACEPTAR_DOCUMENTO")
+
+    def action_autorizar_excepcion(self):
+        self._exigir_nota(_("Escribe en las observaciones internas el motivo y quién autoriza la excepción, y guarda."))
+        self._enviar_decision("AUTORIZAR_EXCEPCION")
 
     def action_requiere_informacion(self):
         self._enviar_decision("REQUIERE_INFORMACION")

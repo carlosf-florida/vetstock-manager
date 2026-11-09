@@ -2,6 +2,7 @@ package es.florida.vet.entity;
 
 import es.florida.vet.dto.SolicitudAltaRequest;
 import es.florida.vet.enums.EstadoAltaSolicitud;
+import es.florida.vet.enums.EstadoDocumentoSolicitud;
 import es.florida.vet.enums.EstadoRevisionSolicitud;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -66,6 +67,13 @@ public class SolicitudAlta {
     private boolean odooPendiente = true;
     private String odooUltimoError;
 
+    // Revisión manual del documento acreditativo (quién, cuándo y con qué resultado)
+    @Enumerated(EnumType.STRING)
+    private EstadoDocumentoSolicitud documentoEstado = EstadoDocumentoSolicitud.SIN_DOCUMENTO;
+    private String documentoRevisadoPor;
+    private LocalDateTime documentoFechaRevision;
+    private String documentoObservaciones;
+
     protected SolicitudAlta() {
     }
 
@@ -105,7 +113,28 @@ public class SolicitudAlta {
         this.estadoRevision = estado;
         this.revisadoPor = revisor;
         this.fechaRevision = LocalDateTime.now();
-        this.observacionesRevision = nota;
+        this.observacionesRevision = recortar(nota, 500);
+    }
+
+    /** Documento nuevo o sustituido: cualquier revisión anterior deja de valer. */
+    public void documentoRecibido() {
+        this.documentoEstado = EstadoDocumentoSolicitud.PENDIENTE;
+        this.documentoRevisadoPor = null;
+        this.documentoFechaRevision = null;
+        this.documentoObservaciones = null;
+        this.odooPendiente = true;
+    }
+
+    public void revisarDocumento(EstadoDocumentoSolicitud resultado, String revisor, String nota) {
+        this.documentoEstado = resultado;
+        this.documentoRevisadoPor = revisor;
+        this.documentoFechaRevision = LocalDateTime.now();
+        this.documentoObservaciones = recortar(nota, 500);
+        this.odooPendiente = true;
+    }
+
+    private static String recortar(String texto, int maximo) {
+        return texto == null || texto.isBlank() ? null : texto.substring(0, Math.min(texto.length(), maximo));
     }
 
     public void marcarAlta(EstadoAltaSolicitud estado, String mensaje) {
@@ -163,4 +192,8 @@ public class SolicitudAlta {
     public Integer getOdooId() { return odooId; }
     public boolean isOdooPendiente() { return odooPendiente; }
     public String getOdooUltimoError() { return odooUltimoError; }
+    public EstadoDocumentoSolicitud getDocumentoEstado() { return documentoEstado; }
+    public String getDocumentoRevisadoPor() { return documentoRevisadoPor; }
+    public LocalDateTime getDocumentoFechaRevision() { return documentoFechaRevision; }
+    public String getDocumentoObservaciones() { return documentoObservaciones; }
 }

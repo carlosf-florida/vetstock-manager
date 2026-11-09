@@ -26,6 +26,7 @@ USE vetstock;
 -- La relación circular clinicas <-> veterinarios impide borrar en orden: se
 -- desactivan las claves foráneas solo durante el borrado para poder recargar.
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS solicitud_documentos;
 DROP TABLE IF EXISTS activaciones_cuenta;
 DROP TABLE IF EXISTS solicitudes_alta;
 DROP TABLE IF EXISTS documentos;
@@ -122,8 +123,31 @@ CREATE TABLE solicitudes_alta (
     odoo_id             INT,                     -- registro de la solicitud en Odoo
     odoo_pendiente      BOOLEAN      NOT NULL DEFAULT TRUE,
     odoo_ultimo_error   VARCHAR(255),
+    documento_estado    VARCHAR(20)  NOT NULL DEFAULT 'SIN_DOCUMENTO',  -- SIN_DOCUMENTO (anteriores), PENDIENTE, ACEPTADO, EXCEPCION
+    documento_revisado_por VARCHAR(100),
+    documento_fecha_revision DATETIME,
+    documento_observaciones VARCHAR(500),
     CONSTRAINT fk_sol_clinica FOREIGN KEY (clinica_id) REFERENCES clinicas(id),
     CONSTRAINT fk_sol_veterinario FOREIGN KEY (veterinario_id) REFERENCES veterinarios(id)
+) ENGINE=InnoDB;
+
+-- Documento acreditativo de la solicitud (ver migración 013)
+CREATE TABLE solicitud_documentos (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    solicitud_id     BIGINT       NOT NULL,
+    nombre_original  VARCHAR(150) NOT NULL,   -- solo para mostrarlo; nunca se usa como ruta
+    tipo             VARCHAR(20)  NOT NULL,   -- image/jpeg o image/png, comprobado por su contenido
+    tamano           INT          NOT NULL,
+    ancho            INT          NOT NULL,
+    alto             INT          NOT NULL,
+    sha256           CHAR(64)     NOT NULL,
+    contenido        MEDIUMBLOB   NOT NULL,
+    vigente          BOOLEAN      NOT NULL DEFAULT TRUE,
+    subido_por       VARCHAR(100),            -- NULL: lo envió la clínica desde el formulario
+    fecha_subida     DATETIME     NOT NULL,
+    odoo_adjunto_id  INT,                     -- adjunto (ir.attachment) en Odoo, cuando se confirma
+    CONSTRAINT fk_doc_solicitud FOREIGN KEY (solicitud_id) REFERENCES solicitudes_alta(id),
+    INDEX idx_doc_solicitud (solicitud_id, vigente)
 ) ENGINE=InnoDB;
 
 CREATE TABLE activaciones_cuenta (
